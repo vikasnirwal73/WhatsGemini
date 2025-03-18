@@ -1,0 +1,13 @@
+{
+  "files": {
+    "main.css": "/WhatsGemini/static/css/main.4e8b5de8.css",
+    "main.js": "/WhatsGemini/static/js/main.c2291701.js",
+    "index.html": "/WhatsGemini/index.html",
+    "main.4e8b5de8.css.map": "/WhatsGemini/static/css/main.4e8b5de8.css.map",
+    "main.c2291701.js.map": "/WhatsGemini/static/js/main.c2291701.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.4e8b5de8.css",
+    "static/js/main.c2291701.js"
+  ]
+}
