@@ -87,7 +87,7 @@ This project is open-source and available under the MIT License.
 ---
 
 ## 🛠️ Author
-Developed by **YOUR_NAME**.
+Developed by **Vikash Nirwal**.
 
 📧 Contact: [vikasnirwal73@gmail.com](mailto:vikasnirwal73@gmail.com)
 
