@@ -18,7 +18,10 @@ const SettingsPage = () => {
   const navigate = useNavigate();
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
-
+  const [customModel, setCustomModel] = useState(() => {
+    const stored = localStorage.getItem(LS_AI_MODEL);
+    return stored && !models.includes(stored) ? stored : "";
+  });
   const getStoredValue = (key, defaultValue) => {
     try {
       return JSON.parse(localStorage.getItem(key)) ?? defaultValue;
@@ -27,9 +30,10 @@ const SettingsPage = () => {
     }
   };
 
-  const [selectedModel, setSelectedModel] = useState(
-    getStoredValue(LS_AI_MODEL, models[0])
-  );
+  const [selectedModel, setSelectedModel] = useState(() => {
+    const stored = localStorage.getItem(LS_AI_MODEL);
+    return stored && models.includes(stored) ? stored : models[0];
+  });
   const [maxOutputTokens, setMaxOutputTokens] = useState(
     getStoredValue(LS_MAX_OUTPUT_TOKENS, DEFAULT_OUTPUT_TOKENS)
   );
@@ -42,7 +46,8 @@ const SettingsPage = () => {
 
   useEffect(() => {
     try {
-      localStorage.setItem(LS_AI_MODEL, selectedModel);
+      const modelToStore = customModel.trim() || selectedModel;
+      localStorage.setItem(LS_AI_MODEL, modelToStore);
       localStorage.setItem(LS_MAX_OUTPUT_TOKENS, JSON.stringify(maxOutputTokens));
       localStorage.setItem(LS_TEMPRATURE, JSON.stringify(temperature));
       localStorage.setItem(LS_SAFETY_SETTINGS, JSON.stringify(safetySettings));
@@ -53,8 +58,8 @@ const SettingsPage = () => {
     } finally {
       setTimeout(() => setSuccess(null), 2000);
     }
-  }, [selectedModel, maxOutputTokens, temperature, safetySettings]);
-
+  }, [customModel, selectedModel, maxOutputTokens, temperature, safetySettings]);
+  
   const handleSafetyChange = useCallback((category, value) => {
     setSafetySettings((prev) => ({ ...prev, [category]: value }));
   }, []);
@@ -88,8 +93,22 @@ const SettingsPage = () => {
 
       <div className="w-full max-w-3xl mx-auto p-6 bg-white dark:bg-[#202c33] shadow-lg rounded-lg mb-20">
         {/* AI Model Selection */}
+        <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+          <strong>Using Model:</strong> {customModel.trim() || selectedModel}
+        </p>
         <label className="block font-semibold mb-2 text-black dark:text-white">
-          Select AI Model
+          Custom AI Model Name (optional)
+        </label>
+        <input
+          type="text"
+          placeholder="Enter custom model name"
+          value={customModel}
+          onChange={(e) => setCustomModel(e.target.value)}
+          className="w-full p-3 bg-[#f0f2f5] dark:bg-[#2a3942] text-black dark:text-white rounded-lg border border-gray-300 dark:border-gray-600 outline-none mb-4"
+        />
+
+        <label className="block font-semibold mb-2 text-black dark:text-white">
+          Or Select AI Model
         </label>
         <select
           value={selectedModel}
@@ -102,6 +121,11 @@ const SettingsPage = () => {
             </option>
           ))}
         </select>
+
+        <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+          <strong>Selected Model:</strong>{" "}
+          {customModel.trim() || selectedModel}
+        </p>
 
         {/* Max Output Tokens */}
         <label className="block font-semibold mb-2 text-black dark:text-white">

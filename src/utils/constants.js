@@ -28,6 +28,7 @@ export const models = [
   "gemini-2.0-flash-lite",
   "gemini-2.0-pro-exp-02-05",
   "gemini-2.0-flash-exp-image-generation",
+  "gemini-2.5-pro-exp-03-25"
 ];
 export const ROLE = "role";
 export const MESSAGE = "message";
