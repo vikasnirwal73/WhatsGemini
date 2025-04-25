@@ -62,7 +62,7 @@ const ChatWindow = ({ messages = [], onRegenerate, aiLoading }) => {
         filteredMessages.map((msg, i) => (
           <div key={i} className={`flex ${msg.role === YOU ? "justify-end" : "justify-start"} mb-4`}>
             <div
-              className={`relative max-w-[75%] p-2 px-4 text-lg rounded-lg shadow-md ${
+              className={`relative max-w-[90%] md:max-w-[75%] p-2 px-4 text-lg rounded-lg shadow-md ${
                 msg.role === YOU
                   ? "bg-[#dcf8c6] dark:bg-[#056162] text-black dark:text-white rounded-br-none"
                   : "pr-8 bg-[#ffffff] dark:bg-[#202c33] text-black dark:text-white rounded-bl-none"
