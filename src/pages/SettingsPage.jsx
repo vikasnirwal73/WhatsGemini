@@ -69,11 +69,20 @@ const SettingsPage = () => {
     []
   );
 
+  const goBackOrHome = () => {
+    const idx = window.history.state?.idx;
+    if (typeof idx === 'number' && idx > 0) {
+      navigate(-1);
+    } else {
+      navigate('/', { replace: true });
+    }
+  };
+
   return (
     <div className="w-full h-screen flex flex-col p-6 bg-[#eae6df] dark:bg-[#0d1418] overflow-auto">
       {/* Back Button */}
       <button
-        onClick={() => navigate("/")}
+        onClick={goBackOrHome}
         className="mb-4 flex items-center gap-2 bg-[#008069] text-white px-4 py-2 rounded-full shadow-md hover:bg-[#026e58] transition w-max"
       >
         <FaArrowLeft size={16} />

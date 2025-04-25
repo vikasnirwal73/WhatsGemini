@@ -4,6 +4,7 @@ import { fetchCharacters, addCharacter, deleteCharacter, updateCharacter } from 
 import { useNavigate } from "react-router-dom";
 import { FaArrowLeft, FaTrash, FaEdit, FaTimes } from "react-icons/fa";
 
+
 const CharacterPage = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -13,7 +14,7 @@ const CharacterPage = () => {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [prompt, setPrompt] = useState("");
-  const [editCharacter, setEditCharacter] = useState(null); // Track editing character
+  const [editCharacter, setEditCharacter] = useState(null); 
 
   useEffect(() => {
     dispatch(fetchCharacters());
@@ -68,11 +69,20 @@ const CharacterPage = () => {
     return text.length > maxLength ? text.substring(0, maxLength) + "..." : text;
   };
 
+  const goBackOrHome = () => {
+    const idx = window.history.state?.idx;
+    if (typeof idx === 'number' && idx > 0) {
+      navigate(-1);
+    } else {
+      navigate('/', { replace: true });
+    }
+  };
+
   return (
     <div className="w-full h-screen flex flex-col p-6 bg-[#eae6df] dark:bg-[#0d1418] overflow-auto">
       {/* Back Button */}
       <button
-        onClick={() => navigate("/")}
+        onClick={goBackOrHome}
         className="mb-4 flex items-center gap-2 bg-[#008069] text-white px-4 py-2 rounded-full shadow-md hover:bg-[#026e58] transition w-max"
       >
         <FaArrowLeft size={16} />

@@ -112,10 +112,20 @@ const ChatPage = () => {
     }
   };
 
+  const goBackOrHome = () => {
+    const idx = window.history.state?.idx;
+    if (typeof idx === 'number' && idx > 0) {
+      navigate(-1);
+    } else {
+      navigate('/', { replace: true });
+    }
+  };
+  
+
   return (
     <div className="flex flex-col w-full h-[calc(100vh-58px)] bg-[#eae6df] dark:bg-[#0d1418]">
       {/* Chat Header */}
-      <ChatHeader character={character} onBack={() => navigate("/")} />
+      <ChatHeader character={character} onBack={goBackOrHome} />
 
       {/* Error Message */}
       {error && <p className="text-red-500 text-center p-2">{error}</p>}
@@ -130,6 +140,7 @@ const ChatPage = () => {
     </div>
   );
 };
+
 
 const ChatHeader = ({ character, onBack }) => (
   <div className="flex items-center p-3 bg-[#008069] dark:bg-[#202c33] text-white shadow-md">

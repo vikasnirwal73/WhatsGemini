@@ -49,6 +49,11 @@ const ChatWindow = ({ messages = [], onRegenerate, aiLoading }) => {
     [onRegenerate, startIndex]
   );
 
+  const italicize = (str) => {
+    return str.replace(/\*(.*?)\*/g, '<em class="text-[#5e5e5e] dark:text-[#989494]">$1</em>');
+  }
+  
+
   return (
     <div className="flex-1 p-4 overflow-auto bg-[#efeae2] dark:bg-[#0d1418] relative z-1">
       {filteredMessages.length === 0 ? (
@@ -63,7 +68,7 @@ const ChatWindow = ({ messages = [], onRegenerate, aiLoading }) => {
                   : "pr-8 bg-[#ffffff] dark:bg-[#202c33] text-black dark:text-white rounded-bl-none"
               }`}
             >
-              <p>{msg.txt}</p>
+              <p dangerouslySetInnerHTML={{__html: italicize(msg.txt)}}></p>
               {msg.role === AI && (
                 <button
                   onClick={() => handleRegenerate(i)}
