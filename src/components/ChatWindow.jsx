@@ -50,8 +50,11 @@ const ChatWindow = ({ messages = [], onRegenerate, aiLoading }) => {
   );
 
   const italicize = (str) => {
-    return str.replace(/\*(.*?)\*/g, '<em class="text-[#5e5e5e] dark:text-[#989494]">$1</em>');
-  }
+  return str
+    .replace(/\*(.*?)\*/g, '<em class="text-[#5e5e5e] dark:text-[#989494]">$1</em>')
+    .replace(/\((.*?)\)/g, '<em class="text-[#5e5e5e] dark:text-[#989494]">$1</em>');
+};
+
   
 
   return (
