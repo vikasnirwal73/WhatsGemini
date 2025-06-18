@@ -1,13 +1,15 @@
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { FaArrowLeft } from "react-icons/fa";
 import InitialMessages from "../components/InitialMessages";
 import {
+  DEFAULT_CHAT_LENGTH,
   DEFAULT_OUTPUT_TOKENS,
   DEFAULT_SAFETY_SETTINGS,
   DEFAULT_TEMPRATURE,
   harmThresholds,
   LS_AI_MODEL,
+  LS_MAX_CHAT_LENGTH,
   LS_MAX_OUTPUT_TOKENS,
   LS_SAFETY_SETTINGS,
   LS_TEMPRATURE,
@@ -37,6 +39,9 @@ const SettingsPage = () => {
   const [maxOutputTokens, setMaxOutputTokens] = useState(
     getStoredValue(LS_MAX_OUTPUT_TOKENS, DEFAULT_OUTPUT_TOKENS)
   );
+  const [maxChatLength, setMaxChatLength] = useState(
+    getStoredValue(LS_MAX_CHAT_LENGTH, DEFAULT_CHAT_LENGTH)
+  );
   const [temperature, setTemperature] = useState(
     getStoredValue(LS_TEMPRATURE, DEFAULT_TEMPRATURE)
   );
@@ -51,6 +56,7 @@ const SettingsPage = () => {
       localStorage.setItem(LS_MAX_OUTPUT_TOKENS, JSON.stringify(maxOutputTokens));
       localStorage.setItem(LS_TEMPRATURE, JSON.stringify(temperature));
       localStorage.setItem(LS_SAFETY_SETTINGS, JSON.stringify(safetySettings));
+      localStorage.setItem(LS_MAX_CHAT_LENGTH, JSON.stringify(maxChatLength));
       setSuccess("Settings saved successfully.");
     } catch (err) {
       console.error("Error saving settings:", err);
@@ -58,7 +64,7 @@ const SettingsPage = () => {
     } finally {
       setTimeout(() => setSuccess(null), 2000);
     }
-  }, [customModel, selectedModel, maxOutputTokens, temperature, safetySettings]);
+  }, [customModel, selectedModel, maxOutputTokens, temperature, safetySettings, maxChatLength]);
   
   const handleSafetyChange = useCallback((category, value) => {
     setSafetySettings((prev) => ({ ...prev, [category]: value }));
@@ -144,6 +150,18 @@ const SettingsPage = () => {
           type="number"
           value={maxOutputTokens}
           onChange={(e) => setMaxOutputTokens(Number(e.target.value))}
+          className="w-full p-3 bg-[#f0f2f5] dark:bg-[#2a3942] text-black dark:text-white rounded-lg border border-gray-300 dark:border-gray-600 outline-none mb-4"
+          min="1"
+        />
+
+        {/* Max chat length */}
+        <label className="block font-semibold mb-2 text-black dark:text-white">
+          Max Chat Length (old messages will be deleted, 0 for unlimited length)
+        </label>
+        <input
+          type="number"
+          value={maxChatLength}
+          onChange={(e) => setMaxChatLength(Number(e.target.value))}
           className="w-full p-3 bg-[#f0f2f5] dark:bg-[#2a3942] text-black dark:text-white rounded-lg border border-gray-300 dark:border-gray-600 outline-none mb-4"
           min="1"
         />

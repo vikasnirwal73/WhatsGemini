@@ -8,6 +8,8 @@ import {
   DEFAULT_TEMPRATURE,
   LS_AI_MODEL,
   LS_GOOGLE_API_KEY,
+  LS_INITIAL_MESSAGES,
+  LS_MAX_CHAT_LENGTH,
   LS_MAX_OUTPUT_TOKENS,
   LS_SAFETY_SETTINGS,
   LS_TEMPRATURE,
@@ -22,6 +24,15 @@ const getStoredValue = (key, defaultValue, parser = (val) => val) => {
     return defaultValue;
   }
 };
+
+const getInitialMessages = () => {
+    try {
+      return JSON.parse(localStorage.getItem(LS_INITIAL_MESSAGES)) || [];
+    } catch (error) {
+      console.error("Error parsing initial messages from localStorage:", error);
+      return [];
+    }
+  };
 
 // Retrieve API Key from localStorage
 const getAPIKey = () => getStoredValue(LS_GOOGLE_API_KEY, null);
@@ -53,7 +64,7 @@ export const generateAIResponse = createAsyncThunk(
     try {
       const apiKey = getAPIKey();
       if (!apiKey) throw new Error("API key is missing. Please log in.");
-
+      const maxHistoryLength = localStorage.getItem(LS_MAX_CHAT_LENGTH) || 0;
       const selectedModel = getStoredValue(LS_AI_MODEL, DEFAULT_AI_MODEL);
       const maxTokens = getStoredValue(LS_MAX_OUTPUT_TOKENS, DEFAULT_OUTPUT_TOKENS, Number);
       const temperature = getStoredValue(LS_TEMPRATURE, DEFAULT_TEMPRATURE, parseFloat);
@@ -82,7 +93,14 @@ export const generateAIResponse = createAsyncThunk(
       if (!validHistory.length || validHistory[validHistory.length - 1].role !== "user") {
         throw new Error("Invalid chat history: Must end with a user message.");
       }
-
+      if(maxHistoryLength) {
+        const initialMessages = getInitialMessages();
+        const initialMessagesLength = initialMessages.length || 0;
+        const maxLength = validHistory.length - maxHistoryLength;
+        if(maxLength > 0) {
+          validHistory.splice(initialMessagesLength + 1, maxLength)
+        }
+      }
       // Start a chat session
       const chat = await model.startChat({ history: validHistory });
       const stream = await chat.sendMessageStream(prompt);

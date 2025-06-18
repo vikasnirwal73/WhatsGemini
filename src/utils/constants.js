@@ -6,6 +6,7 @@ export const DB_NAME = "ChatAppDB";
 export const CHARACTER = "character";
 export const DEFAULT_TEMPRATURE = 0.7;
 export const DEFAULT_OUTPUT_TOKENS = 1000;
+export const DEFAULT_CHAT_LENGTH = 0;
 export const DEFAULT_AI_MODEL = "gemini-1.5-pro";
 export const harmThresholds = [
     { label: "None", value: "BLOCK_NONE" },
@@ -38,6 +39,7 @@ export const DARK = "dark";
 // Local storage variables
 export const LS_AI_MODEL = "ai_model";
 export const LS_MAX_OUTPUT_TOKENS = "max_output_tokens";
+export const LS_MAX_CHAT_LENGTH = "max_chat_length";
 export const LS_TEMPRATURE = "temperature";
 export const LS_SAFETY_SETTINGS = "safety_settings";
 export const LS_INITIAL_CHAT_MESSAGE = "initial_chat_message";
