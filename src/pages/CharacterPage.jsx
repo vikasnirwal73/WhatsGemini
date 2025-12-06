@@ -14,6 +14,7 @@ const CharacterPage = () => {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [prompt, setPrompt] = useState("");
+  const [avatar, setAvatar] = useState("");
   const [editCharacter, setEditCharacter] = useState(null); 
 
   useEffect(() => {
@@ -25,6 +26,7 @@ const CharacterPage = () => {
     setName("");
     setDescription("");
     setPrompt("");
+    setAvatar("");
   } 
 
   const handleCreateCharacter = () => {
@@ -33,10 +35,11 @@ const CharacterPage = () => {
       return;
     }
 
-    dispatch(addCharacter({ name, description, prompt }));
+    dispatch(addCharacter({ name, description, prompt, avatar }));
     setName("");
     setDescription("");
     setPrompt("");
+    setAvatar("");
   };
 
   const handleDeleteCharacter = (id) => {
@@ -50,6 +53,7 @@ const CharacterPage = () => {
     setName(char.name);
     setDescription(char.description);
     setPrompt(char.prompt);
+    setAvatar(char.avatar || "");
   };
 
   const handleSaveEdit = () => {
@@ -58,11 +62,23 @@ const CharacterPage = () => {
       return;
     }
 
-    dispatch(updateCharacter({ id: editCharacter.id, name, description, prompt }));
+    dispatch(updateCharacter({ id: editCharacter.id, name, description, prompt, avatar }));
     setEditCharacter(null);
     setName("");
     setDescription("");
     setPrompt("");
+    setAvatar("");
+  };
+
+  const handleImageUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setAvatar(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   const truncateText = (text, maxLength = 100) => {
@@ -95,6 +111,20 @@ const CharacterPage = () => {
 
       {/* Character Form */}
       <div className="w-full max-w-3xl mx-auto p-5 bg-white dark:bg-[#202c33] shadow-lg rounded-lg">
+        <div className="mb-4 flex flex-col items-center">
+          <div className="w-24 h-24 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center overflow-hidden mb-2">
+            {avatar ? (
+              <img src={avatar} alt="Character Avatar" className="w-full h-full object-cover" />
+            ) : (
+              <span className="text-gray-500 dark:text-gray-400">No Image</span>
+            )}
+          </div>
+          <label className="cursor-pointer bg-[#008069] text-white px-3 py-1 rounded-md hover:bg-[#026e58] transition">
+            Upload Image
+            <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
+          </label>
+        </div>
+
         <input
           type="text"
           placeholder="Character Name"

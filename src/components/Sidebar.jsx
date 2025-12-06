@@ -62,7 +62,7 @@ const Sidebar = () => {
       >
         <div className="p-4 h-full flex flex-col overflow-y-auto">
           <CharacterList characters={filteredCharacters} onCharacterClick={handleCharacterClick} />
-          <ChatList chats={chats} onDeleteChat={handleDeleteChat} setIsOpen={setIsOpen} />
+          <ChatList chats={chats} characters={characters} onDeleteChat={handleDeleteChat} setIsOpen={setIsOpen} />
         </div>
       </aside>
 
@@ -86,7 +86,11 @@ const CharacterList = ({ characters, onCharacterClick }) => {
           title={`Start chat with ${char.name}`}
           aria-label={`Chat with ${char.name}`}
         >
-          <FaUser className="text-[#008069] dark:text-[#25D366]" size={18} />
+          {char.avatar ? (
+            <img src={char.avatar} alt={char.name} className="w-8 h-8 rounded-full object-cover" />
+          ) : (
+            <FaUser className="text-[#008069] dark:text-[#25D366]" size={18} />
+          )}
           <span className="text-black dark:text-white">{char.name}</span>
         </div>
       ))}
@@ -94,31 +98,39 @@ const CharacterList = ({ characters, onCharacterClick }) => {
   );
 };
 
-const ChatList = ({ chats, onDeleteChat, setIsOpen }) => {
+const ChatList = ({ chats, characters, onDeleteChat, setIsOpen }) => {
   if (!chats.length) return null;
   return (
     <>
       <h3 className="text-lg font-semibold text-[#008069] dark:text-[#25D366] mt-5">Chats</h3>
       <div className="flex-1">
-        {chats.map((chat) => (
-          <div
-            key={chat.id}
-            className="flex justify-between items-center p-3 my-1 rounded-lg cursor-pointer 
-              hover:bg-gray-100 dark:hover:bg-[#2a3942] transition"
-          >
-            <Link to={`/chat/${chat.id}`} className="flex-1 text-black dark:text-white text-md truncate" onClick={() => { setIsOpen(false) }}>
-              {chat.title}
-            </Link>
-            <button
-              onClick={() => onDeleteChat(chat.id)}
-              className="p-2 bg-red-500 text-white rounded-full hover:bg-red-600 transition"
-              title="Delete Chat"
-              aria-label={`Delete chat with ${chat.title}`}
+        {chats.map((chat) => {
+          const character = characters.find((c) => c.id === chat.characterId);
+          return (
+            <div
+              key={chat.id}
+              className="flex justify-between items-center p-3 my-1 rounded-lg cursor-pointer 
+                hover:bg-gray-100 dark:hover:bg-[#2a3942] transition"
             >
-              <FaTrash size={16} />
-            </button>
-          </div>
-        ))}
+              <Link to={`/chat/${chat.id}`} className="flex-1 flex items-center gap-2 text-black dark:text-white text-md truncate" onClick={() => { setIsOpen(false) }}>
+                {character?.avatar ? (
+                  <img src={character.avatar} alt={chat.title} className="w-8 h-8 rounded-full object-cover" />
+                ) : (
+                  <FaUser className="text-[#008069] dark:text-[#25D366]" size={18} />
+                )}
+                <span className="truncate">{chat.title}</span>
+              </Link>
+              <button
+                onClick={() => onDeleteChat(chat.id)}
+                className="p-2 bg-red-500 text-white rounded-full hover:bg-red-600 transition"
+                title="Delete Chat"
+                aria-label={`Delete chat with ${chat.title}`}
+              >
+                <FaTrash size={16} />
+              </button>
+            </div>
+          );
+        })}
       </div>
     </>
   );

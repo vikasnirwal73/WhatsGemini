@@ -64,7 +64,7 @@ export const generateAIResponse = createAsyncThunk(
     try {
       const apiKey = getAPIKey();
       if (!apiKey) throw new Error("API key is missing. Please log in.");
-      const maxHistoryLength = localStorage.getItem(LS_MAX_CHAT_LENGTH) || 0;
+      const maxHistoryLength = getStoredValue(LS_MAX_CHAT_LENGTH, 0, Number);
       const selectedModel = getStoredValue(LS_AI_MODEL, DEFAULT_AI_MODEL);
       const maxTokens = getStoredValue(LS_MAX_OUTPUT_TOKENS, DEFAULT_OUTPUT_TOKENS, Number);
       const temperature = getStoredValue(LS_TEMPRATURE, DEFAULT_TEMPRATURE, parseFloat);
@@ -85,14 +85,20 @@ export const generateAIResponse = createAsyncThunk(
         safetySettings: safetySettings,
       });
 
-      // Filter out empty messages and ensure the last message is from the user
+      // Filter out empty messages
       const validHistory = history.filter(
         (msg) => msg?.parts?.[0]?.text && msg.role
       );
 
-      if (!validHistory.length || validHistory[validHistory.length - 1].role !== "user") {
-        throw new Error("Invalid chat history: Must end with a user message.");
+      // If the last message in history is the same as the prompt, remove it to avoid duplication
+      if (
+        validHistory.length > 0 &&
+        validHistory[validHistory.length - 1].role === "user" &&
+        validHistory[validHistory.length - 1].parts[0].text === prompt
+      ) {
+        validHistory.pop();
       }
+
       if(maxHistoryLength) {
         const initialMessages = getInitialMessages();
         const initialMessagesLength = initialMessages.length || 0;

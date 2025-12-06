@@ -15,10 +15,12 @@ const ChatPage = () => {
   const dispatch = useDispatch();
 
   const chats = useSelector((state) => state.chat.chats);
+  const characters = useSelector((state) => state.character.characters);
   const aiLoading = useSelector((state) => state.ai.loading);
   
   const [messages, setMessages] = useState([]);
   const [character, setCharacter] = useState("");
+  const [characterData, setCharacterData] = useState(null);
   const [error, setError] = useState(null);
 
   // Memoize chatIdNum to avoid redundant conversions
@@ -46,9 +48,11 @@ const ChatPage = () => {
       if (currentChat) {
         setMessages(currentChat.content);
         setCharacter(currentChat.title);
+        const charData = characters.find(c => c.id === currentChat.characterId);
+        setCharacterData(charData);
       }
     }
-  }, [chatIdNum, chats]);
+  }, [chatIdNum, chats, characters]);
 
   useEffect(() => {
     if (messages.length > 0 && messages[0]?.characterId) {
@@ -120,12 +124,12 @@ const ChatPage = () => {
       navigate('/', { replace: true });
     }
   };
-  
-
   return (
     <div className="flex flex-col w-full h-[calc(100vh-58px)] bg-[#eae6df] dark:bg-[#0d1418]">
       {/* Chat Header */}
-      <ChatHeader character={character} onBack={goBackOrHome} />
+      <ChatHeader character={character} avatar={characterData?.avatar} onBack={goBackOrHome} />
+
+      {/* Error Message */}
 
       {/* Error Message */}
       {error && <p className="text-red-500 text-center p-2">{error}</p>}
@@ -142,7 +146,7 @@ const ChatPage = () => {
 };
 
 
-const ChatHeader = ({ character, onBack }) => (
+const ChatHeader = ({ character, avatar, onBack }) => (
   <div className="flex items-center p-3 bg-[#008069] dark:bg-[#202c33] text-white shadow-md">
     <button
       onClick={onBack}
@@ -152,7 +156,11 @@ const ChatHeader = ({ character, onBack }) => (
       <FaArrowLeft size={18} />
     </button>
     <div className="flex items-center gap-3 ml-3">
-      <FaUser size={28} className="text-white" />
+      {avatar ? (
+        <img src={avatar} alt={character} className="w-10 h-10 rounded-full object-cover" />
+      ) : (
+        <FaUser size={28} className="text-white" />
+      )}
       <h2 className="text-lg font-semibold">{character || "Chat"}</h2>
     </div>
   </div>

@@ -35,13 +35,13 @@ export const fetchCharacterById = createAsyncThunk(
 
 export const addCharacter = createAsyncThunk(
   "character/add",
-  async ({ name, description, prompt }, { rejectWithValue }) => {
+  async ({ name, description, prompt, avatar }, { rejectWithValue }) => {
     try {
       if (!name.trim() || !prompt.trim()) {
         throw new Error("Character name and prompt are required.");
       }
-      const id = await db.characters.add({ name, description, prompt });
-      return { id, name, description, prompt };
+      const id = await db.characters.add({ name, description, prompt, avatar });
+      return { id, name, description, prompt, avatar };
     } catch (error) {
       return handleDbError(error, rejectWithValue);
     }
@@ -63,10 +63,10 @@ export const deleteCharacter = createAsyncThunk(
 
 export const updateCharacter = createAsyncThunk(
   "character/update",
-  async ({ id, name, description, prompt }, { rejectWithValue }) => {
+  async ({ id, name, description, prompt, avatar }, { rejectWithValue }) => {
     try {
-      await db.characters.update(id, { name, description, prompt });
-      return { id, name, description, prompt };
+      await db.characters.update(id, { name, description, prompt, avatar });
+      return { id, name, description, prompt, avatar };
     } catch (error) {
       return rejectWithValue("Failed to update character.");
     }
