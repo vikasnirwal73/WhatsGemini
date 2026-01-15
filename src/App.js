@@ -51,12 +51,12 @@ const AppContent = () => {
   }
 
   return (
-    <div className="bg-[#eae6df] dark:bg-[#0d1418] min-h-screen">
-      <div className="flex flex-col h-screen mx-auto max-w-[1200px]">
+    <div className="bg-app-light dark:bg-app-dark min-h-screen">
+      <div className="flex flex-col h-screen mx-auto max-w-[1200px] shadow-2xl">
         <Header />
         <div className="flex flex-1 overflow-hidden">
           <Sidebar />
-          <main className="flex-1 bg-white dark:bg-[#111b21] border-l border-gray-300 dark:border-gray-700 relative z-1">
+          <main className="flex-1 bg-app-light dark:bg-app-dark border-l border-gray-200 dark:border-gray-800 relative z-1">
             <Routes>
               <Route path="/chat/:chatId" element={<ChatPage />} />
               <Route path="/characters" element={<CharacterPage />} />

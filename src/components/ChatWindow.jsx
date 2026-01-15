@@ -51,24 +51,24 @@ const ChatWindow = ({ messages = [], onRegenerate, aiLoading }) => {
 
   const italicize = (str) => {
   return str
-    .replace(/\*(.*?)\*/g, '<em class="text-[#5e5e5e] dark:text-[#989494]">$1</em>')
-    .replace(/\((.*?)\)/g, '<em class="text-[#5e5e5e] dark:text-[#989494]">$1</em>');
+    .replace(/\*(.*?)\*/g, '<em class="text-gray-500 dark:text-gray-400">$1</em>')
+    .replace(/\((.*?)\)/g, '<em class="text-gray-500 dark:text-gray-400">$1</em>');
 };
 
   
 
   return (
-    <div className="flex-1 p-4 overflow-auto bg-[#efeae2] dark:bg-[#0d1418] relative z-1">
+    <div className="flex-1 p-4 overflow-auto bg-app-light dark:bg-app-dark relative z-1">
       {filteredMessages.length === 0 ? (
         <p className="text-gray-500 dark:text-gray-400 text-center">No messages yet.</p>
       ) : (
         filteredMessages.map((msg, i) => (
           <div key={i} className={`flex ${msg.role === YOU ? "justify-end" : "justify-start"} mb-4`}>
             <div
-              className={`relative max-w-[90%] md:max-w-[75%] p-2 px-4 text-lg rounded-lg shadow-md ${
+              className={`relative max-w-[90%] md:max-w-[75%] p-3 px-5 text-lg rounded-3xl shadow-sm ${
                 msg.role === YOU
-                  ? "bg-[#dcf8c6] dark:bg-[#056162] text-black dark:text-white rounded-br-none"
-                  : "pr-8 bg-[#ffffff] dark:bg-[#202c33] text-black dark:text-white rounded-bl-none"
+                  ? "bg-bubble-sent-light dark:bg-bubble-sent-dark text-white"
+                  : "pr-8 bg-bubble-received-light dark:bg-bubble-received-dark text-gray-900 dark:text-white"
               }`}
             >
               <p dangerouslySetInnerHTML={{__html: italicize(msg.txt)}}></p>

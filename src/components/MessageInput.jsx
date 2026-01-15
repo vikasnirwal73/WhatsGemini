@@ -14,12 +14,12 @@ const MessageInput = ({ onSend }) => {
   }, [text, onSend]);
 
   return (
-    <div className="p-3 flex items-center bg-[#f0f2f5] dark:bg-[#202c33] border-t border-gray-300 dark:border-gray-700">
+    <div className="p-3 flex items-center bg-panel-light dark:bg-panel-dark border-t border-gray-200 dark:border-gray-800">
       <input
         value={text}
         onChange={(e) => setText(e.target.value)}
         placeholder="Type a message..."
-        className="flex-1 mr-3 px-2.5 py-1.5 bg-white dark:bg-[#2a3942] text-black dark:text-white rounded-lg border border-gray-300 dark:border-gray-600 outline-none text-lg"
+        className="flex-1 mr-3 px-4 py-3 bg-app-light dark:bg-app-dark text-black dark:text-white rounded-full border border-transparent focus:border-primary outline-none text-lg transition-colors"
         onKeyDown={(e) => {
           if (e.key === "Enter" && !e.shiftKey) {
             e.preventDefault();
@@ -31,16 +31,16 @@ const MessageInput = ({ onSend }) => {
 
       <button
         onClick={handleSend}
-        className={`p-2.5 rounded-full transition ${
+        className={`p-3 rounded-full transition shadow-md ${
           text.trim()
-            ? "bg-[#25D366] hover:bg-[#1db954]"
-            : "bg-gray-400 cursor-not-allowed"
-        } text-white`}
+            ? "bg-primary hover:bg-primary-hover text-white transform hover:scale-105"
+            : "bg-gray-200 dark:bg-gray-800 text-gray-400 cursor-not-allowed"
+        }`}
         disabled={!text.trim()}
         title="Send Message"
         aria-label="Send Message"
       >
-        <FaPaperPlane size={18} />
+        <FaPaperPlane size={16} className={text.trim() ? "ml-0.5" : ""} />
       </button>
     </div>
   );

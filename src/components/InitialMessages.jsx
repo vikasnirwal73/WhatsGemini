@@ -59,12 +59,12 @@ const InitialMessages = () => {
             {initialMessages.map((msg, idx) => (
                 <div
                     key={idx}
-                    className="p-4 mb-5 shadow-md rounded-2xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 flex flex-col gap-4 relative"
+                    className="p-4 mb-5 shadow-sm rounded-2xl bg-panel-light dark:bg-panel-dark border border-gray-200 dark:border-gray-800 flex flex-col gap-4 relative"
                 >
                     <select
                         value={msg.role}
                         onChange={(e) => handleChange(e.target.value, idx, "role")}
-                        className="w-full p-3 bg-[#f0f2f5] dark:bg-[#2a3942] text-black dark:text-white rounded-lg border border-gray-300 dark:border-gray-600 outline-none"
+                        className="w-full p-3 bg-app-light dark:bg-app-dark text-black dark:text-white rounded-xl border border-transparent focus:border-primary outline-none transition-all"
                     >
                         <option value={YOU}>You</option>
                         <option value={AI}>Model</option>
@@ -73,7 +73,7 @@ const InitialMessages = () => {
                         value={msg.message}
                         onChange={(e) => handleChange(e.target.value, idx, "message")}
                         placeholder="Enter a message that will be sent as the first message in any new chat..."
-                        className="w-full p-3 bg-[#f0f2f5] dark:bg-[#2a3942] text-black dark:text-white rounded-lg border border-gray-300 dark:border-gray-600 outline-none"
+                        className="w-full p-3 bg-app-light dark:bg-app-dark text-black dark:text-white rounded-xl border border-transparent focus:border-primary outline-none transition-all"
                     />
                     {initialMessages.length > 1 && (
                         <button
@@ -87,7 +87,7 @@ const InitialMessages = () => {
             ))}
             <button
                 onClick={handleAddMessage}
-                className="mx-auto mt-4 flex items-center gap-2 bg-[#008069] text-white px-4 py-2 rounded-full shadow-md hover:bg-[#026e58] transition w-max"
+                className="mx-auto mt-4 flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-full shadow-md hover:bg-primary-hover transition w-max"
             >
                 <FaPlus /> Add Message
             </button>

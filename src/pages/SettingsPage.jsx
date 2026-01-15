@@ -85,20 +85,20 @@ const SettingsPage = () => {
   };
 
   return (
-    <div className="w-full h-screen flex flex-col p-6 bg-[#eae6df] dark:bg-[#0d1418] overflow-auto">
+    <div className="w-full h-screen flex flex-col p-6 bg-app-light dark:bg-app-dark overflow-auto">
       {/* Back Button */}
       <button
         onClick={goBackOrHome}
-        className="mb-4 flex items-center gap-2 bg-[#008069] text-white px-4 py-2 rounded-full shadow-md hover:bg-[#026e58] transition w-max"
+        className="mb-4 flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-full shadow-md hover:bg-primary-hover transition w-max"
       >
         <FaArrowLeft size={16} />
         <span>Back</span>
       </button>
 
-      <h2 className="text-2xl font-bold mb-4 text-center text-[#008069] dark:text-[#25D366]">
+      <h2 className="text-2xl font-bold mb-4 text-center text-primary dark:text-white">
         Settings
       </h2>
-      <p className="text-center text-[#008069] dark:text-[#25D366] mb-4 text-sm">
+      <p className="text-center text-primary dark:text-white mb-4 text-sm">
         Changes are saved automatically.
       </p>
 
@@ -106,7 +106,7 @@ const SettingsPage = () => {
       {error && <p className="text-red-500 text-center mb-3">{error}</p>}
       {success && <p className="text-green-500 text-center mb-3">{success}</p>}
 
-      <div className="w-full max-w-3xl mx-auto p-6 bg-white dark:bg-[#202c33] shadow-lg rounded-lg mb-20">
+      <div className="w-full max-w-3xl mx-auto p-6 bg-panel-light dark:bg-panel-dark shadow-lg rounded-2xl mb-20">
         {/* AI Model Selection */}
         <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
           <strong>Using Model:</strong> {customModel.trim() || selectedModel}
@@ -119,7 +119,7 @@ const SettingsPage = () => {
           placeholder="Enter custom model name"
           value={customModel}
           onChange={(e) => setCustomModel(e.target.value)}
-          className="w-full p-3 bg-[#f0f2f5] dark:bg-[#2a3942] text-black dark:text-white rounded-lg border border-gray-300 dark:border-gray-600 outline-none mb-4"
+          className="w-full p-3 bg-app-light dark:bg-app-dark text-black dark:text-white rounded-xl border border-transparent focus:border-primary outline-none mb-4 transition-all"
         />
 
         <label className="block font-semibold mb-2 text-black dark:text-white">
@@ -128,7 +128,7 @@ const SettingsPage = () => {
         <select
           value={selectedModel}
           onChange={(e) => setSelectedModel(e.target.value)}
-          className="w-full p-3 bg-[#f0f2f5] dark:bg-[#2a3942] text-black dark:text-white rounded-lg border border-gray-300 dark:border-gray-600 outline-none mb-4"
+          className="w-full p-3 bg-app-light dark:bg-app-dark text-black dark:text-white rounded-xl border border-transparent focus:border-primary outline-none mb-4 transition-all"
         >
           {models.map((model) => (
             <option key={model} value={model}>
@@ -150,7 +150,7 @@ const SettingsPage = () => {
           type="number"
           value={maxOutputTokens}
           onChange={(e) => setMaxOutputTokens(Number(e.target.value))}
-          className="w-full p-3 bg-[#f0f2f5] dark:bg-[#2a3942] text-black dark:text-white rounded-lg border border-gray-300 dark:border-gray-600 outline-none mb-4"
+          className="w-full p-3 bg-app-light dark:bg-app-dark text-black dark:text-white rounded-xl border border-transparent focus:border-primary outline-none mb-4 transition-all"
           min="1"
         />
 
@@ -162,7 +162,7 @@ const SettingsPage = () => {
           type="number"
           value={maxChatLength}
           onChange={(e) => setMaxChatLength(Number(e.target.value))}
-          className="w-full p-3 bg-[#f0f2f5] dark:bg-[#2a3942] text-black dark:text-white rounded-lg border border-gray-300 dark:border-gray-600 outline-none mb-4"
+          className="w-full p-3 bg-app-light dark:bg-app-dark text-black dark:text-white rounded-xl border border-transparent focus:border-primary outline-none mb-4 transition-all"
           min="1"
         />
 
@@ -193,7 +193,7 @@ const SettingsPage = () => {
             <select
               value={safetySettings[category]}
               onChange={(e) => handleSafetyChange(category, e.target.value)}
-              className="w-full mb-2 p-2 bg-[#f0f2f5] dark:bg-[#2a3942] text-black dark:text-white rounded-lg border border-gray-300 dark:border-gray-600 outline-none"
+              className="w-full mb-2 p-2 bg-app-light dark:bg-app-dark text-black dark:text-white rounded-xl border border-transparent focus:border-primary outline-none transition-all"
             >
               {harmThresholds.map(({ label, value }) => (
                 <option key={value} value={value}>

@@ -79,45 +79,45 @@ const CharacterPage = () => {
   };
 
   return (
-    <div className="w-full h-screen flex flex-col p-6 bg-[#eae6df] dark:bg-[#0d1418] overflow-auto">
+    <div className="w-full h-screen flex flex-col p-6 bg-app-light dark:bg-app-dark overflow-auto">
       {/* Back Button */}
       <button
         onClick={goBackOrHome}
-        className="mb-4 flex items-center gap-2 bg-[#008069] text-white px-4 py-2 rounded-full shadow-md hover:bg-[#026e58] transition w-max"
+        className="mb-4 flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-full shadow-md hover:bg-primary-hover transition w-max"
       >
         <FaArrowLeft size={16} />
         <span>Back</span>
       </button>
 
-      <h2 className="text-2xl font-bold mb-4 text-center text-[#008069] dark:text-[#25D366]">
+      <h2 className="text-2xl font-bold mb-4 text-center text-primary dark:text-white">
         {editCharacter ? "Edit Character" : "Create a Character"}
       </h2>
 
       {/* Character Form */}
-      <div className="w-full max-w-3xl mx-auto p-5 bg-white dark:bg-[#202c33] shadow-lg rounded-lg">
+      <div className="w-full max-w-3xl mx-auto p-5 bg-panel-light dark:bg-panel-dark shadow-lg rounded-2xl">
         <input
           type="text"
           placeholder="Character Name"
           value={name}
           onChange={(e) => setName(e.target.value)}
-          className="w-full p-3 bg-[#f0f2f5] dark:bg-[#2a3942] text-black dark:text-white rounded-lg border border-gray-300 dark:border-gray-600 outline-none mb-3"
+          className="w-full p-3 bg-app-light dark:bg-app-dark text-black dark:text-white rounded-xl border border-transparent focus:border-primary outline-none mb-3"
         />
         <textarea
           placeholder="Description (Optional)"
           value={description}
           onChange={(e) => setDescription(e.target.value)}
-          className="w-full p-3 bg-[#f0f2f5] dark:bg-[#2a3942] text-black dark:text-white rounded-lg border border-gray-300 dark:border-gray-600 outline-none mb-3"
+          className="w-full p-3 bg-app-light dark:bg-app-dark text-black dark:text-white rounded-xl border border-transparent focus:border-primary outline-none mb-3"
         />
         <textarea
           placeholder="Character Prompt (Personality, Style, etc.)"
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
-          className="w-full p-3 bg-[#f0f2f5] dark:bg-[#2a3942] text-black dark:text-white rounded-lg border border-gray-300 dark:border-gray-600 outline-none mb-3"
+          className="w-full p-3 bg-app-light dark:bg-app-dark text-black dark:text-white rounded-xl border border-transparent focus:border-primary outline-none mb-3"
         />
         <div className="flex gap-3">
           <button
             onClick={editCharacter ? handleSaveEdit : handleCreateCharacter}
-            className="flex-1 bg-[#25D366] text-white px-4 py-2 rounded-full shadow-md hover:bg-[#1db954] transition"
+            className="flex-1 bg-primary text-white px-4 py-2 rounded-full shadow-md hover:bg-primary-hover transition"
             disabled={loading}
           >
             {loading ? "Saving..." : editCharacter ? "Save Changes" : "Create Character"}
@@ -134,7 +134,7 @@ const CharacterPage = () => {
       </div>
 
       {/* Saved Characters */}
-      <h3 className="text-xl font-bold mt-6 text-center text-[#008069] dark:text-[#25D366]">
+      <h3 className="text-xl font-bold mt-6 text-center text-primary dark:text-white">
         Saved Characters
       </h3>
       <div className="w-full max-w-3xl mx-auto mt-4 mb-20">
@@ -146,7 +146,7 @@ const CharacterPage = () => {
           characters.map((char) => (
             <div
               key={char.id}
-              className="p-4 border border-gray-300 dark:border-gray-600 mb-3 rounded-lg flex justify-between items-center bg-white dark:bg-[#202c33] shadow"
+              className="p-4 border border-gray-200 dark:border-gray-800 mb-3 rounded-xl flex justify-between items-center bg-panel-light dark:bg-panel-dark shadow-sm"
             >
               <div>
                 <h4 className="font-semibold text-lg text-black dark:text-white">{char.name}</h4>
