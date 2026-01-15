@@ -64,7 +64,7 @@ export const generateAIResponse = createAsyncThunk(
     try {
       const apiKey = getAPIKey();
       if (!apiKey) throw new Error("API key is missing. Please log in.");
-      const maxHistoryLength = localStorage.getItem(LS_MAX_CHAT_LENGTH) || 0;
+      const maxHistoryLength = parseInt(localStorage.getItem(LS_MAX_CHAT_LENGTH) || "0", 10);
       const selectedModel = getStoredValue(LS_AI_MODEL, DEFAULT_AI_MODEL);
       const maxTokens = getStoredValue(LS_MAX_OUTPUT_TOKENS, DEFAULT_OUTPUT_TOKENS, Number);
       const temperature = getStoredValue(LS_TEMPRATURE, DEFAULT_TEMPRATURE, parseFloat);
@@ -93,16 +93,28 @@ export const generateAIResponse = createAsyncThunk(
       if (!validHistory.length || validHistory[validHistory.length - 1].role !== "user") {
         throw new Error("Invalid chat history: Must end with a user message.");
       }
-      if(maxHistoryLength) {
+      
+      if (maxHistoryLength > 0) {
         const initialMessages = getInitialMessages();
         const initialMessagesLength = initialMessages.length || 0;
         const maxLength = validHistory.length - maxHistoryLength;
-        if(maxLength > 0) {
-          validHistory.splice(initialMessagesLength + 1, maxLength)
+        if (maxLength > 0) {
+           // Keep the first message (assuming context) and remove older messages from the middle
+           // But ensure we don't remove the start index if it's beyond the available bounds
+           const startIndex = initialMessagesLength > 0 ? initialMessagesLength : 1;
+           if (startIndex < validHistory.length) {
+              validHistory.splice(startIndex, maxLength);
+           }
         }
       }
+
+      // The history passed to startChat should not contain the current prompt message,
+      // as it will be sent via sendMessageStream.
+      // validHistory currently ends with the user's prompt.
+      const historyForSdk = validHistory.slice(0, -1);
+
       // Start a chat session
-      const chat = await model.startChat({ history: validHistory });
+      const chat = await model.startChat({ history: historyForSdk });
       const stream = await chat.sendMessageStream(prompt);
       
       let response = "";
