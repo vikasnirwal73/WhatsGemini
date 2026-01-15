@@ -1,13 +1,13 @@
 {
   "files": {
-    "main.css": "/WhatsGemini/static/css/main.d096a654.css",
-    "main.js": "/WhatsGemini/static/js/main.a0126254.js",
+    "main.css": "/WhatsGemini/static/css/main.e1eaa1e1.css",
+    "main.js": "/WhatsGemini/static/js/main.c8648d68.js",
     "index.html": "/WhatsGemini/index.html",
-    "main.d096a654.css.map": "/WhatsGemini/static/css/main.d096a654.css.map",
-    "main.a0126254.js.map": "/WhatsGemini/static/js/main.a0126254.js.map"
+    "main.e1eaa1e1.css.map": "/WhatsGemini/static/css/main.e1eaa1e1.css.map",
+    "main.c8648d68.js.map": "/WhatsGemini/static/js/main.c8648d68.js.map"
   },
   "entrypoints": [
-    "static/css/main.d096a654.css",
-    "static/js/main.a0126254.js"
+    "static/css/main.e1eaa1e1.css",
+    "static/js/main.c8648d68.js"
   ]
 }
