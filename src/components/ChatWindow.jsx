@@ -1,4 +1,6 @@
 import React, { useRef, useEffect, useCallback, useMemo, useState } from "react";
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { FaRedo } from "react-icons/fa";
 import { AI, YOU } from "../utils/constants";
 
@@ -55,14 +57,6 @@ const ChatWindow = ({ messages = [], onRegenerate, aiLoading }) => {
     [onRegenerate, startIndex]
   );
 
-  const italicize = (str) => {
-  return str
-    .replace(/\*(.*?)\*/g, '<em class="text-gray-500 dark:text-gray-400">$1</em>')
-    .replace(/\((.*?)\)/g, '<em class="text-gray-500 dark:text-gray-400">$1</em>');
-};
-
-  
-
   return (
     <div className="flex-1 p-4 overflow-auto bg-app-light dark:bg-app-dark relative z-1">
       {filteredMessages.length === 0 ? (
@@ -77,7 +71,38 @@ const ChatWindow = ({ messages = [], onRegenerate, aiLoading }) => {
                   : "pr-8 bg-bubble-received-light dark:bg-bubble-received-dark text-gray-900 dark:text-white"
               }`}
             >
-              <p dangerouslySetInnerHTML={{__html: italicize(msg.txt)}}></p>
+              <div className="markdown-content text-left break-words">
+                <ReactMarkdown 
+                  remarkPlugins={[remarkGfm]}
+                  components={{
+                    p: ({node, ...props}) => <p className="mb-2 last:mb-0" {...props} />,
+                    em: ({node, ...props}) => <em className={`italic ${msg.role === YOU ? 'text-white/80' : 'text-gray-500 dark:text-gray-400'}`} {...props} />,
+                    a: ({node, ...props}) => <a className={`${msg.role === YOU ? 'text-white underline' : 'text-blue-500 hover:underline'}`} target="_blank" rel="noopener noreferrer" {...props} />,
+                    ul: ({node, ...props}) => <ul className="list-disc ml-5 mb-2" {...props} />,
+                    ol: ({node, ...props}) => <ol className="list-decimal ml-5 mb-2" {...props} />,
+                    li: ({node, ...props}) => <li className="mb-1" {...props} />,
+                    code: ({node, inline, className, children, ...props}) => {
+                      return inline ? (
+                        <code className="bg-black/10 dark:bg-white/10 rounded px-1 py-0.5 text-sm" {...props}>
+                          {children}
+                        </code>
+                      ) : (
+                        <pre className="bg-black/10 dark:bg-white/10 p-3 rounded-md overflow-x-auto my-2 text-sm">
+                          <code className={className} {...props}>
+                            {children}
+                          </code>
+                        </pre>
+                      );
+                    },
+                    blockquote: ({node, ...props}) => <blockquote className={`border-l-4 ${msg.role === YOU ? 'border-white/50' : 'border-gray-300'} pl-4 py-1 my-2 italic`} {...props} />,
+                    table: ({node, ...props}) => <div className="overflow-x-auto my-2"><table className={`min-w-full divide-y ${msg.role === YOU ? 'divide-white/20 border-white/20' : 'divide-gray-200 dark:divide-gray-700 border-gray-200 dark:border-gray-700'} border`} {...props} /></div>,
+                    th: ({node, ...props}) => <th className={`px-3 py-2 text-left text-xs font-medium uppercase tracking-wider border-b ${msg.role === YOU ? 'bg-white/10 border-white/20 text-white' : 'bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-300'}`} {...props} />,
+                    td: ({node, ...props}) => <td className={`px-3 py-2 whitespace-nowrap text-sm border-b ${msg.role === YOU ? 'border-white/20 text-white' : 'border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300'}`} {...props} />,
+                  }}
+                >
+                  {msg.txt}
+                </ReactMarkdown>
+              </div>
               {msg.role === AI && (
                 <button
                   onClick={() => handleRegenerate(i)}
