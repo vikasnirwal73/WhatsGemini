@@ -59,7 +59,7 @@ const InitialMessages = () => {
             {initialMessages.map((msg, idx) => (
                 <div
                     key={idx}
-                    className="p-4 mb-5 shadow-sm rounded-2xl bg-panel-light dark:bg-panel-dark border border-gray-200 dark:border-gray-800 flex flex-col gap-4 relative"
+                    className="mb-5 shadow-sm rounded-2xl bg-panel-light dark:bg-panel-dark border border-gray-200 dark:border-gray-800 flex flex-col gap-4 relative"
                 >
                     <select
                         value={msg.role}

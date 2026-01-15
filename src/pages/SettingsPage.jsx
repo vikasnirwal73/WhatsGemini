@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { FaArrowLeft, FaDownload, FaUpload } from "react-icons/fa";
 import InitialMessages from "../components/InitialMessages";
+import { ToastContainer } from "../components/Toast";
 import { getApiKey } from "../utils/apiKeyManager";
 import {
   DEFAULT_CHAT_LENGTH,
@@ -21,8 +22,7 @@ import {
 const SettingsPage = () => {
   const navigate = useNavigate();
   const [initialMessagesKey, setInitialMessagesKey] = useState(0);
-  const [error, setError] = useState(null);
-  const [success, setSuccess] = useState(null);
+  const [toasts, setToasts] = useState([]);
   const [customModel, setCustomModel] = useState(() => {
     const stored = localStorage.getItem(LS_AI_MODEL);
     return stored && !models.includes(stored) ? stored : "";
@@ -88,22 +88,64 @@ const SettingsPage = () => {
     getStoredValue(LS_SAFETY_SETTINGS, DEFAULT_SAFETY_SETTINGS)
   );
 
+  // Roast messages for when settings are saved
+  const roastMessages = useMemo(() => [
+    "Fine, I saved your precious settings. Happy now?",
+    "Settings saved. You're welcome, your majesty.",
+    "Wow, another setting change. Groundbreaking.",
+    "Saved! Not like I had anything better to do.",
+    "Settings updated. Try not to break anything.",
+    "Done. You sure do love clicking things.",
+    "Saved successfully. I'm so proud of you.",
+    "Changes saved. You're really keeping me busy today.",
+    "Got it. Any more demands, your highness?",
+    "Saved! That's definitely going to fix all your problems.",
+  ], []);
+
+  const saveTimeoutRef = useRef(null);
+
+  // Add a toast notification
+  const addToast = useCallback((message, type = "success", duration = 5000) => {
+    const id = Date.now();
+    setToasts((prev) => [...prev, { id, message, type, duration }]);
+  }, []);
+
+  // Remove a toast by id
+  const removeToast = useCallback((id) => {
+    setToasts((prev) => prev.filter((toast) => toast.id !== id));
+  }, []);
+
   useEffect(() => {
-    try {
-      const modelToStore = customModel.trim() || selectedModel;
-      localStorage.setItem(LS_AI_MODEL, modelToStore);
-      localStorage.setItem(LS_MAX_OUTPUT_TOKENS, JSON.stringify(maxOutputTokens));
-      localStorage.setItem(LS_TEMPRATURE, JSON.stringify(temperature));
-      localStorage.setItem(LS_SAFETY_SETTINGS, JSON.stringify(safetySettings));
-      localStorage.setItem(LS_MAX_CHAT_LENGTH, JSON.stringify(maxChatLength));
-      setSuccess("Settings saved successfully.");
-    } catch (err) {
-      console.error("Error saving settings:", err);
-      setError("Failed to save settings. Please try again.");
-    } finally {
-      setTimeout(() => setSuccess(null), 2000);
+    // Clear any existing timeout
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
     }
-  }, [customModel, selectedModel, maxOutputTokens, temperature, safetySettings, maxChatLength]);
+
+    // Debounce the save operation
+    saveTimeoutRef.current = setTimeout(() => {
+      try {
+        const modelToStore = customModel.trim() || selectedModel;
+        localStorage.setItem(LS_AI_MODEL, modelToStore);
+        localStorage.setItem(LS_MAX_OUTPUT_TOKENS, JSON.stringify(maxOutputTokens));
+        localStorage.setItem(LS_TEMPRATURE, JSON.stringify(temperature));
+        localStorage.setItem(LS_SAFETY_SETTINGS, JSON.stringify(safetySettings));
+        localStorage.setItem(LS_MAX_CHAT_LENGTH, JSON.stringify(maxChatLength));
+        
+        // Pick a random roast message
+        const randomRoast = roastMessages[Math.floor(Math.random() * roastMessages.length)];
+        addToast(randomRoast, "success");
+      } catch (err) {
+        console.error("Error saving settings:", err);
+        addToast("Failed to save settings. Please try again.", "error");
+      }
+    }, 1000); // 1 second debounce
+
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+    };
+  }, [customModel, selectedModel, maxOutputTokens, temperature, safetySettings, maxChatLength, roastMessages, addToast]);
   
   const handleSafetyChange = useCallback((category, value) => {
     setSafetySettings((prev) => ({ ...prev, [category]: value }));
@@ -165,10 +207,10 @@ const SettingsPage = () => {
             setInitialMessagesKey(prev => prev + 1);
         }
 
-        setSuccess("Settings imported successfully!");
+        addToast("Settings imported successfully!", "success");
       } catch (err) {
         console.error("Import error:", err);
-        setError("Failed to import settings. Invalid JSON file.");
+        addToast("Failed to import settings. Invalid JSON file.", "error");
       }
     };
     reader.readAsText(file);
@@ -209,12 +251,11 @@ const SettingsPage = () => {
         Changes are saved automatically.
       </p>
 
-      {/* Display success or error message */}
-      {error && <p className="text-red-500 text-center mb-3">{error}</p>}
-      {success && <p className="text-green-500 text-center mb-3">{success}</p>}
+      {/* Toast Notifications */}
+      <ToastContainer toasts={toasts} removeToast={removeToast} />
 
       <div className="w-full max-w-3xl mx-auto p-6 bg-panel-light dark:bg-panel-dark shadow-lg rounded-2xl mb-20">
-            <div className="flex gap-4 border-b border-gray-200 dark:border-gray-800 pb-6 mb-6">
+            <div className="flex flex-col sm:flex-row gap-4 border-b border-gray-200 dark:border-gray-800 pb-6 mb-6">
                  <button
                     onClick={handleExportSettings}
                     className="flex-1 bg-primary text-white py-2 px-4 rounded-lg hover:bg-primary-hover transition flex items-center justify-center gap-2"
