@@ -1,3 +1,32 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Fix for mobile keyboard hiding input */
+html, body, #root {
+  height: 100%;
+  overflow: hidden;
+}
+
+/* Use dynamic viewport height for better mobile keyboard support */
+.h-dvh {
+  height: 100vh; /* fallback */
+  height: 100dvh;
+}
+
+.h-dvh-minus-header {
+  height: calc(100vh - 58px); /* fallback */
+  height: calc(100dvh - 58px);
+}
+
+/* Ensure input stays visible when keyboard is open */
+@supports (height: 100dvh) {
+  .chat-container {
+    height: calc(100dvh - 58px);
+  }
+}
+
+/* Safe area padding for notched devices */
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}

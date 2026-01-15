@@ -1,25 +1,39 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useRef } from "react";
 import { FaPaperPlane } from "react-icons/fa";
 
-const MessageInput = ({ onSend }) => {
+const MessageInput = ({ onSend, disabled = false }) => {
   const [text, setText] = useState("");
+  const inputRef = useRef(null);
 
   // Memoized function to handle message sending
   const handleSend = useCallback(() => {
+    if (disabled) return;
     const trimmedText = text.trim();
     if (!trimmedText) return;
 
     onSend(trimmedText);
     setText("");
-  }, [text, onSend]);
+  }, [text, onSend, disabled]);
+
+  // Scroll input into view when focused (helps with mobile keyboards)
+  const handleFocus = useCallback(() => {
+    setTimeout(() => {
+      inputRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 300);
+  }, []);
+
+  const canSend = text.trim() && !disabled;
 
   return (
-    <div className="p-3 flex items-center bg-panel-light dark:bg-panel-dark border-t border-gray-200 dark:border-gray-800">
+    <div className="p-3 pb-safe flex items-center bg-panel-light dark:bg-panel-dark border-t border-gray-200 dark:border-gray-800 flex-shrink-0">
       <input
+        ref={inputRef}
         value={text}
         onChange={(e) => setText(e.target.value)}
-        placeholder="Type a message..."
-        className="flex-1 mr-3 px-4 py-3 bg-app-light dark:bg-app-dark text-black dark:text-white rounded-full border border-transparent focus:border-primary outline-none text-base transition-colors"
+        placeholder={disabled ? "Waiting for response..." : "Type a message..."}
+        className="flex-1 mr-3 px-4 py-3 bg-app-light dark:bg-app-dark text-black dark:text-white rounded-full border border-transparent focus:border-primary outline-none text-base transition-colors disabled:opacity-50"
+        disabled={disabled}
+        onFocus={handleFocus}
         onKeyDown={(e) => {
           if (e.key === "Enter" && !e.shiftKey) {
             e.preventDefault();
@@ -27,20 +41,21 @@ const MessageInput = ({ onSend }) => {
           }
         }}
         aria-label="Message input"
+        aria-busy={disabled}
       />
 
       <button
         onClick={handleSend}
         className={`p-3 rounded-full transition shadow-md ${
-          text.trim()
+          canSend
             ? "bg-primary hover:bg-primary-hover text-white transform hover:scale-105"
             : "bg-gray-200 dark:bg-gray-800 text-gray-400 cursor-not-allowed"
         }`}
-        disabled={!text.trim()}
+        disabled={!canSend}
         title="Send Message"
         aria-label="Send Message"
       >
-        <FaPaperPlane size={16} className={text.trim() ? "ml-0.5" : ""} />
+        <FaPaperPlane size={16} className={canSend ? "ml-0.5" : ""} />
       </button>
     </div>
   );

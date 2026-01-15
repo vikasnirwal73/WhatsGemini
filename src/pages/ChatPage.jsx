@@ -85,12 +85,43 @@ const ChatPage = () => {
     }
   };
 
+  const handleEditMessage = async (index, newText) => {
+    if (!newText.trim() || !chatIdNum) return;
+
+    setError(null);
+
+    try {
+      // Truncate messages up to (but not including) the edited message
+      const truncatedMessages = messages.slice(0, index);
+      await dispatch(updateMessages({ chatId: chatIdNum, newMessages: truncatedMessages }));
+
+      // Add the edited message
+      const resultAction = await dispatch(addMessage({ chatId: chatIdNum, role: YOU, text: newText }));
+      const updatedMessages = resultAction.payload || [];
+
+      // Generate new AI response
+      const chatHistory = createChatHistory(updatedMessages);
+      const aiResponse = await dispatch(generateAIResponse({ prompt: newText, history: chatHistory }));
+
+      if (aiResponse.payload) {
+        await dispatch(addMessage({ chatId: chatIdNum, role: AI, text: aiResponse.payload }));
+      }
+
+      dispatch(fetchChats());
+    } catch (err) {
+      console.error("Error editing message:", err);
+      setError("Failed to edit message. Please try again.");
+    }
+  };
+
   const handleRegenerate = async (index) => {
     if (index < 0 || index >= messages.length || !chatIdNum) return;
 
+    setError(null);
+
     try {
       const updatedMessages = messages.slice(0, index);
-      dispatch(updateMessages({ chatId: chatIdNum, newMessages: updatedMessages }));
+      await dispatch(updateMessages({ chatId: chatIdNum, newMessages: updatedMessages }));
 
       if (!updatedMessages.length || updatedMessages[updatedMessages.length - 1].role !== YOU) {
         console.warn("Cannot regenerate without a user message.");
@@ -141,7 +172,7 @@ const ChatPage = () => {
   
 
   return (
-    <div className="flex flex-col w-full h-[calc(100vh-58px)] bg-app-light dark:bg-app-dark">
+    <div className="flex flex-col w-full h-dvh-minus-header chat-container bg-app-light dark:bg-app-dark">
       {/* Chat Header */}
       <ChatHeader character={character} onBack={goBackOrHome} onExport={handleExport} />
 
@@ -150,7 +181,7 @@ const ChatPage = () => {
 
       {/* Chat Messages */}
       <div className="flex-1 overflow-auto">
-        <ChatWindow messages={messages} onRegenerate={handleRegenerate} aiLoading={aiLoading} />
+        <ChatWindow messages={messages} onRegenerate={handleRegenerate} onEdit={handleEditMessage} aiLoading={aiLoading} />
       </div>
 
       {/* Message Input */}
