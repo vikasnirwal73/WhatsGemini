@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useDispatch } from "react-redux";
 import { FaArrowLeft, FaDownload, FaUpload } from "react-icons/fa";
 import InitialMessages from "../components/InitialMessages";
-import { importChat } from "../features/chatSlice";
+import { getApiKey } from "../utils/apiKeyManager";
 import {
   DEFAULT_CHAT_LENGTH,
   DEFAULT_OUTPUT_TOKENS,
@@ -29,6 +29,42 @@ const SettingsPage = () => {
     const stored = localStorage.getItem(LS_AI_MODEL);
     return stored && !models.includes(stored) ? stored : "";
   });
+
+  const [modelList, setModelList] = useState(models.map(m => ({ value: m, label: m })));
+
+  useEffect(() => {
+    const fetchModels = async () => {
+      const apiKey = getApiKey();
+      if (!apiKey) return;
+
+      try {
+        const response = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`
+        );
+        if (!response.ok) throw new Error("Failed to fetch models");
+        const data = await response.json();
+        
+        const validModels = data.models
+          .filter(model => 
+            model.supportedGenerationMethods && 
+            model.supportedGenerationMethods.includes("generateContent")
+          )
+          .map(model => ({
+            value: model.name.replace("models/", ""),
+            label: model.displayName || model.name.replace("models/", "")
+          }));
+
+        if (validModels.length > 0) {
+          setModelList(validModels);
+        }
+      } catch (error) {
+        console.error("Error fetching models:", error);
+      }
+    };
+
+    fetchModels();
+  }, []);
+
   const getStoredValue = (key, defaultValue) => {
     try {
       return JSON.parse(localStorage.getItem(key)) ?? defaultValue;
@@ -225,9 +261,9 @@ const SettingsPage = () => {
           onChange={(e) => setSelectedModel(e.target.value)}
           className="w-full p-3 bg-app-light dark:bg-app-dark text-black dark:text-white rounded-xl border border-transparent focus:border-primary outline-none mb-4 transition-all"
         >
-          {models.map((model) => (
-            <option key={model} value={model}>
-              {model}
+          {modelList.map((model) => (
+            <option key={model.value} value={model.value}>
+              {model.label}
             </option>
           ))}
         </select>
