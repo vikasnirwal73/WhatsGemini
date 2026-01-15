@@ -26,7 +26,7 @@ const MessageMenu = ({ isOpen, onClose, children, isUserMessage }) => {
   return (
     <div
       ref={menuRef}
-      className={`absolute top-8 ${isUserMessage ? 'right-0' : 'left-0'} z-50 min-w-[140px] py-1 rounded-lg shadow-lg border
+      className={`absolute top-8 right-0 z-50 min-w-[140px] py-1 rounded-lg shadow-lg border
         bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700`}
     >
       {children}
@@ -143,7 +143,7 @@ const ChatWindow = ({ messages = [], onRegenerate, onEdit, aiLoading }) => {
   }, [closeMenu]);
 
   return (
-    <div className="flex-1 p-4 overflow-auto bg-app-light dark:bg-app-dark relative z-1 h-full">
+    <div className="flex-1 p-4 overflow-auto bg-app-light dark:bg-app-dark relative z-1 h-full max-w-full">
       {filteredMessages.length === 0 ? (
         <p className="text-gray-500 dark:text-gray-400 text-center">No messages yet.</p>
       ) : (
