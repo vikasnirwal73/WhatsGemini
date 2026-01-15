@@ -58,7 +58,7 @@ const ChatWindow = ({ messages = [], onRegenerate, aiLoading }) => {
   );
 
   return (
-    <div className="flex-1 p-4 overflow-auto bg-app-light dark:bg-app-dark relative z-1">
+    <div className="flex-1 p-4 overflow-auto bg-app-light dark:bg-app-dark relative z-1 h-full">
       {filteredMessages.length === 0 ? (
         <p className="text-gray-500 dark:text-gray-400 text-center">No messages yet.</p>
       ) : (
@@ -77,7 +77,7 @@ const ChatWindow = ({ messages = [], onRegenerate, aiLoading }) => {
                   components={{
                     p: ({node, ...props}) => <p className="mb-2 last:mb-0" {...props} />,
                     em: ({node, ...props}) => <em className={`italic ${msg.role === YOU ? 'text-white/80' : 'text-gray-500 dark:text-gray-400'}`} {...props} />,
-                    a: ({node, ...props}) => <a className={`${msg.role === YOU ? 'text-white underline' : 'text-blue-500 hover:underline'}`} target="_blank" rel="noopener noreferrer" {...props} />,
+                    a: ({node, ...props}) => <a className={`${msg.role === YOU ? 'text-white underline' : 'text-blue-500 hover:underline'}`} target="_blank" rel="noopener noreferrer" {...props} aria-hidden="true" />,
                     ul: ({node, ...props}) => <ul className="list-disc ml-5 mb-2" {...props} />,
                     ol: ({node, ...props}) => <ol className="list-decimal ml-5 mb-2" {...props} />,
                     li: ({node, ...props}) => <li className="mb-1" {...props} />,
@@ -117,7 +117,7 @@ const ChatWindow = ({ messages = [], onRegenerate, aiLoading }) => {
         ))
       )}
       {aiLoading && (
-        <div className="flex justify-start absolute bottom-1">
+        <div className="flex justify-start">
           <div className="text-sm text-gray dark:text-white italic">typing{typingDots}</div>
         </div>
       )}

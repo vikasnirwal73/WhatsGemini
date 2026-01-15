@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { useDispatch } from "react-redux";
 import { FaArrowLeft, FaDownload, FaUpload } from "react-icons/fa";
 import InitialMessages from "../components/InitialMessages";
 import { getApiKey } from "../utils/apiKeyManager";
@@ -22,7 +21,6 @@ import {
 const SettingsPage = () => {
   const navigate = useNavigate();
   const [initialMessagesKey, setInitialMessagesKey] = useState(0);
-  const dispatch = useDispatch();
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
   const [customModel, setCustomModel] = useState(() => {

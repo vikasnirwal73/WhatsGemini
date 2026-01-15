@@ -19,7 +19,7 @@ const MessageInput = ({ onSend }) => {
         value={text}
         onChange={(e) => setText(e.target.value)}
         placeholder="Type a message..."
-        className="flex-1 mr-3 px-4 py-3 bg-app-light dark:bg-app-dark text-black dark:text-white rounded-full border border-transparent focus:border-primary outline-none text-lg transition-colors"
+        className="flex-1 mr-3 px-4 py-3 bg-app-light dark:bg-app-dark text-black dark:text-white rounded-full border border-transparent focus:border-primary outline-none text-base transition-colors"
         onKeyDown={(e) => {
           if (e.key === "Enter" && !e.shiftKey) {
             e.preventDefault();
