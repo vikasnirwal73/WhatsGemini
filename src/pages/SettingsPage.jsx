@@ -141,36 +141,7 @@ const SettingsPage = () => {
     event.target.value = null; 
   };
 
-  const handleFileChange = async (event) => {
-    const file = event.target.files[0];
-    if (!file) return;
 
-    const reader = new FileReader();
-    reader.onload = async (e) => {
-      try {
-        const chatData = JSON.parse(e.target.result);
-        const result = await dispatch(importChat(chatData)).unwrap();
-        if (result && result.id) {
-          setSuccess("Chat imported successfully!");
-          setTimeout(() => setSuccess(null), 2000);
-          // Optional: Navigate to chat if you want, but explicitly asked to move button here, so maybe stay on settings?
-          // The previous behavior was to navigate. I will keep it as staying on settings or maybe navigate.
-          // The user said "restore the chat on another browser", which implies importing. 
-          // Usually when importing a chat, you want to see it. 
-          // However, context is Settings Page. 
-          // I'll show success message. If they want to see, they can go back. 
-          // Actually, let's navigate to it, it is a nicer UX.
-          navigate(`/chat/${result.id}`); 
-        }
-      } catch (error) {
-        console.error("Failed to import chat:", error);
-        setError("Failed to import chat. Invalid file.");
-        setTimeout(() => setError(null), 3000);
-      }
-    };
-    reader.readAsText(file);
-    event.target.value = null;
-  };
 
   const safetyCategories = useMemo(
     () => ["harassment", "hate_speech", "sexual", "dangerous"],
