@@ -1,24 +1,30 @@
 import React, { useRef, useEffect, useCallback, useMemo, useState } from "react";
 import { FaRedo } from "react-icons/fa";
-import { AI, LS_INITIAL_MESSAGES, YOU } from "../utils/constants";
+import { AI, YOU } from "../utils/constants";
 
 const ChatWindow = ({ messages = [], onRegenerate, aiLoading }) => {
   const chatEndRef = useRef(null);
   const [typingDots, setTypingDots] = useState(".");
-  // Safely retrieve saved initial messages
-  const getInitialMessages = () => {
-    try {
-      return JSON.parse(localStorage.getItem(LS_INITIAL_MESSAGES)) || [];
-    } catch (error) {
-      console.error("Error parsing initial messages from localStorage:", error);
-      return [];
-    }
-  };
-
-  const savedMessages = useMemo(() => getInitialMessages(), []);
-
+  
   // Determine the starting index for rendering messages
-  const startIndex = savedMessages.length > 0 ? savedMessages.length + 2 : 2;
+  const startIndex = useMemo(() => {
+    // Find the index of the character initialization prompt
+    const charPromptIndex = messages.findIndex(
+      (m) =>
+        m.role === YOU &&
+        m.txt &&
+        m.txt.startsWith("Role play as, Character Name:")
+    );
+
+    if (charPromptIndex !== -1) {
+      return charPromptIndex + 2;
+    }
+    
+    // Fallback: If no character prompt found, return 0 to show all messages
+    // This handles imported chats or chats without character context better than guessing
+    return 0;
+  }, [messages]);
+
   const filteredMessages = useMemo(() => messages.slice(startIndex) || [], [messages, startIndex]);
 
   // Scroll to the latest message
@@ -65,7 +71,7 @@ const ChatWindow = ({ messages = [], onRegenerate, aiLoading }) => {
         filteredMessages.map((msg, i) => (
           <div key={i} className={`flex ${msg.role === YOU ? "justify-end" : "justify-start"} mb-4`}>
             <div
-              className={`relative max-w-[90%] md:max-w-[75%] p-3 px-5 text-lg rounded-3xl shadow-sm ${
+              className={`relative max-w-[90%] md:max-w-[75%] p-3 px-5 text-base rounded shadow-md ${
                 msg.role === YOU
                   ? "bg-bubble-sent-light dark:bg-bubble-sent-dark text-white"
                   : "pr-8 bg-bubble-received-light dark:bg-bubble-received-dark text-gray-900 dark:text-white"
