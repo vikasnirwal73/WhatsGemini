@@ -37,7 +37,7 @@ module.exports = {
         },
       },
       borderRadius: {
-        'bubble': '1.5rem', // Extra rounded for pill shape
+        'bubble': '0.5rem', // Extra rounded for pill shape
       }
     },
   },

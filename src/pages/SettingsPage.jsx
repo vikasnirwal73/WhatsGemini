@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useDispatch } from "react-redux";
-import { FaArrowLeft, FaFileImport } from "react-icons/fa";
+import { FaArrowLeft, FaDownload, FaUpload } from "react-icons/fa";
 import InitialMessages from "../components/InitialMessages";
 import { importChat } from "../features/chatSlice";
 import {
@@ -11,6 +11,7 @@ import {
   DEFAULT_TEMPRATURE,
   harmThresholds,
   LS_AI_MODEL,
+  LS_INITIAL_MESSAGES,
   LS_MAX_CHAT_LENGTH,
   LS_MAX_OUTPUT_TOKENS,
   LS_SAFETY_SETTINGS,
@@ -20,8 +21,8 @@ import {
 
 const SettingsPage = () => {
   const navigate = useNavigate();
+  const [initialMessagesKey, setInitialMessagesKey] = useState(0);
   const dispatch = useDispatch();
-  const fileInputRef = useRef(null);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
   const [customModel, setCustomModel] = useState(() => {
@@ -73,6 +74,72 @@ const SettingsPage = () => {
   const handleSafetyChange = useCallback((category, value) => {
     setSafetySettings((prev) => ({ ...prev, [category]: value }));
   }, []);
+
+  const settingsFileInputRef = useRef(null);
+
+  const handleExportSettings = () => {
+    const settings = {
+      [LS_AI_MODEL]: customModel.trim() || selectedModel,
+      [LS_MAX_OUTPUT_TOKENS]: maxOutputTokens,
+      [LS_TEMPRATURE]: temperature,
+      [LS_SAFETY_SETTINGS]: safetySettings,
+      [LS_MAX_CHAT_LENGTH]: maxChatLength,
+      [LS_INITIAL_MESSAGES]: JSON.parse(localStorage.getItem(LS_INITIAL_MESSAGES) || "[]"),
+    };
+    
+    const jsonString = JSON.stringify(settings, null, 2);
+    const blob = new Blob([jsonString], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `whatsgemini_settings.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleImportSettingsClick = () => {
+    settingsFileInputRef.current.click();
+  };
+
+  const handleSettingsFileChange = (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const settings = JSON.parse(e.target.result);
+        
+        if (settings[LS_AI_MODEL]) {
+            const model = settings[LS_AI_MODEL];
+            if (models.includes(model)) {
+                setSelectedModel(model);
+                setCustomModel("");
+            } else {
+                 setCustomModel(model);
+            }
+        }
+        if (settings[LS_MAX_OUTPUT_TOKENS]) setMaxOutputTokens(settings[LS_MAX_OUTPUT_TOKENS]);
+        if (settings[LS_TEMPRATURE]) setTemperature(settings[LS_TEMPRATURE]);
+        if (settings[LS_SAFETY_SETTINGS]) setSafetySettings(settings[LS_SAFETY_SETTINGS]);
+        if (settings[LS_MAX_CHAT_LENGTH]) setMaxChatLength(settings[LS_MAX_CHAT_LENGTH]);
+        if (settings[LS_INITIAL_MESSAGES]) {
+            localStorage.setItem(LS_INITIAL_MESSAGES, JSON.stringify(settings[LS_INITIAL_MESSAGES]));
+            setInitialMessagesKey(prev => prev + 1);
+        }
+
+        setSuccess("Settings imported successfully!");
+      } catch (err) {
+        console.error("Import error:", err);
+        setError("Failed to import settings. Invalid JSON file.");
+      }
+    };
+    reader.readAsText(file);
+    event.target.value = null; 
+  };
 
   const handleFileChange = async (event) => {
     const file = event.target.files[0];
@@ -142,6 +209,28 @@ const SettingsPage = () => {
       {success && <p className="text-green-500 text-center mb-3">{success}</p>}
 
       <div className="w-full max-w-3xl mx-auto p-6 bg-panel-light dark:bg-panel-dark shadow-lg rounded-2xl mb-20">
+            <div className="flex gap-4 border-b border-gray-200 dark:border-gray-800 pb-6 mb-6">
+                 <button
+                    onClick={handleExportSettings}
+                    className="flex-1 bg-primary text-white py-2 px-4 rounded-lg hover:bg-primary-hover transition flex items-center justify-center gap-2"
+                 >
+                    <FaDownload /> Export Settings
+                 </button>
+                 <button
+                    onClick={handleImportSettingsClick}
+                    className="flex-1 bg-gray-600 text-white py-2 px-4 rounded-lg hover:bg-gray-700 transition flex items-center justify-center gap-2"
+                 >
+                    <FaUpload /> Import Settings
+                 </button>
+                 <input
+                    type="file"
+                    ref={settingsFileInputRef}
+                    onChange={handleSettingsFileChange}
+                    accept=".json"
+                    style={{ display: "none" }}
+                 />
+            </div>
+
         {/* AI Model Selection */}
         <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
           <strong>Using Model:</strong> {customModel.trim() || selectedModel}
@@ -240,27 +329,7 @@ const SettingsPage = () => {
         ))}
 
         {/* Initial Chat Message */}
-        <InitialMessages />
-
-         {/* Import Chat */}
-         <h3 className="font-semibold mb-2 mt-6 text-black dark:text-white">Data Management</h3>
-         <div className="mb-4">
-          <input
-            type="file"
-            ref={fileInputRef}
-            onChange={handleFileChange}
-            className="hidden"
-            accept=".json"
-          />
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            className="flex items-center justify-center gap-2 w-full p-3 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white rounded-xl hover:bg-gray-300 dark:hover:bg-gray-600 transition"
-          >
-            <FaFileImport size={16} />
-            <span className="font-medium">Import Chat</span>
-          </button>
-          <p className="text-xs text-center text-gray-500 mt-2">Upload a previously exported chat JSON file.</p>
-        </div>
+        <InitialMessages key={initialMessagesKey} />
       </div>
     </div>
   );

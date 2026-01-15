@@ -3,7 +3,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { fetchChats, deleteChat, addChat } from "../features/chatSlice";
 import { fetchCharacters } from "../features/characterSlice";
 import { Link, useNavigate } from "react-router-dom";
-import { FaBars, FaTrash, FaUser } from "react-icons/fa";
+import { FaBars, FaTrash, FaUser, FaFileImport } from "react-icons/fa";
 
 const Sidebar = () => {
   const dispatch = useDispatch();
@@ -42,6 +42,35 @@ const Sidebar = () => {
   const chatCharacterIds = new Set(chats.map(chat => chat.characterId));
   const filteredCharacters = characters.filter(character => !chatCharacterIds.has(character.id));
 
+  const fileInputRef = React.useRef(null);
+
+  const handleImportClick = () => {
+    fileInputRef.current.click();
+  };
+
+  const handleFileChange = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      try {
+        const chatData = JSON.parse(e.target.result);
+        const { importChat } = await import("../features/chatSlice");
+        const result = await dispatch(importChat(chatData)).unwrap();
+        if (result && result.id) {
+            navigate(`/chat/${result.id}`);
+            setIsOpen(false);
+        }
+      } catch (error) {
+        console.error("Failed to import chat:", error);
+        alert("Failed to import chat. Invalid file.");
+      }
+    };
+    reader.readAsText(file);
+    event.target.value = null; 
+  };
+
   return (
     <>
       {/* Mobile Sidebar Toggle */}
@@ -57,12 +86,29 @@ const Sidebar = () => {
       {/* Sidebar */}
       <aside
         className={`fixed z-50 top-0 left-0 w-72 h-full bg-panel-light dark:bg-panel-dark shadow-md 
-          transform ${isOpen ? "translate-x-0" : "-translate-x-full"} transition-transform md:translate-x-0 md:relative border-r border-gray-200 dark:border-gray-800`}
+          transform ${isOpen ? "translate-x-0" : "-translate-x-full"} transition-transform md:translate-x-0 md:relative border-r border-gray-200 dark:border-gray-800 flex flex-col`}
         aria-label="Sidebar"
       >
-        <div className="p-4 h-full flex flex-col overflow-y-auto">
+        <div className="p-4 flex-1 flex flex-col overflow-y-auto">
           <CharacterList characters={filteredCharacters} onCharacterClick={handleCharacterClick} />
           <ChatList chats={chats} onDeleteChat={handleDeleteChat} setIsOpen={setIsOpen} />
+        </div>
+        
+        <div className="p-4 border-t border-gray-200 dark:border-gray-800">
+            <button
+                onClick={handleImportClick}
+                className="w-full flex items-center justify-center gap-2 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 py-2 px-4 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition"
+            >
+                <FaFileImport />
+                <span>Import Chat</span>
+            </button>
+            <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileChange}
+                accept=".json"
+                style={{ display: "none" }}
+            />
         </div>
       </aside>
 
