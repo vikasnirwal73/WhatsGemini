@@ -1,7 +1,9 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { FaArrowLeft } from "react-icons/fa";
+import { useDispatch } from "react-redux";
+import { FaArrowLeft, FaFileImport } from "react-icons/fa";
 import InitialMessages from "../components/InitialMessages";
+import { importChat } from "../features/chatSlice";
 import {
   DEFAULT_CHAT_LENGTH,
   DEFAULT_OUTPUT_TOKENS,
@@ -18,6 +20,8 @@ import {
 
 const SettingsPage = () => {
   const navigate = useNavigate();
+  const dispatch = useDispatch();
+  const fileInputRef = useRef(null);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
   const [customModel, setCustomModel] = useState(() => {
@@ -69,6 +73,37 @@ const SettingsPage = () => {
   const handleSafetyChange = useCallback((category, value) => {
     setSafetySettings((prev) => ({ ...prev, [category]: value }));
   }, []);
+
+  const handleFileChange = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      try {
+        const chatData = JSON.parse(e.target.result);
+        const result = await dispatch(importChat(chatData)).unwrap();
+        if (result && result.id) {
+          setSuccess("Chat imported successfully!");
+          setTimeout(() => setSuccess(null), 2000);
+          // Optional: Navigate to chat if you want, but explicitly asked to move button here, so maybe stay on settings?
+          // The previous behavior was to navigate. I will keep it as staying on settings or maybe navigate.
+          // The user said "restore the chat on another browser", which implies importing. 
+          // Usually when importing a chat, you want to see it. 
+          // However, context is Settings Page. 
+          // I'll show success message. If they want to see, they can go back. 
+          // Actually, let's navigate to it, it is a nicer UX.
+          navigate(`/chat/${result.id}`); 
+        }
+      } catch (error) {
+        console.error("Failed to import chat:", error);
+        setError("Failed to import chat. Invalid file.");
+        setTimeout(() => setError(null), 3000);
+      }
+    };
+    reader.readAsText(file);
+    event.target.value = null;
+  };
 
   const safetyCategories = useMemo(
     () => ["harassment", "hate_speech", "sexual", "dangerous"],
@@ -206,6 +241,26 @@ const SettingsPage = () => {
 
         {/* Initial Chat Message */}
         <InitialMessages />
+
+         {/* Import Chat */}
+         <h3 className="font-semibold mb-2 mt-6 text-black dark:text-white">Data Management</h3>
+         <div className="mb-4">
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleFileChange}
+            className="hidden"
+            accept=".json"
+          />
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            className="flex items-center justify-center gap-2 w-full p-3 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white rounded-xl hover:bg-gray-300 dark:hover:bg-gray-600 transition"
+          >
+            <FaFileImport size={16} />
+            <span className="font-medium">Import Chat</span>
+          </button>
+          <p className="text-xs text-center text-gray-500 mt-2">Upload a previously exported chat JSON file.</p>
+        </div>
       </div>
     </div>
   );
