@@ -1,3 +1,88 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Fix for mobile keyboard hiding input */
+html, body, #root {
+  height: 100%;
+  overflow: hidden;
+}
+
+/* Use dynamic viewport height for better mobile keyboard support */
+.h-dvh {
+  height: 100vh; /* fallback */
+  height: 100dvh;
+}
+
+.h-dvh-minus-header {
+  height: calc(100vh - 58px); /* fallback */
+  height: calc(100dvh - 58px);
+}
+
+/* Ensure input stays visible when keyboard is open */
+@supports (height: 100dvh) {
+  .chat-container {
+    height: calc(100dvh - 58px);
+  }
+}
+
+/* Safe area padding for notched devices */
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* ===== Toast Notifications ===== */
+.toast-container {
+  @apply fixed bottom-4 right-4 z-[100] flex flex-col gap-2;
+}
+
+.toast {
+  @apply flex items-center gap-3 px-4 py-3 rounded-lg shadow-lg min-w-[280px] max-w-[400px];
+  @apply animate-[slideIn_0.3s_ease-out];
+}
+
+.toast--success {
+  @apply bg-green-600 text-white;
+}
+
+.toast--error {
+  @apply bg-red-600 text-white;
+}
+
+.toast--leaving {
+  @apply animate-[slideOut_0.3s_ease-in_forwards];
+}
+
+.toast__icon {
+  @apply flex-shrink-0;
+}
+
+.toast__message {
+  @apply flex-1 text-sm font-medium;
+}
+
+.toast__close {
+  @apply flex-shrink-0 p-1 rounded hover:bg-white/20 transition;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideOut {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+}

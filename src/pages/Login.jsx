@@ -33,26 +33,26 @@ const Login = () => {
   }
 
   return (
-    <div className="flex items-center justify-center h-screen bg-[#eae6df] dark:bg-[#0d1418]">
-      <div className="bg-white dark:bg-[#202c33] p-6 rounded-lg shadow-md w-96 max-w-[calc(100%-30px)]">
-        <h2 className="text-lg font-semibold text-center text-[#008069] dark:text-[#25D366] mb-4">
+    <div className="flex items-center justify-center h-screen bg-app-light dark:bg-app-dark">
+      <div className="bg-panel-light dark:bg-panel-dark p-8 rounded-2xl shadow-xl w-96 max-w-[calc(100%-30px)]">
+        <h2 className="text-2xl font-bold text-center text-primary dark:text-white mb-6">
           Enter Google API Key
         </h2>
 
         {/* Error Message */}
-        {error && <p className="text-red-500 text-sm text-center mb-3">{error}</p>}
+        {error && <p className="text-red-500 text-sm text-center mb-4">{error}</p>}
 
         <input
           type="text"
           value={key}
           onChange={(e) => setKey(e.target.value)}
           placeholder="Enter your API Key..."
-          className="w-full p-3 bg-[#f0f2f5] dark:bg-[#2a3942] text-black dark:text-white rounded-lg border border-gray-300 dark:border-gray-600 outline-none mb-3"
+          className="w-full p-3 bg-app-light dark:bg-app-dark text-black dark:text-white rounded-xl border border-transparent focus:border-primary outline-none mb-4 transition-all"
         />
 
         <button
           onClick={handleLogin}
-          className="w-full p-3 bg-[#25D366] text-white rounded-lg shadow-md hover:bg-[#1db954] transition"
+          className="w-full p-3 bg-primary text-white rounded-xl shadow-lg hover:bg-primary-hover transform hover:scale-[1.02] transition-all"
           disabled={loading || !key.trim()}
         >
           {loading ? "Saving..." : "Save & Continue"}

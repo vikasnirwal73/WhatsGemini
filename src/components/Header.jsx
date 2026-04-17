@@ -6,8 +6,8 @@ import { ThemeContext } from "../contexts/ThemeContext";
 import { FaUserPlus, FaMoon, FaSun, FaCog } from "react-icons/fa";
 
 const NAV_LINKS = [
-  { to: "/characters", icon: FaUserPlus, title: "New Chat", bgClass: "bg-[#25D366] hover:bg-[#1db954]" },
-  { to: "/settings", icon: FaCog, title: "Settings", bgClass: "hover:bg-white/20" },
+  { to: "/characters", icon: FaUserPlus, title: "New Chat", bgClass: "bg-primary hover:bg-primary-hover text-white" },
+  { to: "/settings", icon: FaCog, title: "Settings", bgClass: "hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300" },
 ];
 
 const Header = () => {
@@ -19,8 +19,8 @@ const Header = () => {
   }, [toggleTheme]);
 
   return (
-    <header className="flex items-center justify-between p-3 bg-[#008069] dark:bg-[#202c33] text-white shadow-md">
-      <Link to="/" className="ml-14 sm:ml-0 text-lg font-semibold tracking-wide" aria-label="Go to Home">
+    <header className="flex items-center justify-between p-3 bg-panel-light dark:bg-panel-dark text-black dark:text-white border-b border-gray-200 dark:border-gray-800 z-10 relative">
+      <Link to="/" className="ml-14 sm:ml-0 text-xl font-bold tracking-tight text-primary dark:text-white" aria-label="Go to Home">
         WhatsGemini
       </Link>
 
@@ -39,7 +39,7 @@ const Header = () => {
 
         <button 
           onClick={handleToggleTheme}
-          className="p-2 rounded-full hover:bg-white/20 transition"
+          className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition text-gray-600 dark:text-gray-300"
           title="Toggle Theme"
           aria-label="Toggle Dark Mode"
         >
@@ -47,7 +47,7 @@ const Header = () => {
         </button>
         <button
           onClick={logout}
-          className="p-2 rounded-full hover:bg-white/20 transition"
+          className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition text-gray-600 dark:text-gray-300"
           title="Logout"
           aria-label="Logout"
         >

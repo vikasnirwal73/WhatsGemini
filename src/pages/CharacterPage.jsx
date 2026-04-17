@@ -1,13 +1,14 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchCharacters, addCharacter, deleteCharacter, updateCharacter } from "../features/characterSlice";
 import { useNavigate } from "react-router-dom";
-import { FaArrowLeft, FaTrash, FaEdit, FaTimes } from "react-icons/fa";
+import { FaArrowLeft, FaTrash, FaEdit, FaTimes, FaDownload, FaUpload } from "react-icons/fa";
 
 
 const CharacterPage = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const fileInputRef = useRef(null);
   const characters = useSelector((state) => state.character.characters);
   const loading = useSelector((state) => state.character.loading);
 
@@ -81,6 +82,63 @@ const CharacterPage = () => {
     }
   };
 
+  const handleExportCharacter = (char) => {
+    const dataToExport = {
+      name: char.name,
+      description: char.description,
+      prompt: char.prompt,
+    };
+
+    const jsonString = JSON.stringify(dataToExport, null, 2);
+    const blob = new Blob([jsonString], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${char.name.replace(/[^a-z0-9]/gi, "_").toLowerCase()}_character.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleImportClick = () => {
+    fileInputRef.current.click();
+  };
+
+  const handleFileChange = (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const content = e.target.result;
+        const parsed = JSON.parse(content);
+
+        if (!parsed.name || !parsed.prompt) {
+          alert("Invalid character file: Missing name or prompt.");
+          return;
+        }
+
+        dispatch(
+          addCharacter({
+            name: parsed.name,
+            description: parsed.description || "",
+            prompt: parsed.prompt,
+          })
+        );
+
+        alert("Character imported successfully!");
+      } catch (err) {
+        console.error("Import error:", err);
+        alert("Failed to import character. Invalid JSON file.");
+      }
+    };
+    reader.readAsText(file);
+    event.target.value = null; // Reset input
+  };
+
   const truncateText = (text, maxLength = 100) => {
     return text.length > maxLength ? text.substring(0, maxLength) + "..." : text;
   };
@@ -95,63 +153,59 @@ const CharacterPage = () => {
   };
 
   return (
-    <div className="w-full h-screen flex flex-col p-6 bg-[#eae6df] dark:bg-[#0d1418] overflow-auto">
+    <div className="w-full h-screen flex flex-col p-6 bg-app-light dark:bg-app-dark overflow-auto">
       {/* Back Button */}
       <button
         onClick={goBackOrHome}
-        className="mb-4 flex items-center gap-2 bg-[#008069] text-white px-4 py-2 rounded-full shadow-md hover:bg-[#026e58] transition w-max"
+        className="mb-4 flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-full shadow-md hover:bg-primary-hover transition w-max"
       >
         <FaArrowLeft size={16} />
         <span>Back</span>
       </button>
 
-      <h2 className="text-2xl font-bold mb-4 text-center text-[#008069] dark:text-[#25D366]">
+      <h2 className="text-2xl font-bold mb-4 text-center text-primary dark:text-white">
         {editCharacter ? "Edit Character" : "Create a Character"}
       </h2>
 
       {/* Character Form */}
-      <div className="w-full max-w-3xl mx-auto p-5 bg-white dark:bg-[#202c33] shadow-lg rounded-lg">
-        <div className="mb-4 flex flex-col items-center">
-          <div className="w-24 h-24 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center overflow-hidden mb-2">
-            {avatar ? (
-              <img src={avatar} alt="Character Avatar" className="w-full h-full object-cover" />
-            ) : (
-              <span className="text-gray-500 dark:text-gray-400">No Image</span>
-            )}
-          </div>
-          <label className="cursor-pointer bg-[#008069] text-white px-3 py-1 rounded-md hover:bg-[#026e58] transition">
-            Upload Image
-            <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
-          </label>
-        </div>
-
+      <div className="w-full max-w-3xl mx-auto p-5 bg-panel-light dark:bg-panel-dark shadow-lg rounded-2xl">
         <input
           type="text"
           placeholder="Character Name"
           value={name}
           onChange={(e) => setName(e.target.value)}
-          className="w-full p-3 bg-[#f0f2f5] dark:bg-[#2a3942] text-black dark:text-white rounded-lg border border-gray-300 dark:border-gray-600 outline-none mb-3"
+          className="w-full p-3 bg-app-light dark:bg-app-dark text-black dark:text-white rounded-xl border border-transparent focus:border-primary outline-none mb-3"
         />
         <textarea
           placeholder="Description (Optional)"
           value={description}
           onChange={(e) => setDescription(e.target.value)}
-          className="w-full p-3 bg-[#f0f2f5] dark:bg-[#2a3942] text-black dark:text-white rounded-lg border border-gray-300 dark:border-gray-600 outline-none mb-3"
+          className="w-full p-3 bg-app-light dark:bg-app-dark text-black dark:text-white rounded-xl border border-transparent focus:border-primary outline-none mb-3"
         />
         <textarea
           placeholder="Character Prompt (Personality, Style, etc.)"
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
-          className="w-full p-3 bg-[#f0f2f5] dark:bg-[#2a3942] text-black dark:text-white rounded-lg border border-gray-300 dark:border-gray-600 outline-none mb-3"
+          className="w-full p-3 bg-app-light dark:bg-app-dark text-black dark:text-white rounded-xl border border-transparent focus:border-primary outline-none mb-3"
         />
         <div className="flex gap-3">
           <button
             onClick={editCharacter ? handleSaveEdit : handleCreateCharacter}
-            className="flex-1 bg-[#25D366] text-white px-4 py-2 rounded-full shadow-md hover:bg-[#1db954] transition"
+            className="flex-1 bg-primary text-white px-4 py-2 rounded-full shadow-md hover:bg-primary-hover transition"
             disabled={loading}
           >
             {loading ? "Saving..." : editCharacter ? "Save Changes" : "Create Character"}
           </button>
+          {!editCharacter && (
+            <button
+              onClick={handleImportClick}
+              className="bg-green-600 text-white px-4 py-2 rounded-full shadow-md hover:bg-green-700 transition flex items-center justify-center gap-2"
+              title="Import Character from JSON"
+            >
+              <FaUpload size={16} />
+              <span className="hidden sm:inline">Import</span>
+            </button>
+          )}
           {editCharacter && (
             <button
               onClick={() => handerSetEditCharacter(null)}
@@ -161,10 +215,17 @@ const CharacterPage = () => {
             </button>
           )}
         </div>
+        <input
+          type="file"
+          ref={fileInputRef}
+          onChange={handleFileChange}
+          accept=".json"
+          style={{ display: "none" }}
+        />
       </div>
 
       {/* Saved Characters */}
-      <h3 className="text-xl font-bold mt-6 text-center text-[#008069] dark:text-[#25D366]">
+      <h3 className="text-xl font-bold mt-6 text-center text-primary dark:text-white">
         Saved Characters
       </h3>
       <div className="w-full max-w-3xl mx-auto mt-4 mb-20">
@@ -176,13 +237,20 @@ const CharacterPage = () => {
           characters.map((char) => (
             <div
               key={char.id}
-              className="p-4 border border-gray-300 dark:border-gray-600 mb-3 rounded-lg flex justify-between items-center bg-white dark:bg-[#202c33] shadow"
+              className="p-4 border border-gray-200 dark:border-gray-800 mb-3 rounded-xl flex justify-between items-center bg-panel-light dark:bg-panel-dark shadow-sm"
             >
               <div>
                 <h4 className="font-semibold text-lg text-black dark:text-white">{char.name}</h4>
                 <p className="text-sm text-gray-600 dark:text-gray-400 nowrap">{truncateText(char.description)}</p>
               </div>
               <div className="flex gap-2">
+                <button
+                  onClick={() => handleExportCharacter(char)}
+                  className="p-2 bg-green-500 text-white rounded-full hover:bg-green-600 transition"
+                  title="Export Character"
+                >
+                  <FaDownload size={16} />
+                </button>
                 <button
                   onClick={() => handleEditCharacter(char)}
                   className="p-2 bg-blue-500 text-white rounded-full hover:bg-blue-600 transition"

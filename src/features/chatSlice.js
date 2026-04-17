@@ -122,6 +122,29 @@ export const updateMessages = createAsyncThunk(
   }
 );
 
+export const importChat = createAsyncThunk("chat/import", async (chatData, { rejectWithValue }) => {
+  try {
+    const { title, content, characterId, timestamp } = chatData;
+    // Basic validation
+    if (!title || !content || !Array.isArray(content)) {
+      throw new Error("Invalid chat data format.");
+    }
+
+    // Create new chat object, ignoring original ID
+    const newChat = {
+      title,
+      content,
+      characterId: characterId || null,
+      timestamp: timestamp || Date.now(),
+    };
+
+    const id = await db.chats.add(newChat);
+    return { ...newChat, id };
+  } catch (error) {
+    return handleDbError(error, rejectWithValue);
+  }
+});
+
 // Chat Slice
 const chatSlice = createSlice({
   name: "chat",
@@ -163,6 +186,12 @@ const chatSlice = createSlice({
         }
       })
       .addCase(updateMessages.rejected, (state, action) => {
+        state.error = action.payload;
+      })
+      .addCase(importChat.fulfilled, (state, action) => {
+        state.chats.push(action.payload);
+      })
+      .addCase(importChat.rejected, (state, action) => {
         state.error = action.payload;
       });
   },
