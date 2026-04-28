@@ -1,7 +1,7 @@
 import { LS_GOOGLE_API_KEY } from "./constants";
 
 // Save API Key
-export const saveApiKey = (apiKey) => {
+export const saveApiKey = (apiKey: string) => {
   try {
     if (!apiKey || typeof apiKey !== "string") {
       throw new Error("Invalid API key");

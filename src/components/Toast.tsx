@@ -1,7 +1,22 @@
 import React, { useEffect, useState } from "react";
 import { FaCheckCircle, FaExclamationCircle, FaTimes } from "react-icons/fa";
+import { cn } from "../utils/cn";
 
-const Toast = ({ message, type = "success", duration = 5000, onClose }) => {
+export interface ToastData {
+  id: string;
+  message: string;
+  type: "success" | "error";
+  duration?: number;
+}
+
+interface ToastProps {
+  message: string;
+  type?: "success" | "error";
+  duration?: number;
+  onClose?: () => void;
+}
+
+const Toast: React.FC<ToastProps> = ({ message, type = "success", duration = 5000, onClose }) => {
   const [isVisible, setIsVisible] = useState(true);
   const [isLeaving, setIsLeaving] = useState(false);
 
@@ -31,7 +46,11 @@ const Toast = ({ message, type = "success", duration = 5000, onClose }) => {
 
   return (
     <div
-      className={`toast ${isLeaving ? "toast--leaving" : ""} ${isError ? "toast--error" : "toast--success"}`}
+      className={cn(
+        "toast",
+        isLeaving && "toast--leaving",
+        isError ? "toast--error" : "toast--success"
+      )}
       role="alert"
     >
       <div className="toast__icon">
@@ -46,7 +65,12 @@ const Toast = ({ message, type = "success", duration = 5000, onClose }) => {
 };
 
 // Toast Container to manage multiple toasts
-export const ToastContainer = ({ toasts, removeToast }) => {
+interface ToastContainerProps {
+  toasts: ToastData[];
+  removeToast: (id: string) => void;
+}
+
+export const ToastContainer: React.FC<ToastContainerProps> = ({ toasts, removeToast }) => {
   return (
     <div className="toast-container">
       {toasts.map((toast) => (

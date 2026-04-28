@@ -1,10 +1,11 @@
 import React, { useState, useContext, useCallback } from "react";
 import { AuthContext } from "../contexts/AuthContext";
 import { Navigate } from "react-router-dom";
+import { cn } from "../utils/cn";
 
 const Login = () => {
   const [key, setKey] = useState("");
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const { saveApiKey, apiKey } = useContext(AuthContext);
 
@@ -52,7 +53,10 @@ const Login = () => {
 
         <button
           onClick={handleLogin}
-          className="w-full p-3 bg-primary text-white rounded-xl shadow-lg hover:bg-primary-hover transform hover:scale-[1.02] transition-all"
+          className={cn(
+            "w-full p-3 bg-primary text-white rounded-xl shadow-lg transition-all",
+            loading || !key.trim() ? "opacity-70 cursor-not-allowed" : "hover:bg-primary-hover transform hover:scale-[1.02]"
+          )}
           disabled={loading || !key.trim()}
         >
           {loading ? "Saving..." : "Save & Continue"}

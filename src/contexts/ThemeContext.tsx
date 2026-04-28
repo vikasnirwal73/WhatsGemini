@@ -1,9 +1,17 @@
-import React, { createContext, useState, useEffect, useCallback } from "react";
+import React, { createContext, useState, useEffect, useCallback, ReactNode } from "react";
 import { DARK, LIGHT, LS_THEME } from "../utils/constants";
 
-export const ThemeContext = createContext();
+interface ThemeContextType {
+  theme: string;
+  toggleTheme: () => void;
+}
 
-export const ThemeProvider = ({ children }) => {
+export const ThemeContext = createContext<ThemeContextType>({
+  theme: DARK,
+  toggleTheme: () => {},
+});
+
+export const ThemeProvider = ({ children }: { children: ReactNode }) => {
   // Lazy initialization to prevent unnecessary localStorage reads
   const getStoredTheme = () => {
     try {
@@ -14,7 +22,7 @@ export const ThemeProvider = ({ children }) => {
     }
   };
 
-  const [theme, setTheme] = useState(getStoredTheme);
+  const [theme, setTheme] = useState<string>(getStoredTheme);
 
   useEffect(() => {
     try {

@@ -1,9 +1,19 @@
-import React, { createContext, useState, useEffect, useCallback } from "react";
+import React, { createContext, useState, useEffect, useCallback, ReactNode } from "react";
 import { LS_GOOGLE_API_KEY } from "../utils/constants";
 
-export const AuthContext = createContext();
+interface AuthContextType {
+  apiKey: string | null;
+  saveApiKey: (key: string) => void;
+  logout: () => void;
+}
 
-export const AuthProvider = ({ children }) => {
+export const AuthContext = createContext<AuthContextType>({
+  apiKey: null,
+  saveApiKey: () => {},
+  logout: () => {},
+});
+
+export const AuthProvider = ({ children }: { children: ReactNode }) => {
   // Lazy initialization to prevent unnecessary localStorage reads
   const getStoredApiKey = () => {
     try {
@@ -14,7 +24,7 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const [apiKey, setApiKey] = useState(getStoredApiKey);
+  const [apiKey, setApiKey] = useState<string | null>(getStoredApiKey);
 
   // Save API key to localStorage when it changes
   useEffect(() => {
@@ -28,7 +38,7 @@ export const AuthProvider = ({ children }) => {
   }, [apiKey]);
 
   // Memoized function to save API key
-  const saveApiKey = useCallback((key) => {
+  const saveApiKey = useCallback((key: string) => {
     try {
       localStorage.setItem(LS_GOOGLE_API_KEY, key);
       setApiKey(key);

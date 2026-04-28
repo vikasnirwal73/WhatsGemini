@@ -46,4 +46,6 @@ export const LS_INITIAL_CHAT_MESSAGE = "initial_chat_message";
 export const LS_GOOGLE_API_KEY = "google_api_key";
 export const LS_THEME = "theme";
 export const LS_INITIAL_MESSAGES = "initial_messages";
+export const LS_FONT_SIZE = "app_font_size";
 export const API_KEY_STORAGE_KEY = "genAI_api_key";
+export const LS_USER_PROFILE = "whatsgemini_user_profile";

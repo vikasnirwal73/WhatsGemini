@@ -13,6 +13,10 @@ export const store = configureStore({
   devTools: process.env.NODE_ENV !== "production", // Enable Redux DevTools in development
 });
 
+// Infer the `RootState` and `AppDispatch` types from the store itself
+export type RootState = ReturnType<typeof store.getState>;
+export type AppDispatch = typeof store.dispatch;
+
 // Debug Logging (Only in Development)
 if (process.env.NODE_ENV === "development") {
   store.subscribe(() => {

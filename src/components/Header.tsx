@@ -1,9 +1,10 @@
 import React, { useContext, useCallback } from "react";
 import { AuthContext } from "../contexts/AuthContext";
-import { FaSignOutAlt } from "react-icons/fa";
+import { FaSignOutAlt, FaUserPlus, FaMoon, FaSun, FaCog } from "react-icons/fa";
 import { Link } from "react-router-dom";
 import { ThemeContext } from "../contexts/ThemeContext";
-import { FaUserPlus, FaMoon, FaSun, FaCog } from "react-icons/fa";
+import { DARK } from "../utils/constants";
+import { cn } from "../utils/cn";
 
 const NAV_LINKS = [
   { to: "/characters", icon: FaUserPlus, title: "New Chat", bgClass: "bg-primary hover:bg-primary-hover text-white" },
@@ -11,12 +12,14 @@ const NAV_LINKS = [
 ];
 
 const Header = () => {
-  const { toggleTheme, darkMode } = useContext(ThemeContext);
+  const { toggleTheme, theme } = useContext(ThemeContext);
   const { logout } = useContext(AuthContext);
-  // Prevent unnecessary re-renders
+
   const handleToggleTheme = useCallback(() => {
     toggleTheme();
   }, [toggleTheme]);
+
+  const isDarkMode = theme === DARK;
 
   return (
     <header className="flex items-center justify-between p-3 bg-panel-light dark:bg-panel-dark text-black dark:text-white border-b border-gray-200 dark:border-gray-800 z-10 relative">
@@ -29,7 +32,7 @@ const Header = () => {
           <Link 
             key={to}
             to={to}
-            className={`p-2 rounded-full transition ${bgClass}`}
+            className={cn("p-2 rounded-full transition", bgClass)}
             title={title}
             aria-label={title}
           >
@@ -43,7 +46,7 @@ const Header = () => {
           title="Toggle Theme"
           aria-label="Toggle Dark Mode"
         >
-          {darkMode ? <FaSun size={18} /> : <FaMoon size={18} />}
+          {isDarkMode ? <FaSun size={18} /> : <FaMoon size={18} />}
         </button>
         <button
           onClick={logout}
