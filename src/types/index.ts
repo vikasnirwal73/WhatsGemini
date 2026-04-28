@@ -2,6 +2,7 @@ export interface Message {
   role: "user" | "model" | string;
   txt?: string; // The markdown text
   characterId?: number;
+  isSystem?: boolean;
 }
 
 export interface Chat {

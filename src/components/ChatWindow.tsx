@@ -4,12 +4,12 @@ import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import remarkGfm from 'remark-gfm';
 import { FaRedo, FaEdit, FaCheck, FaTimes, FaEllipsisV, FaCopy, FaArrowDown } from "react-icons/fa";
-import { AI, YOU } from "../utils/constants";
+import { AI, YOU, LS_INITIAL_MESSAGES } from "../utils/constants";
 import { Message } from "../types";
 import { cn } from "../utils/cn";
 
 // CodeBlock Component to handle syntax highlighting and copying
-const CodeBlock = ({ inline, className, children, ...props }: any) => {
+const CodeBlock = ({ node, className, children, ...props }: any) => {
   const [copied, setCopied] = useState(false);
   const match = /language-(\w+)/.exec(className || '');
   const lang = match ? match[1] : '';
@@ -21,7 +21,7 @@ const CodeBlock = ({ inline, className, children, ...props }: any) => {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  if (inline) {
+  if (!match) {
     return (
       <code className="bg-black/10 dark:bg-white/10 rounded px-1.5 py-0.5 text-sm font-mono" {...props}>
         {children}
@@ -57,7 +57,8 @@ const CodeBlock = ({ inline, className, children, ...props }: any) => {
 };
 
 // Markdown Renderer memoized to prevent re-renders of old messages
-const MarkdownRenderer = React.memo(({ msgText, isUser }: { msgText: string; isUser: boolean }) => {
+const MarkdownRenderer = React.memo(({ msgText, isUser }: { msgText: string | any; isUser: boolean }) => {
+  const safeText = typeof msgText === 'string' ? msgText : (msgText?.text || JSON.stringify(msgText));
   return (
     <div className="markdown-content text-left break-words min-w-0">
       <ReactMarkdown 
@@ -76,7 +77,7 @@ const MarkdownRenderer = React.memo(({ msgText, isUser }: { msgText: string; isU
           td: ({node, ...props}) => <td className={cn("px-3 py-2 whitespace-nowrap text-sm border-b", isUser ? 'border-white/20 text-white' : 'border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300')} {...props} />,
         }}
       >
-        {msgText}
+        {safeText}
       </ReactMarkdown>
     </div>
   );
@@ -153,21 +154,59 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ messages = [], onRegenerate, on
   }, []);
   
   const startIndex = useMemo(() => {
+    let index = 0;
+    
     const charPromptIndex = messages.findIndex(
       (m) =>
         m.role === YOU &&
         m.txt &&
         m.txt.startsWith("Role play as, Character Name:")
     );
-
     if (charPromptIndex !== -1) {
-      return charPromptIndex + 2;
+      index = Math.max(index, charPromptIndex + 2);
     }
     
-    return 0;
+    // Hide the [SYSTEM DIRECTIVE] summary message added during compression
+    const sysDirIndex = messages.findIndex(
+      (m) =>
+        m.role === YOU &&
+        m.txt &&
+        m.txt.startsWith("[SYSTEM DIRECTIVE]:")
+    );
+    if (sysDirIndex !== -1) {
+      index = Math.max(index, sysDirIndex + 2);
+    }
+
+    return index;
   }, [messages]);
 
-  const filteredMessages = useMemo(() => messages.slice(startIndex) || [], [messages, startIndex]);
+  const filteredMessages = useMemo(() => {
+    let sliced = messages.slice(startIndex) || [];
+    
+    // Hide explicitly flagged system setup messages
+    sliced = sliced.filter(m => !m.isSystem);
+
+    // Additionally hide backward compatibility pre-populated InitialMessages
+    // if they weren't explicitly flagged (e.g. from an older app state)
+    try {
+      const savedMessages = JSON.parse(localStorage.getItem(LS_INITIAL_MESSAGES) || "[]") as any[];
+      let hiddenCount = 0;
+      for (let i = 0; i < savedMessages.length && i < sliced.length; i++) {
+        if (sliced[i].role === savedMessages[i].role && sliced[i].txt?.trim() === savedMessages[i].message?.trim()) {
+          hiddenCount++;
+        } else {
+          break;
+        }
+      }
+      if (hiddenCount > 0) {
+        sliced = sliced.slice(hiddenCount);
+      }
+    } catch (err) {
+      console.warn("Failed to parse initial messages for filtering", err);
+    }
+    
+    return sliced;
+  }, [messages, startIndex]);
 
   useEffect(() => {
     setEditingIndex(null);

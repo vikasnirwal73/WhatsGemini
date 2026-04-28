@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useState, lazy, Suspense, useCallback } from "react";
+import React, { useContext, useEffect, useState, lazy, Suspense } from "react";
 import { HashRouter, Routes, Route, Navigate, useNavigate } from "react-router-dom";
 import { Provider } from "react-redux";
 import { AuthProvider, AuthContext } from "./contexts/AuthContext";
@@ -10,7 +10,7 @@ import { fetchChats, addChat } from "./features/chatSlice";
 import { fetchCharacters } from "./features/characterSlice";
 import { LS_FONT_SIZE } from "./utils/constants";
 
-import Header from "./components/Header";
+// import Header from "./components/Header";
 import Sidebar from "./components/Sidebar";
 
 const ChatPage = lazy(() => import("./pages/ChatPage"));

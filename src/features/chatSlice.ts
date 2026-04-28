@@ -67,7 +67,7 @@ export const addMessage = createAsyncThunk(
       if (chat.content.length === 0) {
         savedMessages.forEach((msg) => {
           if (msg.role && msg.message) {
-            chat.content.push({ role: msg.role, txt: msg.message });
+            chat.content.push({ role: msg.role, txt: msg.message, isSystem: true });
           }
         });
 

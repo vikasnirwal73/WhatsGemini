@@ -2,10 +2,10 @@ import React, { useEffect, useState, useMemo, useRef, useCallback } from "react"
 import { useParams, useNavigate } from "react-router-dom";
 import { fetchChatById, fetchChats, addMessage, updateMessages } from "../features/chatSlice";
 import { fetchCharacterById } from "../features/characterSlice";
-import { generateAIResponse, calculateTokenCount } from "../features/aiSlice";
+import { generateAIResponse, compressChatHistory } from "../features/aiSlice";
 import ChatWindow from "../components/ChatWindow";
 import MessageInput from "../components/MessageInput";
-import { FaInfoCircle } from "react-icons/fa";
+import { FaInfoCircle, FaCompressArrowsAlt, FaDownload } from "react-icons/fa";
 import { AI, MODEL, USER, YOU, LS_USER_PROFILE } from "../utils/constants";
 import { useAppDispatch, useAppSelector } from "../store/hooks";
 import { Message, UserProfile } from "../types";
@@ -18,6 +18,7 @@ const ChatPage = () => {
   const chats = useAppSelector((state) => state.chat.chats);
   const characters = useAppSelector((state) => state.character.characters);
   const aiLoading = useAppSelector((state) => state.ai.loading);
+  const aiCompressing = useAppSelector((state) => state.ai.compressing);
   const aiTokenCount = useAppSelector((state) => state.ai.tokenCount);
   const aiCostEstimate = useAppSelector((state) => state.ai.costEstimate);
   
@@ -97,9 +98,6 @@ const ChatPage = () => {
       }
       
       // Calculate token count for the current chat context
-      const chatHistory = createChatHistory(messages);
-      const systemInstruction = getSystemInstruction();
-      dispatch(calculateTokenCount({ history: chatHistory, systemInstruction }));
     }
   }, [dispatch, messages, createChatHistory, getSystemInstruction, currentChat]);
 
@@ -119,7 +117,7 @@ const ChatPage = () => {
       aiPromiseRef.current = null;
 
       if (aiResponse.payload) {
-        await dispatch(addMessage({ chatId: chatIdNum, role: AI, text: aiResponse.payload as string }));
+        await dispatch(addMessage({ chatId: chatIdNum, role: AI, text: (aiResponse.payload as any)?.text || (aiResponse.payload as string) }));
       }
 
       dispatch(fetchChats());
@@ -151,7 +149,7 @@ const ChatPage = () => {
       aiPromiseRef.current = null;
 
       if (aiResponse.payload) {
-        await dispatch(addMessage({ chatId: chatIdNum, role: AI, text: aiResponse.payload as string }));
+        await dispatch(addMessage({ chatId: chatIdNum, role: AI, text: (aiResponse.payload as any)?.text || (aiResponse.payload as string) }));
       }
 
       dispatch(fetchChats());
@@ -183,7 +181,7 @@ const ChatPage = () => {
       aiPromiseRef.current = null;
 
       if (aiResponse.payload) {
-        await dispatch(addMessage({ chatId: chatIdNum, role: AI, text: aiResponse.payload as string }));
+        await dispatch(addMessage({ chatId: chatIdNum, role: AI, text: (aiResponse.payload as any)?.text || (aiResponse.payload as string) }));
       }
 
       dispatch(fetchChats());
@@ -203,11 +201,61 @@ const ChatPage = () => {
       aiPromiseRef.current = null;
     }
   };
+
+  const handleCompress = async () => {
+    if (messages.length <= 4 || !chatIdNum) return;
+
+    setError(null);
+    try {
+      // Keep only the last 2 messages uncompressed if possible, but summarize everything before
+      const cutoff = Math.max(messages.length - 2, 2);
+      const msgsToCompress = messages.slice(0, cutoff);
+      const historyToCompress = createChatHistory(msgsToCompress);
+      const systemInstruction = getSystemInstruction();
+
+      const summaryObj = await dispatch(compressChatHistory({ history: historyToCompress, systemInstruction })).unwrap();
+
+      if (summaryObj) {
+        const retainedMsgs = messages.slice(cutoff);
+        
+        // Create new memory initialization format messages
+        const newMessages: Message[] = [
+          { role: YOU, txt: "[SYSTEM DIRECTIVE]: I will provide you with a summary of our conversation so far. Treat this summary as the exact events that have already occurred between us. Please strictly maintain the language (e.g. Hinglish, informal English, etc.), tone, and emotional feeling indicated in the summary as we continue.\n\nSummary:\n" + summaryObj },
+          { role: AI, txt: "Understood. I will remember our history and continue speaking in the exact same language, tone, and emotional state as before." },
+          ...retainedMsgs
+        ];
+
+        // Ensure characterId and timestamp propagates safely if needed on the slice update
+        // We do a full DB overwrite of the chat's content
+        await dispatch(updateMessages({ chatId: chatIdNum, newMessages }));
+        dispatch(fetchChats());
+      }
+    } catch (err) {
+      console.error("Error compressing chat:", err);
+      setError("Failed to compress conversation. It might be too short or an API error occurred.");
+    }
+  };
+
+  const handleExport = () => {
+    if (!chatIdNum || !chats) return;
+    const currentChat = chats.find((c) => c.id === chatIdNum);
+    if (!currentChat) return;
+    
+    const { id, ...exportData } = currentChat;
+    
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `chat-${chatIdNum}-${Date.now()}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
   
   return (
     <div className="flex flex-col w-full h-screen bg-app-light dark:bg-app-dark relative">
       {/* Chat Header */}
-      <ChatHeader onInfoClick={handleInfoClick} />
+      <ChatHeader onInfoClick={handleInfoClick} onCompressClick={handleCompress} onExportClick={handleExport} isCompressing={aiCompressing} canCompress={messages.length > 4} />
 
       {/* Error Message */}
       {error && <p className="text-red-500 text-center p-2 absolute top-16 w-full z-20">{error}</p>}
@@ -225,16 +273,35 @@ const ChatPage = () => {
   );
 };
 
-const ChatHeader = ({ onInfoClick }: { onInfoClick: () => void }) => (
+const ChatHeader = ({ onInfoClick, onCompressClick, onExportClick, isCompressing, canCompress }: { onInfoClick: () => void, onCompressClick: () => void, onExportClick: () => void, isCompressing: boolean, canCompress: boolean }) => (
   <div className="flex items-center justify-between px-8 py-5 bg-transparent text-gray-900 dark:text-slate-100 z-10">
     <h2 className="text-2xl font-medium tracking-wide">Chat</h2>
-    <button
-      onClick={onInfoClick}
-      className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-slate-800 transition text-gray-500 dark:text-slate-400 dark:hover:text-slate-200"
-      title="Gemini Context"
-    >
-      <FaInfoCircle size={22} />
-    </button>
+    <div className="flex items-center gap-3">
+      <button
+        onClick={onExportClick}
+        className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-slate-800 transition text-gray-500 dark:text-slate-400 dark:hover:text-slate-200"
+        title="Export Chat"
+      >
+        <FaDownload size={18} />
+      </button>
+      {canCompress && (
+        <button
+          onClick={onCompressClick}
+          disabled={isCompressing}
+          className={`p-2 rounded-full transition text-gray-500 dark:text-slate-400 ${isCompressing ? 'animate-pulse opacity-50 cursor-not-allowed' : 'hover:bg-gray-200 dark:hover:bg-slate-800 dark:hover:text-slate-200'}`}
+          title="Summarize and compress older messages to save tokens."
+        >
+          <FaCompressArrowsAlt size={18} />
+        </button>
+      )}
+      <button
+        onClick={onInfoClick}
+        className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-slate-800 transition text-gray-500 dark:text-slate-400 dark:hover:text-slate-200"
+        title="Gemini Context"
+      >
+        <FaInfoCircle size={22} />
+      </button>
+    </div>
   </div>
 );
 

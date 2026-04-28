@@ -97,6 +97,7 @@ export const generateAIResponse = createAsyncThunk(
       );
 
       // If the last message in history is the same as the prompt, remove it to avoid duplication
+      // (This happens because it was just saved in Redux before this thunk was called)
       if (
         validHistory.length > 0 &&
         validHistory[validHistory.length - 1].role === "user" &&
@@ -117,7 +118,14 @@ export const generateAIResponse = createAsyncThunk(
         }
       }
 
-      const historyForSdk = validHistory.slice(0, -1);
+      // Ensure the history passed to startChat does not end with a "user" string 
+      // otherwise sendMessageStream(prompt) will result in consecutive user turns. 
+      // (If it does, pop the trailing un-anwered user message).
+      while (validHistory.length > 0 && validHistory[validHistory.length - 1].role === "user") {
+        validHistory.pop();
+      }
+
+      const historyForSdk = validHistory;
 
       // Defensively start chat session and get response
       const chat = await model.startChat({ history: historyForSdk });
@@ -139,7 +147,20 @@ export const generateAIResponse = createAsyncThunk(
         }
       }
 
-      return response.trim();
+      const responseData = await stream.response;
+      const totalTokens = responseData?.usageMetadata?.totalTokenCount || 0;
+
+      let costPerMillion = 0.075; 
+      if (selectedModel.includes("pro")) {
+        costPerMillion = 1.25; 
+      }
+      const costEstimate = (totalTokens / 1_000_000) * costPerMillion;
+
+      return {
+        text: response.trim(),
+        tokenCount: totalTokens,
+        costEstimate: costEstimate
+      };
     } catch (error: any) {
       console.error("AI Response Error:", error);
       return rejectWithValue(error.message || "An unexpected error occurred.");
@@ -150,6 +171,7 @@ export const generateAIResponse = createAsyncThunk(
 interface AIState {
   response: string;
   loading: boolean;
+  compressing: boolean;
   error: string | null;
   tokenCount: number;
   costEstimate: number;
@@ -158,54 +180,52 @@ interface AIState {
 const initialState: AIState = {
   response: "",
   loading: false,
+  compressing: false,
   error: null,
   tokenCount: 0,
   costEstimate: 0,
 };
 
-// Async Thunk for calculating token count and cost
-export const calculateTokenCount = createAsyncThunk(
-  "ai/calculateTokenCount",
-  async ({ history = [], systemInstruction }: { history?: any[], systemInstruction?: string }, { rejectWithValue }) => {
+
+// Async Thunk for compressing chat history
+export const compressChatHistory = createAsyncThunk(
+  "ai/compressHistory",
+  async ({ history = [], systemInstruction }: { history: any[], systemInstruction?: string }, { rejectWithValue }) => {
     try {
       const apiKey = getAPIKey();
-      if (!apiKey) throw new Error("API key is missing.");
+      if (!apiKey) throw new Error("API key is missing. Please log in.");
       const selectedModel = getStoredValue(LS_AI_MODEL, DEFAULT_AI_MODEL);
 
       const genAI = new GoogleGenerativeAI(apiKey);
-      const modelParams: any = { model: selectedModel };
-      
+      const modelParams: any = {
+        model: selectedModel,
+      };
+
       if (systemInstruction) {
-        modelParams.systemInstruction = systemInstruction;
+        modelParams.systemInstruction = {
+          role: "system",
+          parts: [{ text: systemInstruction }]
+        };
       }
 
       const model = genAI.getGenerativeModel(modelParams);
 
-      // Filter out empty messages
-      const validHistory = history.filter(
-        (msg) => msg?.parts?.[0]?.text && msg.role
-      );
+      const conversationText = history
+        .map((m) => `${m.role === "user" ? "User" : "AI"}: ${m.parts[0].text}`)
+        .join("\n\n");
 
-      if (validHistory.length === 0) {
-        return { tokenCount: 0, costEstimate: 0 };
-      }
+      const prompt = `Please provide a concise but comprehensive summary of the following conversation history. 
+Retain all key facts, user preferences, important context, the language used (e.g., Hinglish, English), the tone, and the current emotional state of both the User and the AI. This summary will act as the AI's memory replacing the older messages.
+Do not act as a conversational partner, just provide the summary directly. Ensure you explicitly note the language format, tone, and emotional context so the AI can seamlessly resume in the exact same style and mood.
 
-      // Count tokens
-      const { totalTokens } = await model.countTokens({ contents: validHistory });
-      
-      // Rough cost estimate (using Gemini 1.5 Flash pricing as example: $0.075 / 1M tokens)
-      // Note: Pricing varies by model, this is just a subtle indicator.
-      let costPerMillion = 0.075; 
-      if (selectedModel.includes("pro")) {
-        costPerMillion = 1.25; // Example Pro pricing
-      }
-      
-      const costEstimate = (totalTokens / 1_000_000) * costPerMillion;
+Conversation:
+${conversationText}`;
 
-      return { tokenCount: totalTokens, costEstimate };
+      const result = await model.generateContent(prompt);
+      return result.response.text().trim();
     } catch (error: any) {
-      // Don't crash the app for token counting failure
-      return { tokenCount: 0, costEstimate: 0 };
+      console.error("AI Compress Error:", error);
+      return rejectWithValue(error.message || "Failed to compress history.");
     }
   }
 );
@@ -228,15 +248,24 @@ const aiSlice = createSlice({
       })
       .addCase(generateAIResponse.fulfilled, (state, action) => {
         state.loading = false;
-        state.response = action.payload as string;
+        state.response = action.payload.text;
+        state.tokenCount = action.payload.tokenCount;
+        state.costEstimate = action.payload.costEstimate;
       })
       .addCase(generateAIResponse.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload as string;
       })
-      .addCase(calculateTokenCount.fulfilled, (state, action) => {
-        state.tokenCount = action.payload.tokenCount;
-        state.costEstimate = action.payload.costEstimate;
+      .addCase(compressChatHistory.pending, (state) => {
+        state.compressing = true;
+        state.error = null;
+      })
+      .addCase(compressChatHistory.fulfilled, (state) => {
+        state.compressing = false;
+      })
+      .addCase(compressChatHistory.rejected, (state, action) => {
+        state.compressing = false;
+        state.error = action.payload as string;
       });
   },
 });
