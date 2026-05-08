@@ -229,18 +229,24 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ messages = [], onRegenerate, on
   }, [aiLoading]);
 
   const handleRegenerate = useCallback(
-    (index: number) => {
+    (msg: Message) => {
       if (onRegenerate) {
-        onRegenerate(index + startIndex);
+        const originalIndex = messages.indexOf(msg);
+        if (originalIndex !== -1) {
+          onRegenerate(originalIndex);
+        }
       }
     },
-    [onRegenerate, startIndex]
+    [onRegenerate, messages]
   );
 
-  const startEdit = useCallback((index: number, messageText: string) => {
-    setEditingIndex(index);
-    setEditText(messageText);
-  }, []);
+  const startEdit = useCallback((msg: Message) => {
+    const originalIndex = messages.indexOf(msg);
+    if (originalIndex !== -1) {
+      setEditingIndex(originalIndex);
+      setEditText(msg.txt || "");
+    }
+  }, [messages]);
 
   const cancelEdit = useCallback(() => {
     setEditingIndex(null);
@@ -249,11 +255,11 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ messages = [], onRegenerate, on
 
   const saveEdit = useCallback(() => {
     if (editText.trim() && onEdit && editingIndex !== null) {
-      onEdit(editingIndex + startIndex, editText.trim());
+      onEdit(editingIndex, editText.trim());
       setEditingIndex(null);
       setEditText("");
     }
-  }, [editText, editingIndex, onEdit, startIndex]);
+  }, [editText, editingIndex, onEdit]);
 
   const toggleMenu = useCallback((index: number) => {
     setOpenMenuIndex(prev => prev === index ? null : index);
@@ -310,7 +316,8 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ messages = [], onRegenerate, on
       ) : (
         filteredMessages.map((msg, i) => {
           const isUser = msg.role === YOU;
-          const isEditing = isUser && editingIndex === i;
+          const originalIndex = messages.indexOf(msg);
+          const isEditing = isUser && editingIndex === originalIndex;
 
           return (
             <div key={i} className={cn("flex w-full mb-6", isUser ? "justify-end" : "justify-start")}>
@@ -374,10 +381,10 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ messages = [], onRegenerate, on
                       <MessageMenu isOpen={openMenuIndex === i} onClose={closeMenu} isUserMessage={isUser}>
                         <MenuItem icon={FaCopy} label="Copy" onClick={() => copyMessage(msg.txt || "")} />
                         {msg.role === AI && (
-                          <MenuItem icon={FaRedo} label="Regenerate" onClick={() => { handleRegenerate(i); closeMenu(); }} disabled={aiLoading} />
+                          <MenuItem icon={FaRedo} label="Regenerate" onClick={() => { handleRegenerate(msg); closeMenu(); }} disabled={aiLoading} />
                         )}
                         {isUser && (
-                          <MenuItem icon={FaEdit} label="Edit" onClick={() => { startEdit(i, msg.txt || ""); closeMenu(); }} disabled={aiLoading} />
+                          <MenuItem icon={FaEdit} label="Edit" onClick={() => { startEdit(msg); closeMenu(); }} disabled={aiLoading} />
                         )}
                       </MessageMenu>
                     </div>
@@ -387,7 +394,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ messages = [], onRegenerate, on
                         <button onClick={() => copyMessage(msg.txt || "")} className="flex items-center gap-1.5 hover:text-gray-800 dark:hover:text-slate-200 transition">
                           <FaCopy size={12} /> Copy
                         </button>
-                        <button onClick={() => handleRegenerate(i)} className="flex items-center gap-1.5 hover:text-gray-800 dark:hover:text-slate-200 transition">
+                        <button onClick={() => handleRegenerate(msg)} className="flex items-center gap-1.5 hover:text-gray-800 dark:hover:text-slate-200 transition">
                           <FaRedo size={12} /> Regenerate
                         </button>
                       </div>
