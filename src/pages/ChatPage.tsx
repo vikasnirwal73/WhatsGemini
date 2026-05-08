@@ -133,23 +133,32 @@ const ChatPage = () => {
     setError(null);
 
     try {
-      // Truncate messages up to (but not including) the edited message
-      const truncatedMessages = messages.slice(0, index);
-      await dispatch(updateMessages({ chatId: chatIdNum, newMessages: truncatedMessages }));
+      const isLastUserMessage = messages[index].role === YOU && messages.slice(index + 1).every(m => m.role !== YOU);
 
-      // Add the edited message
-      const resultAction = await dispatch(addMessage({ chatId: chatIdNum, role: YOU, text: newText }));
-      const updatedMessages = resultAction.payload as Message[] || [];
+      if (isLastUserMessage) {
+        // If it's the last user message edit, truncate it and any subsequent AI responses, then resend
+        const truncatedMessages = messages.slice(0, index);
+        await dispatch(updateMessages({ chatId: chatIdNum, newMessages: truncatedMessages }));
 
-      // Generate new AI response
-      const chatHistory = createChatHistory(updatedMessages);
-      const systemInstruction = getSystemInstruction();
-      aiPromiseRef.current = dispatch(generateAIResponse({ prompt: newText, history: chatHistory, systemInstruction }));
-      const aiResponse = await aiPromiseRef.current;
-      aiPromiseRef.current = null;
+        // Add the edited message
+        const resultAction = await dispatch(addMessage({ chatId: chatIdNum, role: YOU, text: newText }));
+        const updatedMessages = resultAction.payload as Message[] || [];
 
-      if (aiResponse.payload) {
-        await dispatch(addMessage({ chatId: chatIdNum, role: AI, text: (aiResponse.payload as any)?.text || (aiResponse.payload as string) }));
+        // Generate new AI response
+        const chatHistory = createChatHistory(updatedMessages);
+        const systemInstruction = getSystemInstruction();
+        aiPromiseRef.current = dispatch(generateAIResponse({ prompt: newText, history: chatHistory, systemInstruction }));
+        const aiResponse = await aiPromiseRef.current;
+        aiPromiseRef.current = null;
+
+        if (aiResponse.payload) {
+          await dispatch(addMessage({ chatId: chatIdNum, role: AI, text: (aiResponse.payload as any)?.text || (aiResponse.payload as string) }));
+        }
+      } else {
+        // If it's NOT the last user message, just update locally in the store
+        const updatedMessages = [...messages];
+        updatedMessages[index] = { ...updatedMessages[index], txt: newText };
+        await dispatch(updateMessages({ chatId: chatIdNum, newMessages: updatedMessages }));
       }
 
       dispatch(fetchChats());

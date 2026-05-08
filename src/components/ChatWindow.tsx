@@ -213,10 +213,18 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ messages = [], onRegenerate, on
     setEditText("");
   }, [messages]);
 
+  const prevMessagesLengthRef = useRef(messages.length);
+
   useEffect(() => {
     if (!isScrolledUp) {
-      chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+      // Determine if we should smooth scroll or jump instantly
+      // Jump instantly if loading a new chat (length jumps significantly or goes from 0 to N)
+      const diff = Math.abs(messages.length - prevMessagesLengthRef.current);
+      const isInstant = prevMessagesLengthRef.current === 0 || diff > 1;
+      
+      chatEndRef.current?.scrollIntoView({ behavior: isInstant ? "auto" : "smooth" });
     }
+    prevMessagesLengthRef.current = messages.length;
   }, [messages, aiLoading, isScrolledUp]);
 
   useEffect(() => {
@@ -316,8 +324,6 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ messages = [], onRegenerate, on
       ) : (
         filteredMessages.map((msg, i) => {
           const isUser = msg.role === YOU;
-          const originalIndex = messages.indexOf(msg);
-          const isEditing = isUser && editingIndex === originalIndex;
 
           return (
             <div key={i} className={cn("flex w-full mb-6", isUser ? "justify-end" : "justify-start")}>
@@ -330,40 +336,13 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ messages = [], onRegenerate, on
 
               <div
                 className={cn(
-                  "relative p-4 rounded-3xl max-w-[85%] md:max-w-[70%] shadow-sm min-w-0",
+                  "relative p-4 rounded-3xl max-w-[85%] md:max-w-[70%] shadow-sm min-w-0 group",
                   isUser 
                     ? "bg-primary text-white rounded-tr-sm" 
                     : "bg-slate-200 dark:bg-slate-700/60 text-gray-900 dark:text-slate-100 rounded-tl-sm border border-transparent dark:border-slate-600/50"
                 )}
                 style={{ fontSize: 'var(--chat-font-size, 16px)' }}
               >
-                {isEditing ? (
-                  <div className="flex flex-col gap-2">
-                    <textarea
-                      ref={(el) => { if (el) el.focus() }}
-                      value={editText}
-                      onChange={(e) => setEditText(e.target.value)}
-                      className="w-full min-h-[80px] p-2 bg-white/10 text-white rounded border border-white/30 focus:border-white/60 outline-none resize-y"
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" && !e.shiftKey) {
-                          e.preventDefault();
-                          saveEdit();
-                        }
-                        if (e.key === "Escape") {
-                          cancelEdit();
-                        }
-                      }}
-                    />
-                    <div className="flex justify-end gap-2">
-                      <button onClick={cancelEdit} className="p-1.5 rounded bg-white/10 hover:bg-white/20 text-white/80 hover:text-white transition" title="Cancel (Esc)">
-                        <FaTimes size={12} />
-                      </button>
-                      <button onClick={saveEdit} className="p-1.5 rounded bg-white/20 hover:bg-white/30 text-white transition" title="Save (Enter)">
-                        <FaCheck size={12} />
-                      </button>
-                    </div>
-                  </div>
-                ) : (
                   <>
                     <MarkdownRenderer msgText={msg.txt || ""} isUser={isUser} />
                     <div className="absolute top-2 right-2">
@@ -378,14 +357,23 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ messages = [], onRegenerate, on
                       >
                         <FaEllipsisV size={12} />
                       </button>
+                      <button
+                        onClick={() => startEdit(msg)}
+                        className={cn(
+                          "p-1.5 rounded-full transition opacity-0 group-hover:opacity-100 ml-1",
+                          isUser ? 'text-white/80 hover:text-white hover:bg-white/20' : 'text-gray-500 hover:text-gray-700 dark:text-slate-400 dark:hover:text-white hover:bg-gray-300 dark:hover:bg-slate-600'
+                        )}
+                        title="Edit message"
+                        aria-label="Edit message"
+                      >
+                        <FaEdit size={12} />
+                      </button>
                       <MessageMenu isOpen={openMenuIndex === i} onClose={closeMenu} isUserMessage={isUser}>
                         <MenuItem icon={FaCopy} label="Copy" onClick={() => copyMessage(msg.txt || "")} />
                         {msg.role === AI && (
                           <MenuItem icon={FaRedo} label="Regenerate" onClick={() => { handleRegenerate(msg); closeMenu(); }} disabled={aiLoading} />
                         )}
-                        {isUser && (
-                          <MenuItem icon={FaEdit} label="Edit" onClick={() => { startEdit(msg); closeMenu(); }} disabled={aiLoading} />
-                        )}
+                        <MenuItem icon={FaEdit} label="Edit" onClick={() => { startEdit(msg); closeMenu(); }} disabled={aiLoading} />
                       </MessageMenu>
                     </div>
                     {/* Action Row for AI Messages */}
@@ -397,10 +385,12 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ messages = [], onRegenerate, on
                         <button onClick={() => handleRegenerate(msg)} className="flex items-center gap-1.5 hover:text-gray-800 dark:hover:text-slate-200 transition">
                           <FaRedo size={12} /> Regenerate
                         </button>
+                        <button onClick={() => startEdit(msg)} className="flex items-center gap-1.5 hover:text-gray-800 dark:hover:text-slate-200 transition">
+                          <FaEdit size={12} /> Edit
+                        </button>
                       </div>
                     )}
                   </>
-                )}
               </div>
             </div>
           );
@@ -424,6 +414,63 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ messages = [], onRegenerate, on
         >
           <FaArrowDown size={16} />
         </button>
+      )}
+
+      {/* Full Screen Edit Modal */}
+      {editingIndex !== null && (
+        <div className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 md:p-8 animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl w-full max-w-4xl shadow-2xl flex flex-col h-[80vh] md:h-[70vh] border border-gray-200 dark:border-slate-700">
+            <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-slate-800">
+              <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Edit Message</h3>
+              <button 
+                onClick={cancelEdit}
+                className="text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white transition p-2 rounded-full hover:bg-gray-100 dark:hover:bg-slate-800"
+              >
+                <FaTimes size={18} />
+              </button>
+            </div>
+            
+            <div className="flex-1 p-4 md:p-6 overflow-hidden flex flex-col">
+              <textarea
+                ref={(el) => { if (el) el.focus() }}
+                value={editText}
+                onChange={(e) => setEditText(e.target.value)}
+                className="flex-1 w-full p-4 rounded-xl border border-gray-300 dark:border-slate-700 bg-gray-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary focus:border-transparent outline-none resize-none text-base disabled:opacity-50"
+                placeholder="Type your message here..."
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    saveEdit();
+                  }
+                  if (e.key === "Escape") {
+                    cancelEdit();
+                  }
+                }}
+              />
+              <div className="mt-2 text-xs text-gray-500 dark:text-slate-400 flex justify-between">
+                <span>Markdown is supported.</span>
+                <span><kbd className="bg-gray-200 dark:bg-slate-700 px-1.5 py-0.5 rounded">Enter</kbd> to save, <kbd className="bg-gray-200 dark:bg-slate-700 px-1.5 py-0.5 rounded">Shift+Enter</kbd> for new line, <kbd className="bg-gray-200 dark:bg-slate-700 px-1.5 py-0.5 rounded">Esc</kbd> to cancel</span>
+              </div>
+            </div>
+
+            <div className="p-4 border-t border-gray-200 dark:border-slate-800 flex justify-end gap-3 bg-gray-50 dark:bg-slate-900/50 rounded-b-2xl">
+              <button 
+                onClick={cancelEdit}
+                className="px-5 py-2.5 rounded-xl font-medium text-slate-700 dark:text-slate-300 hover:bg-gray-200 dark:hover:bg-slate-800 transition"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={saveEdit}
+                disabled={!editText.trim()}
+                className="px-5 py-2.5 rounded-xl font-medium bg-primary text-white hover:bg-primary-hover transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-sm"
+              >
+                <FaCheck size={14} />
+                Save Changes
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

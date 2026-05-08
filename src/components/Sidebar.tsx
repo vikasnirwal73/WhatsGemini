@@ -237,21 +237,21 @@ const ChatList = ({ chats, onDeleteChat, setIsOpen }: { chats: Chat[], onDeleteC
         const iconColor = isProject ? 'bg-indigo-500' : 'bg-slate-500';
 
         return (
-          <div
+          <Link to={`/chat/${chat.id}`}
             key={chat.id}
             className="flex items-center gap-3 p-3 rounded-xl cursor-pointer group hover:bg-gray-200 dark:hover:bg-slate-800 transition"
           >
             <div className={`w-8 h-8 rounded-full ${iconColor} flex items-center justify-center flex-shrink-0 text-white shadow-sm`}>
               <Icon size={14} />
             </div>
-            <Link to={`/chat/${chat.id}`} className="flex-1 flex flex-col overflow-hidden" onClick={() => { setIsOpen(false) }}>
+            <div className="flex-1 flex flex-col overflow-hidden" onClick={() => { setIsOpen(false) }}>
               <div className="flex justify-between items-center w-full">
                 <span className="text-gray-900 dark:text-slate-200 font-medium text-sm truncate">{chat.title}</span>
                 <span className="text-xs text-gray-500 dark:text-slate-500 ml-2 flex-shrink-0">
                   {i < 10 ? `0${i+5}:59` : `1${i-10}:23`}
                 </span>
               </div>
-            </Link>
+            </div>
             <button
               onClick={() => onDeleteChat(chat.id)}
               className="p-1.5 text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition absolute right-4 bg-slate-800 rounded shadow-md"
@@ -260,7 +260,7 @@ const ChatList = ({ chats, onDeleteChat, setIsOpen }: { chats: Chat[], onDeleteC
             >
               <FaTrash size={12} />
             </button>
-          </div>
+          </Link>
         );
       })}
     </div>
