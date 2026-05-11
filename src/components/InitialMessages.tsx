@@ -7,7 +7,11 @@ interface InitialMessage {
   message: string;
 }
 
-const InitialMessages = () => {
+interface InitialMessagesProps {
+  onSave?: () => void;
+}
+
+const InitialMessages: React.FC<InitialMessagesProps> = ({ onSave }) => {
   // Safely retrieve saved messages from localStorage
   const getSavedMessages = (): InitialMessage[] => {
     try {
@@ -29,9 +33,16 @@ const InitialMessages = () => {
         { ...prevMessages[0], role: YOU },
         ...prevMessages.slice(1),
       ]);
+      return; // Re-run effect after state update
     }
-    localStorage.setItem(LS_INITIAL_MESSAGES, JSON.stringify(nonEmptyMessages));
-  }, [initialMessages]);
+    
+    const timeoutId = setTimeout(() => {
+      localStorage.setItem(LS_INITIAL_MESSAGES, JSON.stringify(nonEmptyMessages));
+      if (onSave) onSave();
+    }, 1000);
+    
+    return () => clearTimeout(timeoutId);
+  }, [initialMessages, onSave]);
 
   // Handle input change
   const handleChange = useCallback((value: string, idx: number, key: keyof InitialMessage) => {

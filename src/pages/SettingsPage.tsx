@@ -634,7 +634,10 @@ const SettingsPage = () => {
 
               {/* Initial Chat Message */}
               <div className="mt-4 border-t border-gray-200 dark:border-gray-800 pt-4">
-                <InitialMessages key={initialMessagesKey} />
+                <InitialMessages 
+                  key={initialMessagesKey} 
+                  onSave={() => addToast(roastMessages[Math.floor(Math.random() * roastMessages.length)], "success")}
+                />
               </div>
             </div>
           )}
