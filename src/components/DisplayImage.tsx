@@ -1,0 +1,78 @@
+import React, { useEffect, useState } from 'react';
+import { dbService } from '../services/dbService';
+
+interface DisplayImageProps extends React.ImgHTMLAttributes<HTMLImageElement> {
+  srcContext: string | undefined;
+}
+
+export const DisplayImage: React.FC<DisplayImageProps> = ({ srcContext, className, alt, ...props }) => {
+  const [objectUrl, setObjectUrl] = useState<string | null>(null);
+  const [error, setError] = useState<boolean>(false);
+
+  useEffect(() => {
+    let currentUrl: string | null = null;
+    let isMounted = true;
+
+    const loadLocalImage = async (filename: string) => {
+      try {
+        const dirHandle = await dbService.getSetting("image_save_directory");
+        if (dirHandle) {
+          const fileHandle = await dirHandle.getFileHandle(filename);
+          const file = await fileHandle.getFile();
+          
+          if (isMounted) {
+            currentUrl = URL.createObjectURL(file);
+            setObjectUrl(currentUrl);
+          }
+        }
+      } catch (err) {
+        console.error(`Failed to load local image: ${filename}`, err);
+        if (isMounted) setError(true);
+      }
+    };
+
+    if (srcContext?.startsWith('local:')) {
+      const filename = srcContext.substring(6);
+      loadLocalImage(filename);
+    } else if (srcContext?.startsWith('data:image')) {
+      // It's already base64, but we convert it to Object URL for better DOM performance
+      try {
+        const arr = srcContext.split(',');
+        const mimeMatch = arr[0].match(/:(.*?);/);
+        if (mimeMatch) {
+          const mime = mimeMatch[1];
+          const bstr = atob(arr[1]);
+          let n = bstr.length;
+          const u8arr = new Uint8Array(n);
+          while (n--) {
+            u8arr[n] = bstr.charCodeAt(n);
+          }
+          const blob = new Blob([u8arr], { type: mime });
+          currentUrl = URL.createObjectURL(blob);
+          setObjectUrl(currentUrl);
+        } else {
+            setObjectUrl(srcContext); // Fallback
+        }
+      } catch (e) {
+        setObjectUrl(srcContext); // Fallback
+      }
+    } else if (srcContext) {
+      setObjectUrl(srcContext); // Use as is (external URL?)
+    }
+
+    return () => {
+      isMounted = false;
+      if (currentUrl) URL.revokeObjectURL(currentUrl);
+    };
+  }, [srcContext]);
+
+  if (error || !srcContext) {
+    return <div className={`bg-theme-bg-secondary flex items-center justify-center text-theme-text-secondary text-xs p-2 rounded ${className}`}>Failed to load image</div>;
+  }
+
+  return objectUrl ? (
+    <img src={objectUrl} alt={alt || "Image"} className={className} {...props} />
+  ) : (
+    <div className={`animate-pulse bg-gray-600 rounded ${className}`} />
+  );
+};

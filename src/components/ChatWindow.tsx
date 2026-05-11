@@ -7,6 +7,7 @@ import { FaRedo, FaEdit, FaCheck, FaTimes, FaEllipsisV, FaCopy, FaArrowDown } fr
 import { AI, YOU, LS_INITIAL_MESSAGES } from "../utils/constants";
 import { Message } from "../types";
 import { cn } from "../utils/cn";
+import { DisplayImage } from "./DisplayImage";
 
 // CodeBlock Component to handle syntax highlighting and copying
 const CodeBlock = ({ node, className, children, ...props }: any) => {
@@ -58,7 +59,7 @@ const CodeBlock = ({ node, className, children, ...props }: any) => {
 
 // Markdown Renderer memoized to prevent re-renders of old messages
 const MarkdownRenderer = React.memo(({ msgText, isUser }: { msgText: string | any; isUser: boolean }) => {
-  const safeText = typeof msgText === 'string' ? msgText : (msgText?.text || JSON.stringify(msgText));
+  const safeText = typeof msgText === 'string' ? msgText : (typeof msgText?.text === 'string' ? msgText.text : JSON.stringify(msgText));
   return (
     <div className="markdown-content text-left break-words min-w-0">
       <ReactMarkdown 
@@ -66,6 +67,7 @@ const MarkdownRenderer = React.memo(({ msgText, isUser }: { msgText: string | an
         components={{
           p: ({node, ...props}) => <p className="mb-2 last:mb-0" {...props} />,
           em: ({node, ...props}) => <em className={cn("italic", isUser ? 'text-white/80' : 'text-gray-500 dark:text-gray-400')} {...props} />,
+          // eslint-disable-next-line jsx-a11y/anchor-has-content
           a: ({node, ...props}) => <a className={cn(isUser ? 'text-white underline' : 'text-blue-500 hover:underline')} target="_blank" rel="noopener noreferrer" {...props} aria-hidden="true" />,
           ul: ({node, ...props}) => <ul className="list-disc ml-5 mb-2" {...props} />,
           ol: ({node, ...props}) => <ol className="list-decimal ml-5 mb-2" {...props} />,
@@ -132,7 +134,7 @@ interface ChatWindowProps {
   messages: Message[];
   onRegenerate?: (index: number) => void;
   onEdit?: (index: number, text: string) => void;
-  onSend?: (text: string) => void;
+  onSend?: (text: string, isImageRequest?: boolean) => void;
   aiLoading?: boolean;
   characterName?: string;
 }
@@ -345,6 +347,9 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ messages = [], onRegenerate, on
               >
                   <>
                     <MarkdownRenderer msgText={msg.txt || ""} isUser={isUser} />
+                    {msg.images && msg.images.map((imgSrc, idx) => (
+                      <DisplayImage key={idx} srcContext={imgSrc} alt="Generated" className="mt-2 max-w-full rounded-lg shadow-sm border border-white/20 dark:border-slate-700" />
+                    ))}
                     <div className="absolute top-2 right-2">
                       <button
                         onClick={() => toggleMenu(i)}

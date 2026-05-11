@@ -51,23 +51,60 @@ const ChatPage = () => {
 
   useEffect(() => {
     if (currentChat) {
-      setMessages(currentChat.content);
+      let needsDbUpdate = false;
+      const cleanedMessages = currentChat.content.map(msg => {
+         let text = msg.txt || "";
+         if (text.length > 500 && (text.includes("data:image") || /[A-Za-z0-9+/=]{1000,}/.test(text))) {
+            needsDbUpdate = true;
+            text = text.replace(/!\[.*?\]\(\s*(data:image\/[a-zA-Z0-9+.-]+;base64,[A-Za-z0-9+/=\s]+)\s*\)/g, '');
+            text = text.replace(/<img[^>]+src=["'](data:image\/[a-zA-Z0-9+.-]+;base64,[A-Za-z0-9+/=\s]+)["'][^>]*>/gi, '');
+            text = text.replace(/data:image\/[a-zA-Z0-9+.-]+;base64,[A-Za-z0-9+/=\s]+/g, '');
+            text = text.replace(/[A-Za-z0-9+/=]{1000,}/g, '');
+            
+            // If the message had an image leaked as base64, but images array isn't populated properly, 
+            // the AI already dropped it during the sync stream.
+         }
+         return { ...msg, txt: text };
+      });
+
+      if (needsDbUpdate && chatIdNum) {
+         dispatch(updateMessages({ chatId: chatIdNum, newMessages: cleanedMessages }));
+      }
+
+      setMessages(cleanedMessages);
       setCharacter(currentChat.title);
     }
-  }, [currentChat]);
+  }, [currentChat, chatIdNum, dispatch]);
 
   const createChatHistory = useCallback((msgs: Message[]) =>
-    msgs.map((msg) => ({
-      role: msg.role === YOU ? USER : MODEL,
-      parts: [{ text: msg.txt }],
-    })), []);
+    msgs.map((msg) => {
+      let text = msg.txt || "";
+      
+      // Clean old base64 leaks from database so they aren't passed into the context
+      const hadBase64 = text.length > 500 && (text.includes("data:image") || /[A-Za-z0-9+/=]{1000,}/.test(text));
+      if (hadBase64) {
+        text = text.replace(/!\[.*?\]\(\s*(data:image\/[a-zA-Z0-9+.-]+;base64,[A-Za-z0-9+/=\s]+)\s*\)/g, '');
+        text = text.replace(/<img[^>]+src=["'](data:image\/[a-zA-Z0-9+.-]+;base64,[A-Za-z0-9+/=\s]+)["'][^>]*>/gi, '');
+        text = text.replace(/data:image\/[a-zA-Z0-9+.-]+;base64,[A-Za-z0-9+/=\s]+/g, '');
+        text = text.replace(/[A-Za-z0-9+/=]{1000,}/g, '');
+      }
+
+      if ((msg.images && msg.images.length > 0) || hadBase64) {
+        text += text.trim() ? "\n[System Note: Included an image requested by the user.]" : "[System Note: Included an image requested by the user.]";
+      }
+      
+      return {
+        role: msg.role === YOU ? USER : MODEL,
+        parts: [{ text: text.trim() || " " }], // Gemini requires non-empty string, fallback to space
+      };
+    }), []);
 
   const getSystemInstruction = useCallback(() => {
     const charId = currentChat?.characterId;
-    if (!charId) return undefined;
+    if (!charId) return { text: undefined, images: undefined };
     
     const characterInfo = characters.find(c => c.id === charId);
-    if (!characterInfo) return undefined;
+    if (!characterInfo) return { text: undefined, images: undefined };
 
     let roleplayPrompt = `Role play as, Character Name: ${characterInfo.name}.\nCharacter description: ${characterInfo.description}.\nExample dialogue: ${characterInfo.prompt}`;
             
@@ -84,11 +121,14 @@ const ChatPage = () => {
       if (characterInfo.relationship) {
         roleplayPrompt += `\nYour relationship with the user: ${characterInfo.relationship}`;
       }
+      if (characterInfo.appearance) {
+        roleplayPrompt += `\nYour physical appearance/looks: ${characterInfo.appearance}`;
+      }
     } catch (e) {
       console.error("Error parsing user profile for context:", e);
     }
     
-    return roleplayPrompt;
+    return { text: roleplayPrompt, images: characterInfo.appearanceImages };
   }, [currentChat, characters]);
 
   useEffect(() => {
@@ -101,7 +141,7 @@ const ChatPage = () => {
     }
   }, [dispatch, messages, createChatHistory, getSystemInstruction, currentChat]);
 
-  const handleSend = async (text: string) => {
+  const handleSend = async (text: string, isImageRequest?: boolean) => {
     if (!text.trim() || !chatIdNum) return;
 
     setError(null);
@@ -111,13 +151,18 @@ const ChatPage = () => {
       const updatedMessages = resultAction.payload as Message[] || [];
 
       const chatHistory = createChatHistory(updatedMessages);
-      const systemInstruction = getSystemInstruction();
-      aiPromiseRef.current = dispatch(generateAIResponse({ prompt: text, history: chatHistory, systemInstruction }));
+      const { text: systemInstruction, images: characterImages } = getSystemInstruction();
+      aiPromiseRef.current = dispatch(generateAIResponse({ prompt: text, history: chatHistory, systemInstruction, characterImages, isImageRequest }));
       const aiResponse = await aiPromiseRef.current;
       aiPromiseRef.current = null;
 
       if (aiResponse.payload) {
-        await dispatch(addMessage({ chatId: chatIdNum, role: AI, text: (aiResponse.payload as any)?.text || (aiResponse.payload as string) }));
+        await dispatch(addMessage({ 
+          chatId: chatIdNum, 
+          role: AI, 
+          text: typeof (aiResponse.payload as any)?.text === 'string' ? (aiResponse.payload as any).text : (aiResponse.payload as string),
+          images: (aiResponse.payload as any)?.images || undefined
+        }));
       }
 
       dispatch(fetchChats());
@@ -146,13 +191,18 @@ const ChatPage = () => {
 
         // Generate new AI response
         const chatHistory = createChatHistory(updatedMessages);
-        const systemInstruction = getSystemInstruction();
-        aiPromiseRef.current = dispatch(generateAIResponse({ prompt: newText, history: chatHistory, systemInstruction }));
+        const { text: systemInstruction, images: characterImages } = getSystemInstruction();
+        aiPromiseRef.current = dispatch(generateAIResponse({ prompt: newText, history: chatHistory, systemInstruction, characterImages }));
         const aiResponse = await aiPromiseRef.current;
         aiPromiseRef.current = null;
 
         if (aiResponse.payload) {
-          await dispatch(addMessage({ chatId: chatIdNum, role: AI, text: (aiResponse.payload as any)?.text || (aiResponse.payload as string) }));
+          await dispatch(addMessage({ 
+            chatId: chatIdNum, 
+            role: AI, 
+            text: typeof (aiResponse.payload as any)?.text === 'string' ? (aiResponse.payload as any).text : (aiResponse.payload as string),
+            images: (aiResponse.payload as any)?.images || undefined
+          }));
         }
       } else {
         // If it's NOT the last user message, just update locally in the store
@@ -184,13 +234,18 @@ const ChatPage = () => {
 
       const lastUserMessage = updatedMessages[updatedMessages.length - 1].txt || "";
       const chatHistory = createChatHistory(updatedMessages);
-      const systemInstruction = getSystemInstruction();
-      aiPromiseRef.current = dispatch(generateAIResponse({ prompt: lastUserMessage, history: chatHistory, systemInstruction }));
+      const { text: systemInstruction, images: characterImages } = getSystemInstruction();
+      aiPromiseRef.current = dispatch(generateAIResponse({ prompt: lastUserMessage, history: chatHistory, systemInstruction, characterImages }));
       const aiResponse = await aiPromiseRef.current;
       aiPromiseRef.current = null;
 
       if (aiResponse.payload) {
-        await dispatch(addMessage({ chatId: chatIdNum, role: AI, text: (aiResponse.payload as any)?.text || (aiResponse.payload as string) }));
+        await dispatch(addMessage({ 
+          chatId: chatIdNum, 
+          role: AI, 
+          text: typeof (aiResponse.payload as any)?.text === 'string' ? (aiResponse.payload as any).text : (aiResponse.payload as string),
+          images: (aiResponse.payload as any)?.images || undefined
+        }));
       }
 
       dispatch(fetchChats());
@@ -220,9 +275,9 @@ const ChatPage = () => {
       const cutoff = Math.max(messages.length - 2, 2);
       const msgsToCompress = messages.slice(0, cutoff);
       const historyToCompress = createChatHistory(msgsToCompress);
-      const systemInstruction = getSystemInstruction();
+      const { text: systemInstructionText } = getSystemInstruction();
 
-      const summaryObj = await dispatch(compressChatHistory({ history: historyToCompress, systemInstruction })).unwrap();
+      const summaryObj = await dispatch(compressChatHistory({ history: historyToCompress, systemInstruction: systemInstructionText })).unwrap();
 
       if (summaryObj) {
         const retainedMsgs = messages.slice(cutoff);

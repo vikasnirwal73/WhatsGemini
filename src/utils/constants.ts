@@ -38,6 +38,8 @@ export const DARK = "dark";
 
 // Local storage variables
 export const LS_AI_MODEL = "ai_model";
+export const LS_IMAGE_MODEL = "image_model";
+export const DEFAULT_IMAGE_MODEL = "gemini-2.0-flash-exp";
 export const LS_MAX_OUTPUT_TOKENS = "max_output_tokens";
 export const LS_MAX_CHAT_LENGTH = "max_chat_length";
 export const LS_TEMPRATURE = "temperature";
@@ -48,4 +50,12 @@ export const LS_THEME = "theme";
 export const LS_INITIAL_MESSAGES = "initial_messages";
 export const LS_FONT_SIZE = "app_font_size";
 export const API_KEY_STORAGE_KEY = "genAI_api_key";
+export const LS_IMAGE_RESOLUTION = "image_resolution";
+
+export const IMAGE_RESOLUTIONS = [
+  "256x256",
+  "512x512",
+  "1024x1024"
+];
+export const DEFAULT_IMAGE_RESOLUTION = "512x512";
 export const LS_USER_PROFILE = "whatsgemini_user_profile";

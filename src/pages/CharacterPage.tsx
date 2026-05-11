@@ -5,11 +5,14 @@ import { FaArrowLeft, FaTrash, FaEdit, FaTimes, FaDownload, FaUpload, FaCopy } f
 import { useAppDispatch, useAppSelector } from "../store/hooks";
 import { Character } from "../types";
 import { useModal } from "../contexts/ModalContext";
+import { dbService } from "../services/dbService";
+import { DisplayImage } from "../components/DisplayImage";
 
 const CharacterPage = () => {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
   const characters = useAppSelector((state) => state.character.characters);
   const loading = useAppSelector((state) => state.character.loading);
   const { showConfirm } = useModal();
@@ -18,6 +21,8 @@ const CharacterPage = () => {
   const [description, setDescription] = useState("");
   const [prompt, setPrompt] = useState("");
   const [relationship, setRelationship] = useState("");
+  const [appearance, setAppearance] = useState("");
+  const [appearanceImages, setAppearanceImages] = useState<string[]>([]);
   const [avatar, setAvatar] = useState("");
   const [editCharacter, setEditCharacter] = useState<Character | null>(null); 
 
@@ -31,6 +36,8 @@ const CharacterPage = () => {
     setDescription("");
     setPrompt("");
     setRelationship("");
+    setAppearance("");
+    setAppearanceImages([]);
     setAvatar("");
   } 
 
@@ -40,11 +47,13 @@ const CharacterPage = () => {
       return;
     }
 
-    dispatch(addCharacter({ name, description, prompt, relationship, avatar }));
+    dispatch(addCharacter({ name, description, prompt, relationship, appearance, appearanceImages, avatar }));
     setName("");
     setDescription("");
     setPrompt("");
     setRelationship("");
+    setAppearance("");
+    setAppearanceImages([]);
     setAvatar("");
   };
 
@@ -61,6 +70,8 @@ const CharacterPage = () => {
     setDescription(char.description);
     setPrompt(char.prompt);
     setRelationship(char.relationship || "");
+    setAppearance(char.appearance || "");
+    setAppearanceImages(char.appearanceImages || []);
     // Ensure avatar is handled if added later to Character type, ignoring for now if missing
     // setAvatar(char.avatar || "");
   };
@@ -71,6 +82,8 @@ const CharacterPage = () => {
     setDescription(char.description);
     setPrompt(char.prompt);
     setRelationship(char.relationship || "");
+    setAppearance(char.appearance || "");
+    setAppearanceImages(char.appearanceImages || []);
     // setAvatar(char.avatar || "");
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
@@ -81,12 +94,14 @@ const CharacterPage = () => {
       return;
     }
 
-    dispatch(updateCharacter({ id: editCharacter.id, name, description, prompt, relationship, avatar }));
+    dispatch(updateCharacter({ id: editCharacter.id, name, description, prompt, relationship, appearance, appearanceImages, avatar }));
     setEditCharacter(null);
     setName("");
     setDescription("");
     setPrompt("");
     setRelationship("");
+    setAppearance("");
+    setAppearanceImages([]);
     setAvatar("");
   };
 
@@ -96,6 +111,8 @@ const CharacterPage = () => {
       description: char.description,
       prompt: char.prompt,
       relationship: char.relationship || "",
+      appearance: char.appearance || "",
+      appearanceImages: char.appearanceImages || [],
     };
 
     const jsonString = JSON.stringify(dataToExport, null, 2);
@@ -136,6 +153,8 @@ const CharacterPage = () => {
             description: parsed.description || "",
             prompt: parsed.prompt,
             relationship: parsed.relationship || "",
+            appearance: parsed.appearance || "",
+            appearanceImages: parsed.appearanceImages || [],
           })
         );
 
@@ -147,6 +166,48 @@ const CharacterPage = () => {
     };
     reader.readAsText(file);
     event.target.value = ''; // Reset input
+  };
+
+  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
+
+    try {
+      const dirHandle = await dbService.getSetting("image_save_directory");
+      if (!dirHandle) {
+         alert("Please select an Image Save Directory in Settings first to use file persistence.");
+         return;
+      }
+
+      const newImageRefs: string[] = [];
+      
+      for (const file of Array.from(files)) {
+         const ext = file.name.split('.').pop() || 'png';
+         const filename = `char_ref_${Date.now()}_${Math.random().toString(36).substr(2, 5)}.${ext}`;
+         
+         const fileHandle = await dirHandle.getFileHandle(filename, { create: true });
+         const writable = await fileHandle.createWritable();
+         await writable.write(file);
+         await writable.close();
+         
+         newImageRefs.push(`local:${filename}`);
+      }
+
+      setAppearanceImages((prev) => [...prev, ...newImageRefs]);
+    } catch (err: any) {
+      console.error("Error saving image files to directory:", err);
+      if (err.name === 'NotAllowedError') {
+         alert("Permission to write to directory was denied. Please re-select the directory in Settings.");
+      } else {
+         alert("Failed to save image files to the local directory.");
+      }
+    }
+    
+    event.target.value = ''; // Reset input
+  };
+
+  const removeAppearanceImage = (index: number) => {
+    setAppearanceImages(prev => prev.filter((_, i) => i !== index));
   };
 
   const truncateText = (text: string, maxLength = 100) => {
@@ -204,6 +265,46 @@ const CharacterPage = () => {
           onChange={(e) => setRelationship(e.target.value)}
           className="w-full p-3 bg-app-light dark:bg-slate-900/50 text-black dark:text-white rounded-xl border border-transparent dark:border-slate-700 focus:border-indigo-500 outline-none mb-4 transition-all"
         />
+        <textarea
+          placeholder="Character Appearance/Looks (e.g. Blonde hair, wears a red jacket) (Optional)"
+          value={appearance}
+          onChange={(e) => setAppearance(e.target.value)}
+          className="w-full p-3 bg-app-light dark:bg-slate-900/50 text-black dark:text-white rounded-xl border border-transparent dark:border-slate-700 focus:border-indigo-500 outline-none mb-4 transition-all resize-none min-h-[80px]"
+        />
+        
+        <div className="mb-4">
+          <label className="block text-sm text-gray-700 dark:text-gray-300 font-medium mb-2">Character Reference Images</label>
+          <div className="flex flex-wrap gap-2 mb-2">
+            {appearanceImages.map((src, idx) => (
+              <div key={idx} className="relative w-20 h-20 rounded-lg overflow-hidden border border-gray-300 dark:border-slate-600 bg-slate-800">
+                <DisplayImage srcContext={src} alt="Appearance Reference" className="w-full h-full object-cover" />
+                <button
+                  onClick={() => removeAppearanceImage(idx)}
+                  className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
+                >
+                  <FaTimes size={10} />
+                </button>
+              </div>
+            ))}
+            <button
+              onClick={() => imageInputRef.current?.click()}
+              className="w-20 h-20 flex flex-col justify-center items-center rounded-lg border-2 border-dashed border-gray-300 dark:border-slate-600 text-gray-500 hover:text-indigo-500 hover:border-indigo-500 transition-colors"
+            >
+              <FaUpload size={16} />
+              <span className="text-[10px] mt-1 text-center font-medium">Add Image</span>
+            </button>
+          </div>
+          <p className="text-xs text-gray-500">Provided to image-capable models to keep generated appearance consistent.</p>
+          <input
+            type="file"
+            ref={imageInputRef}
+            onChange={handleImageUpload}
+            accept="image/*"
+            multiple
+            style={{ display: "none" }}
+          />
+        </div>
+
         <textarea
           placeholder="Character Prompt (Personality, Style, etc.)"
           value={prompt}

@@ -5,12 +5,16 @@ import { Chat, Character } from "../types";
 class WhatsGeminiDB extends Dexie {
   chats!: Table<Chat, number>;
   characters!: Table<Character, number>;
+  settings!: Table<{ key: string, value: any }, string>;
 
   constructor() {
     super(DB_NAME);
-    this.version(3).stores({
+    this.version(4).stores({
       chats: "++id, title, timestamp, content, characterId",
-      characters: "++id, name, description, prompt, relationship, avatar",
+      characters: "++id, name, description, prompt, relationship, appearance, avatar",
+      settings: "key",
+    }).upgrade(tx => {
+      // Upgrade logic if needed from v3 to v4
     });
   }
 }
@@ -18,6 +22,15 @@ class WhatsGeminiDB extends Dexie {
 export const db = new WhatsGeminiDB();
 
 export const dbService = {
+  // Settings (e.g. Directory Handle)
+  async getSetting(key: string): Promise<any> {
+    const setting = await db.settings.get(key);
+    return setting ? setting.value : undefined;
+  },
+
+  async setSetting(key: string, value: any): Promise<void> {
+    await db.settings.put({ key, value });
+  },
   // Chats
   async getAllChats(): Promise<Chat[]> {
     return await db.chats.orderBy("timestamp").toArray();

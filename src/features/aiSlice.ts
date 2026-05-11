@@ -1,5 +1,6 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } from "@google/generative-ai";
+import { dbService } from "../services/dbService";
 import {
   AI,
   DEFAULT_AI_MODEL,
@@ -13,6 +14,10 @@ import {
   LS_MAX_OUTPUT_TOKENS,
   LS_SAFETY_SETTINGS,
   LS_TEMPRATURE,
+  // LS_IMAGE_RESOLUTION,
+  // DEFAULT_IMAGE_RESOLUTION,
+  LS_IMAGE_MODEL,
+  DEFAULT_IMAGE_MODEL
 } from "../utils/constants";
 import { AISafetySettings } from "../types";
 
@@ -60,12 +65,23 @@ const formatSafetySettings = (settings: AISafetySettings | any) => [
 // Async Thunk for generating AI response
 export const generateAIResponse = createAsyncThunk(
   "ai/generateResponse",
-  async ({ prompt, history = [], systemInstruction }: { prompt: string; history?: any[], systemInstruction?: string }, { rejectWithValue, signal }) => {
+  async ({ prompt, history = [], systemInstruction, characterImages, isImageRequest = false }: { prompt: string; history?: any[], systemInstruction?: string, characterImages?: string[], isImageRequest?: boolean }, { rejectWithValue, signal }) => {
     try {
       const apiKey = getAPIKey();
       if (!apiKey) throw new Error("API key is missing. Please log in.");
       const maxHistoryLength = parseInt(localStorage.getItem(LS_MAX_CHAT_LENGTH) || "0", 10);
-      const selectedModel = getStoredValue(LS_AI_MODEL, DEFAULT_AI_MODEL);
+      let selectedModel = getStoredValue(LS_AI_MODEL, DEFAULT_AI_MODEL);
+      
+      if (isImageRequest) {
+        selectedModel = getStoredValue(LS_IMAGE_MODEL, DEFAULT_IMAGE_MODEL); 
+      }
+      
+      // Inject image request text if not explicitly present in the prompt but the toggle is active
+      let finalPrompt = prompt;
+      if (isImageRequest && !/\b(generate image|draw|picture|pic|photo|image)\b/i.test(prompt)) {
+        finalPrompt = `Please generate an image of: ${prompt}. Consider the context of our chat.`;
+      }
+      
       const maxTokens = getStoredValue(LS_MAX_OUTPUT_TOKENS, DEFAULT_OUTPUT_TOKENS, Number);
       const temperature = getStoredValue(LS_TEMPRATURE, DEFAULT_TEMPRATURE, parseFloat);
       const storedSafetySettings = getStoredValue<AISafetySettings | any>(
@@ -129,26 +145,106 @@ export const generateAIResponse = createAsyncThunk(
 
       // Defensively start chat session and get response
       const chat = await model.startChat({ history: historyForSdk });
-      const stream = await chat.sendMessageStream(prompt);
       
       let response = "";
-      for await (const chunk of stream.stream) {
-        if (signal.aborted) {
-          console.log("AI response generation aborted by user.");
-          break;
-        }
-        try {
-          const chunkText = chunk.text();
-          if (chunkText) {
-            response += chunkText;
-          }
-        } catch (e) {
-          console.warn("Could not parse text chunk:", e);
-        }
-      }
+      let totalTokens = 0;
+      let generatedImages: string[] = [];
 
-      const responseData = await stream.response;
-      const totalTokens = responseData?.usageMetadata?.totalTokenCount || 0;
+      try {
+        const promptParts: any[] = [{ text: finalPrompt }];
+
+        if (isImageRequest && characterImages && characterImages.length > 0) {
+           for (const imgRef of characterImages) {
+              if (imgRef.startsWith('local:')) {
+                 try {
+                     const filename = imgRef.substring(6);
+                     const dirHandle = await dbService.getSetting("image_save_directory");
+                     if (dirHandle) {
+                        const fileHandle = await dirHandle.getFileHandle(filename);
+                        const file = await fileHandle.getFile();
+                        const buffer = await file.arrayBuffer();
+                        const base64d = btoa(
+                           new Uint8Array(buffer).reduce((data, byte) => data + String.fromCharCode(byte), '')
+                        );
+                        // infer mimetype
+                        const ext = filename.split('.').pop()?.toLowerCase();
+                        let mimeType = 'image/png';
+                        if (ext === 'jpg' || ext === 'jpeg') mimeType = 'image/jpeg';
+                        else if (ext === 'webp') mimeType = 'image/webp';
+                        
+                        promptParts.push({
+                           inlineData: {
+                              mimeType,
+                              data: base64d
+                           }
+                        });
+                     }
+                 } catch (e) {
+                     console.error("Failed to load local character image for AI context:", e);
+                 }
+              } else {
+                 const mimeMatch = imgRef.match(/data:(.*?);base64,/);
+                 if (mimeMatch) {
+                    promptParts.push({
+                       inlineData: {
+                          mimeType: mimeMatch[1],
+                          data: imgRef.split(',')[1]
+                       }
+                    });
+                 }
+              }
+           }
+        }
+
+        const stream = await chat.sendMessageStream(promptParts);
+        for await (const chunk of stream.stream) {
+          if (signal.aborted) {
+            console.log("AI response generation aborted by user.");
+            break;
+          }
+          
+          try {
+            // Check for potential image parts in candidates
+            const parts = chunk.candidates?.[0]?.content?.parts || [];
+            for (const part of parts) {
+               if (part.inlineData) {
+                  // Reconstruct base64 into a data URI
+                  const mimeType = part.inlineData.mimeType;
+                  const base64d = part.inlineData.data;
+                  const dataUri = `data:${mimeType};base64,${base64d}`;
+                  
+                  generatedImages.push(dataUri);
+               } else if (part.text) {
+                  response += part.text;
+               }
+            }
+          } catch (e) {
+            console.warn("Could not parse text chunk:", e);
+          }
+        }
+
+        const responseData = await stream.response;
+        totalTokens = responseData?.usageMetadata?.totalTokenCount || 0;
+      } catch (err: any) {
+         // Fallback if the streaming API rejects standard text handling for imagen models
+         console.warn("Stream failed, trying standard generateContent", err);
+         const res = await model.generateContent(finalPrompt);
+         const responseData = res.response;
+         totalTokens = responseData?.usageMetadata?.totalTokenCount || 0;
+         
+         const parts = responseData.candidates?.[0]?.content?.parts || [];
+         for (const part of parts) {
+               if (part.inlineData) {
+                  const mimeType = part.inlineData.mimeType;
+                  const base64d = part.inlineData.data;
+                  const dataUri = `data:${mimeType};base64,${base64d}`;
+                  
+                  generatedImages.push(dataUri);
+               } else if (part.text) {
+                  response += part.text;
+               }
+         }
+      }
 
       let costPerMillion = 0.075; 
       if (selectedModel.includes("pro")) {
@@ -156,11 +252,82 @@ export const generateAIResponse = createAsyncThunk(
       }
       const costEstimate = (totalTokens / 1_000_000) * costPerMillion;
 
-      return {
-        text: response.trim(),
+      let finalResponseText = response;
+
+      // Extract and remove any raw base64 images that might contain whitespace/newlines
+      const markdownBase64Regex = /!\[.*?\]\(\s*(data:image\/[a-zA-Z0-9+.-]+;base64,[A-Za-z0-9+/=\s]+)\s*\)/g;
+      finalResponseText = finalResponseText.replace(markdownBase64Regex, (match, base64Str) => {
+          const cleanBase64 = base64Str.replace(/\s+/g, '');
+          if (!generatedImages.includes(cleanBase64)) {
+              generatedImages.push(cleanBase64);
+          }
+          return ''; // Strip the markdown image from the text
+      });
+      
+      // Also catch HTML img tags with base64
+      const htmlImgRegex = /<img[^>]+src=["'](data:image\/[a-zA-Z0-9+.-]+;base64,[A-Za-z0-9+/=\s]+)["'][^>]*>/gi;
+      finalResponseText = finalResponseText.replace(htmlImgRegex, (match, base64Str) => {
+          const cleanBase64 = base64Str.replace(/\s+/g, '');
+          if (!generatedImages.includes(cleanBase64)) {
+              generatedImages.push(cleanBase64);
+          }
+          return '';
+      });
+
+      // Also catch any bare data URIs floating in the text
+      const bareBase64Regex = /data:image\/[a-zA-Z0-9+.-]+;base64,[A-Za-z0-9+/=\s]+/g;
+      finalResponseText = finalResponseText.replace(bareBase64Regex, (match) => {
+          const cleanBase64 = match.replace(/\s+/g, '');
+          if (!generatedImages.includes(cleanBase64)) {
+              generatedImages.push(cleanBase64);
+          }
+          return ''; // Strip it from the text
+      });
+
+      // Clean up any stray long base64 blocks that might have been output directly without data:image prefix
+      const strayBase64 = /[A-Za-z0-9+/=]{1000,}/g; 
+      finalResponseText = finalResponseText.replace(strayBase64, '');
+
+      // Once all base64 URIs are extracted into generatedImages, flush them to disk to strip size from Redux state
+      for (let i = 0; i < generatedImages.length; i++) {
+        if (generatedImages[i].startsWith('data:')) {
+          try {
+            const dirHandle = await dbService.getSetting("image_save_directory");
+            if (dirHandle && typeof dirHandle.getFileHandle === 'function') {
+               const mimeMatch = generatedImages[i].match(/data:(.*?);base64,/);
+               const ext = mimeMatch && mimeMatch[1] === 'image/jpeg' ? 'jpg' : 'png';
+               const filename = `gemini_img_${Date.now()}_${Math.random().toString(36).substr(2, 5)}.${ext}`;
+               const fileHandle = await dirHandle.getFileHandle(filename, { create: true });
+               const writable = await fileHandle.createWritable();
+               
+               const base64Data = generatedImages[i].split(',')[1];
+               const bstr = atob(base64Data);
+               let n = bstr.length;
+               let u8arr = new Uint8Array(n);
+               while(n--) { u8arr[n] = bstr.charCodeAt(n); }
+               
+               await writable.write(u8arr.buffer);
+               await writable.close();
+               
+               generatedImages[i] = `local:${filename}`; // Replace base64 in array with local reference
+            }
+          } catch (err) {
+            console.warn("Failed to write fully extracted image to FileSystem API directory", err);
+          }
+        }
+      }
+
+      const returnPayload: any = {
+        text: finalResponseText.trim(),
         tokenCount: totalTokens,
         costEstimate: costEstimate
       };
+      
+      if (generatedImages.length > 0) {
+        returnPayload.images = generatedImages;
+      }
+
+      return returnPayload;
     } catch (error: any) {
       console.error("AI Response Error:", error);
       return rejectWithValue(error.message || "An unexpected error occurred.");

@@ -3,7 +3,7 @@ import { FaPaperPlane, FaStop, FaPlus } from "react-icons/fa";
 import { cn } from "../utils/cn";
 
 interface MessageInputProps {
-  onSend: (text: string) => void;
+  onSend: (text: string, isImageRequest?: boolean) => void;
   disabled?: boolean;
   onStop?: () => void;
   tokenCount?: number;
@@ -12,6 +12,7 @@ interface MessageInputProps {
 
 const MessageInput: React.FC<MessageInputProps> = ({ onSend, disabled = false, onStop, tokenCount = 0, costEstimate = 0 }) => {
   const [text, setText] = useState("");
+  const [isImageRequest, setIsImageRequest] = useState(false);
 
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -21,9 +22,10 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSend, disabled = false, o
     const trimmedText = text.trim();
     if (!trimmedText) return;
 
-    onSend(trimmedText);
+    onSend(trimmedText, isImageRequest);
     setText("");
-  }, [text, onSend, disabled]);
+    setIsImageRequest(false); // Disable/uncheck it afterward
+  }, [text, isImageRequest, onSend, disabled]);
 
   // Scroll input into view when focused (helps with mobile keyboards)
   const handleFocus = useCallback(() => {
@@ -45,6 +47,18 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSend, disabled = false, o
         <button className="text-gray-400 hover:text-gray-600 dark:text-slate-400 dark:hover:text-slate-200 p-2 transition">
           <FaPlus size={18} />
         </button>
+
+        <label className="flex items-center gap-1.5 cursor-pointer text-sm text-gray-500 hover:text-gray-700 dark:text-slate-400 dark:hover:text-slate-200 transition select-none ml-1 mr-1">
+          <input
+            type="checkbox"
+            checked={isImageRequest}
+            onChange={(e) => setIsImageRequest(e.target.checked)}
+            disabled={disabled}
+            className="w-4 h-4 rounded border-gray-300 text-indigo-500 focus:ring-indigo-500 dark:bg-slate-700 dark:border-slate-600 bg-transparent disabled:opacity-50"
+            title="Request image generation"
+          />
+          <span className="hidden sm:inline">Image</span>
+        </label>
 
         <input
         ref={inputRef}

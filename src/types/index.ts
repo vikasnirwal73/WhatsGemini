@@ -1,6 +1,7 @@
 export interface Message {
   role: "user" | "model" | string;
   txt?: string; // The markdown text
+  images?: string[]; // Array of local paths or object URLs
   characterId?: number;
   isSystem?: boolean;
 }
@@ -19,6 +20,8 @@ export interface Character {
   description: string;
   prompt: string;
   relationship?: string;
+  appearance?: string;
+  appearanceImages?: string[];
   avatar?: string;
 }
 

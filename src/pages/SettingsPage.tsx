@@ -18,9 +18,15 @@ import {
   LS_TEMPRATURE,
   LS_FONT_SIZE,
   LS_USER_PROFILE,
+  LS_IMAGE_RESOLUTION,
+  IMAGE_RESOLUTIONS,
+  DEFAULT_IMAGE_RESOLUTION,
+  LS_IMAGE_MODEL,
+  DEFAULT_IMAGE_MODEL,
   models,
 } from "../utils/constants";
 import { AISafetySettings, UserProfile } from "../types";
+import { dbService } from "../services/dbService";
 
 const SettingsPage = () => {
   const navigate = useNavigate();
@@ -79,6 +85,11 @@ const SettingsPage = () => {
     const stored = localStorage.getItem(LS_AI_MODEL);
     return stored && models.includes(stored) ? stored : models[0];
   });
+  
+  const [imageModel, setImageModel] = useState(() => {
+    return localStorage.getItem(LS_IMAGE_MODEL) || DEFAULT_IMAGE_MODEL;
+  });
+
   const [maxOutputTokens, setMaxOutputTokens] = useState<number>(
     getStoredValue(LS_MAX_OUTPUT_TOKENS, DEFAULT_OUTPUT_TOKENS)
   );
@@ -100,6 +111,47 @@ const SettingsPage = () => {
   const [userProfile, setUserProfile] = useState<UserProfile>(() => {
     return getStoredValue<UserProfile>(LS_USER_PROFILE, { name: "", bio: "" });
   });
+  
+  const [imageResolution, setImageResolution] = useState<string>(() => {
+    return localStorage.getItem(LS_IMAGE_RESOLUTION) || DEFAULT_IMAGE_RESOLUTION;
+  });
+
+  const [imageSaveDirName, setImageSaveDirName] = useState<string>("Not Selected");
+
+  useEffect(() => {
+    const loadDirName = async () => {
+      try {
+        const handle = await dbService.getSetting("image_save_directory");
+        if (handle && handle.name) {
+          setImageSaveDirName(handle.name);
+        }
+      } catch (err) {
+        console.warn("Could not load directory handle", err);
+      }
+    };
+    loadDirName();
+  }, []);
+
+  const handleSelectDirectory = async () => {
+    try {
+      if (!('showDirectoryPicker' in window)) {
+        addToast("Your browser does not support the File System Access API. Please configure standard downloads instead.", "error");
+        return;
+      }
+      const dirHandle = await (window as any).showDirectoryPicker({
+        mode: "readwrite",
+      });
+      // Try to save to IndexedDB
+      await dbService.setSetting("image_save_directory", dirHandle);
+      setImageSaveDirName(dirHandle.name);
+      addToast("Directory selected and saved successfully!", "success");
+    } catch (err: any) {
+      if (err.name !== 'AbortError') {
+        console.error("Directory picker error:", err);
+        addToast("Failed to select directory.", "error");
+      }
+    }
+  };
 
   // Roast messages for when settings are saved
   const roastMessages = useMemo(() => [
@@ -139,11 +191,13 @@ const SettingsPage = () => {
       try {
         const modelToStore = customModel.trim() || selectedModel;
         localStorage.setItem(LS_AI_MODEL, modelToStore);
+        localStorage.setItem(LS_IMAGE_MODEL, imageModel);
         localStorage.setItem(LS_MAX_OUTPUT_TOKENS, JSON.stringify(maxOutputTokens));
         localStorage.setItem(LS_TEMPRATURE, JSON.stringify(temperature));
         localStorage.setItem(LS_SAFETY_SETTINGS, JSON.stringify(safetySettings));
         localStorage.setItem(LS_MAX_CHAT_LENGTH, JSON.stringify(maxChatLength));
         localStorage.setItem(LS_FONT_SIZE, fontSize);
+        localStorage.setItem(LS_IMAGE_RESOLUTION, imageResolution);
         localStorage.setItem(LS_USER_PROFILE, JSON.stringify(userProfile));
         document.documentElement.style.setProperty('--chat-font-size', fontSize);
         
@@ -161,7 +215,7 @@ const SettingsPage = () => {
         clearTimeout(saveTimeoutRef.current);
       }
     };
-  }, [customModel, selectedModel, maxOutputTokens, temperature, safetySettings, maxChatLength, fontSize, userProfile, roastMessages, addToast]);
+  }, [customModel, selectedModel, maxOutputTokens, temperature, safetySettings, maxChatLength, fontSize, imageResolution, userProfile, roastMessages, addToast]);
   
   const handleSafetyChange = useCallback((category: keyof AISafetySettings, value: string) => {
     setSafetySettings((prev) => ({ ...prev, [category]: value }));
@@ -177,6 +231,7 @@ const SettingsPage = () => {
       [LS_SAFETY_SETTINGS]: safetySettings,
       [LS_MAX_CHAT_LENGTH]: maxChatLength,
       [LS_FONT_SIZE]: fontSize,
+      [LS_IMAGE_RESOLUTION]: imageResolution,
       [LS_USER_PROFILE]: userProfile,
       [LS_INITIAL_MESSAGES]: JSON.parse(localStorage.getItem(LS_INITIAL_MESSAGES) || "[]"),
     };
@@ -223,6 +278,9 @@ const SettingsPage = () => {
         if (settings[LS_FONT_SIZE]) {
             setFontSize(settings[LS_FONT_SIZE]);
             document.documentElement.style.setProperty('--chat-font-size', settings[LS_FONT_SIZE]);
+        }
+        if (settings[LS_IMAGE_RESOLUTION]) {
+            setImageResolution(settings[LS_IMAGE_RESOLUTION]);
         }
         if (settings[LS_USER_PROFILE]) {
             setUserProfile(settings[LS_USER_PROFILE]);
@@ -429,11 +487,27 @@ const SettingsPage = () => {
         />
 
         <label className="block font-semibold mb-2 text-black dark:text-white">
-          Or Select AI Model
+          Or Select AI text Model
         </label>
         <select
           value={selectedModel}
           onChange={(e) => setSelectedModel(e.target.value)}
+          className="w-full p-3 bg-app-light dark:bg-app-dark text-black dark:text-white rounded-xl border border-transparent focus:border-primary outline-none mb-4 transition-all"
+        >
+          {modelList.map((model: {value: string, label: string}) => (
+            <option key={model.value} value={model.value}>
+              {model.label}
+            </option>
+          ))}
+        </select>
+        
+        <label className="block font-semibold mb-2 text-black dark:text-white mt-4">
+          Image Generation Model
+        </label>
+        <p className="text-xs text-gray-500 mb-2">Used when "send pic" or similar is queried.</p>
+        <select
+          value={imageModel}
+          onChange={(e) => setImageModel(e.target.value)}
           className="w-full p-3 bg-app-light dark:bg-app-dark text-black dark:text-white rounded-xl border border-transparent focus:border-primary outline-none mb-4 transition-all"
         >
           {modelList.map((model: {value: string, label: string}) => (
@@ -489,8 +563,41 @@ const SettingsPage = () => {
           Current: {temperature}
         </p>
 
+        {/* Image Generation Settings */}
+        <h3 className="font-semibold mb-2 text-black dark:text-white mt-6">Image Generation</h3>
+        <div className="mb-4">
+          <label className="block text-sm text-gray-700 dark:text-gray-300 mb-1">
+            Default Image Resolution
+          </label>
+          <select
+            value={imageResolution}
+            onChange={(e) => setImageResolution(e.target.value)}
+            className="w-full p-3 bg-app-light dark:bg-app-dark text-black dark:text-white rounded-xl border border-transparent focus:border-primary outline-none transition-all mb-4"
+          >
+            {IMAGE_RESOLUTIONS.map((res) => (
+              <option key={res} value={res}>{res}</option>
+            ))}
+          </select>
+
+          <label className="block text-sm text-gray-700 dark:text-gray-300 mb-1">
+            Save Generated Images To:
+          </label>
+          <div className="flex items-center justify-between bg-app-light dark:bg-app-dark p-3 rounded-xl border border-transparent mb-2">
+            <span className="text-black dark:text-white truncate pr-2">{imageSaveDirName}</span>
+            <button 
+              onClick={handleSelectDirectory}
+              className="px-3 py-1.5 bg-primary text-white text-sm rounded-lg hover:bg-primary-hover transition whitespace-nowrap"
+            >
+              Select Folder
+            </button>
+          </div>
+          <p className="text-xs text-gray-500 dark:text-gray-400">
+            Note: Browsers may prompt you to re-approve write permissions to this folder when resuming the app.
+          </p>
+        </div>
+
         {/* Safety Settings */}
-        <h3 className="font-semibold mb-2 text-black dark:text-white">Safety Settings</h3>
+        <h3 className="font-semibold mb-2 text-black dark:text-white mt-6">Safety Settings</h3>
         {safetyCategories.map((category) => (
           <div key={category} className="mb-2">
             <label className="block text-black dark:text-white capitalize mb-1">
