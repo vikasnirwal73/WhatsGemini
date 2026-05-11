@@ -76,10 +76,22 @@ export const generateAIResponse = createAsyncThunk(
         selectedModel = getStoredValue(LS_IMAGE_MODEL, DEFAULT_IMAGE_MODEL); 
       }
       
-      // Inject image request text if not explicitly present in the prompt but the toggle is active
+      // Inject conversation context into the image generation prompt so the model understands references like "give him a hat"
       let finalPrompt = prompt;
-      if (isImageRequest && !/\b(generate image|draw|picture|pic|photo|image)\b/i.test(prompt)) {
-        finalPrompt = `Please generate an image of: ${prompt}. Consider the context of our chat.`;
+      if (isImageRequest) {
+        let recentContext = "";
+        if (history && history.length > 0) {
+          const recentMsgs = history.slice(-6).filter((m: any) => m?.parts?.[0]?.text);
+          if (recentMsgs.length > 0) {
+            recentContext = "Recent chat context:\n" + recentMsgs.map((m: any) => `${m.role === "user" ? "User" : "AI"}: ${m.parts[0].text}`).join("\n") + "\n\n";
+          }
+        }
+
+        if (!/\b(generate image|draw|picture|pic|photo|image)\b/i.test(prompt)) {
+          finalPrompt = `${recentContext}Current user request: "${prompt}"\n\nPlease generate an image that fulfills the current request, using the recent chat context for visual references (characters, setting, objects, etc.).`;
+        } else {
+          finalPrompt = `${recentContext}User image request: "${prompt}"\n\nPlease generate the requested image, using the recent chat context for any missing visual details.`;
+        }
       }
       
       const maxTokens = getStoredValue(LS_MAX_OUTPUT_TOKENS, DEFAULT_OUTPUT_TOKENS, Number);
