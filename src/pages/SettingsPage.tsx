@@ -215,7 +215,7 @@ const SettingsPage = () => {
         clearTimeout(saveTimeoutRef.current);
       }
     };
-  }, [customModel, selectedModel, maxOutputTokens, temperature, safetySettings, maxChatLength, fontSize, imageResolution, userProfile, roastMessages, addToast]);
+  }, [customModel, selectedModel, imageModel, maxOutputTokens, temperature, safetySettings, maxChatLength, fontSize, imageResolution, userProfile, roastMessages, addToast]);
   
   const handleSafetyChange = useCallback((category: keyof AISafetySettings, value: string) => {
     setSafetySettings((prev) => ({ ...prev, [category]: value }));
