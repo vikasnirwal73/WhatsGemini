@@ -23,6 +23,8 @@ import {
   DEFAULT_IMAGE_RESOLUTION,
   LS_IMAGE_MODEL,
   DEFAULT_IMAGE_MODEL,
+  LS_IMAGE_GEN_PROMPT,
+  DEFAULT_IMAGE_GEN_PROMPT,
   models,
 } from "../utils/constants";
 import { AISafetySettings, UserProfile } from "../types";
@@ -98,6 +100,10 @@ const SettingsPage = () => {
   
   const [imageModel, setImageModel] = useState(() => {
     return localStorage.getItem(LS_IMAGE_MODEL) || DEFAULT_IMAGE_MODEL;
+  });
+
+  const [imageGenPrompt, setImageGenPrompt] = useState(() => {
+    return localStorage.getItem(LS_IMAGE_GEN_PROMPT) || DEFAULT_IMAGE_GEN_PROMPT;
   });
 
   const [maxOutputTokens, setMaxOutputTokens] = useState<number>(
@@ -202,6 +208,7 @@ const SettingsPage = () => {
         const modelToStore = customModel.trim() || selectedModel;
         localStorage.setItem(LS_AI_MODEL, modelToStore);
         localStorage.setItem(LS_IMAGE_MODEL, imageModel);
+        localStorage.setItem(LS_IMAGE_GEN_PROMPT, imageGenPrompt);
         localStorage.setItem(LS_MAX_OUTPUT_TOKENS, JSON.stringify(maxOutputTokens));
         localStorage.setItem(LS_TEMPRATURE, JSON.stringify(temperature));
         localStorage.setItem(LS_SAFETY_SETTINGS, JSON.stringify(safetySettings));
@@ -225,7 +232,7 @@ const SettingsPage = () => {
         clearTimeout(saveTimeoutRef.current);
       }
     };
-  }, [customModel, selectedModel, imageModel, maxOutputTokens, temperature, safetySettings, maxChatLength, fontSize, imageResolution, userProfile, roastMessages, addToast]);
+  }, [customModel, selectedModel, imageModel, imageGenPrompt, maxOutputTokens, temperature, safetySettings, maxChatLength, fontSize, imageResolution, userProfile, roastMessages, addToast]);
   
   const handleSafetyChange = useCallback((category: keyof AISafetySettings, value: string) => {
     setSafetySettings((prev) => ({ ...prev, [category]: value }));
@@ -531,6 +538,17 @@ const SettingsPage = () => {
             </option>
           ))}
         </select>
+        
+        <label className="block font-semibold mb-2 text-black dark:text-white mt-4">
+          Image Generation Base Prompt
+        </label>
+        <p className="text-xs text-gray-500 mb-2">Used as the base instruction whenever an image is requested.</p>
+        <textarea
+          value={imageGenPrompt}
+          onChange={(e) => setImageGenPrompt(e.target.value)}
+          placeholder="e.g. Create a high quality, detailed image..."
+          className="w-full p-3 bg-app-light dark:bg-app-dark text-black dark:text-white rounded-xl border border-transparent focus:border-primary outline-none mb-4 transition-all resize-y min-h-[80px]"
+        />
 
         <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
           <strong>Selected Model:</strong>{" "}

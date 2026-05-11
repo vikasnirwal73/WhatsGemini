@@ -17,7 +17,9 @@ import {
   // LS_IMAGE_RESOLUTION,
   // DEFAULT_IMAGE_RESOLUTION,
   LS_IMAGE_MODEL,
-  DEFAULT_IMAGE_MODEL
+  DEFAULT_IMAGE_MODEL,
+  LS_IMAGE_GEN_PROMPT,
+  DEFAULT_IMAGE_GEN_PROMPT
 } from "../utils/constants";
 import { AISafetySettings } from "../types";
 
@@ -80,6 +82,8 @@ export const generateAIResponse = createAsyncThunk(
       let finalPrompt = prompt;
       if (isImageRequest) {
         let recentContext = "";
+        const baseImagePrompt = getStoredValue(LS_IMAGE_GEN_PROMPT, DEFAULT_IMAGE_GEN_PROMPT);
+
         if (history && history.length > 0) {
           const recentMsgs = history.slice(-6).filter((m: any) => m?.parts?.[0]?.text);
           if (recentMsgs.length > 0) {
@@ -87,10 +91,12 @@ export const generateAIResponse = createAsyncThunk(
           }
         }
 
+        const instructionSuffix = `\n\nBase Instruction:\n${baseImagePrompt}\n\nIMPORTANT: Along with the image, you MUST also output a very brief text description (in brackets like [Generated Image: ...]) describing the key details of the visual (characters, clothes, pose, environment). This will be saved in our chat history so we remember what was drawn!`;
+
         if (!/\b(generate image|draw|picture|pic|photo|image)\b/i.test(prompt)) {
-          finalPrompt = `${recentContext}Current user request: "${prompt}"\n\nPlease generate an image that fulfills the current request, using the recent chat context for visual references (characters, setting, objects, etc.).`;
+          finalPrompt = `${recentContext}Current user request: "${prompt}"\n\nPlease generate an image that fulfills the current request, using the recent chat context for visual references.${instructionSuffix}`;
         } else {
-          finalPrompt = `${recentContext}User image request: "${prompt}"\n\nPlease generate the requested image, using the recent chat context for any missing visual details.`;
+          finalPrompt = `${recentContext}User image request: "${prompt}"\n\nPlease generate the requested image, using the recent chat context for any missing visual details.${instructionSuffix}`;
         }
       }
       
