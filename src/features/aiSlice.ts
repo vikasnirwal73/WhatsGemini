@@ -74,32 +74,15 @@ export const generateAIResponse = createAsyncThunk(
       const maxHistoryLength = parseInt(localStorage.getItem(LS_MAX_CHAT_LENGTH) || "0", 10);
       let selectedModel = getStoredValue(LS_AI_MODEL, DEFAULT_AI_MODEL);
       
-      if (isImageRequest) {
-        selectedModel = getStoredValue(LS_IMAGE_MODEL, DEFAULT_IMAGE_MODEL); 
-      }
-      
-      // Inject conversation context into the image generation prompt so the model understands references like "give him a hat"
       let finalPrompt = prompt;
-      if (isImageRequest) {
-        let recentContext = "";
-        const baseImagePrompt = getStoredValue(LS_IMAGE_GEN_PROMPT, DEFAULT_IMAGE_GEN_PROMPT);
-
-        if (history && history.length > 0) {
-          const recentMsgs = history.slice(-6).filter((m: any) => m?.parts?.[0]?.text);
-          if (recentMsgs.length > 0) {
-            recentContext = "Recent chat context:\n" + recentMsgs.map((m: any) => `${m.role === "user" ? "User" : "AI"}: ${m.parts[0].text}`).join("\n") + "\n\n";
-          }
-        }
-
-        const instructionSuffix = `\n\nBase Instruction:\n${baseImagePrompt}\n\nIMPORTANT: Along with the image, you MUST also output a very brief text description (in brackets like [Generated Image: ...]) describing the key details of the visual (characters, clothes, pose, environment). This will be saved in our chat history so we remember what was drawn!`;
-
-        if (!/\b(generate image|draw|picture|pic|photo|image)\b/i.test(prompt)) {
-          finalPrompt = `${recentContext}Current user request: "${prompt}"\n\nPlease generate an image that fulfills the current request, using the recent chat context for visual references.${instructionSuffix}`;
-        } else {
-          finalPrompt = `${recentContext}User image request: "${prompt}"\n\nPlease generate the requested image, using the recent chat context for any missing visual details.${instructionSuffix}`;
-        }
-      }
+      let generatedImages: string[] = [];
+      let response = "";
+      let totalTokens = 0;
+      let costPerMillion = 0.075;
       
+      let imageModelName = getStoredValue(LS_IMAGE_MODEL, DEFAULT_IMAGE_MODEL);
+      const genAI = new GoogleGenerativeAI(apiKey);
+
       const maxTokens = getStoredValue(LS_MAX_OUTPUT_TOKENS, DEFAULT_OUTPUT_TOKENS, Number);
       const temperature = getStoredValue(LS_TEMPRATURE, DEFAULT_TEMPRATURE, parseFloat);
       const storedSafetySettings = getStoredValue<AISafetySettings | any>(
@@ -107,10 +90,9 @@ export const generateAIResponse = createAsyncThunk(
         DEFAULT_SAFETY_SETTINGS,
         JSON.parse
       );
-
       const safetySettings = formatSafetySettings(storedSafetySettings);
-      const genAI = new GoogleGenerativeAI(apiKey);
-      const modelParams: any = {
+
+      const textModelParams: any = {
         model: selectedModel,
         generationConfig: {
           maxOutputTokens: maxTokens,
@@ -120,10 +102,10 @@ export const generateAIResponse = createAsyncThunk(
       };
 
       if (systemInstruction) {
-        modelParams.systemInstruction = systemInstruction;
+        textModelParams.systemInstruction = systemInstruction;
       }
 
-      const model = genAI.getGenerativeModel(modelParams);
+      const textModel = genAI.getGenerativeModel(textModelParams);
 
       // Filter out empty messages
       const validHistory = history.filter(
@@ -131,7 +113,6 @@ export const generateAIResponse = createAsyncThunk(
       );
 
       // If the last message in history is the same as the prompt, remove it to avoid duplication
-      // (This happens because it was just saved in Redux before this thunk was called)
       if (
         validHistory.length > 0 &&
         validHistory[validHistory.length - 1].role === "user" &&
@@ -152,67 +133,72 @@ export const generateAIResponse = createAsyncThunk(
         }
       }
 
-      // Ensure the history passed to startChat does not end with a "user" string 
-      // otherwise sendMessageStream(prompt) will result in consecutive user turns. 
-      // (If it does, pop the trailing un-anwered user message).
       while (validHistory.length > 0 && validHistory[validHistory.length - 1].role === "user") {
         validHistory.pop();
       }
 
       const historyForSdk = validHistory;
-
-      // Defensively start chat session and get response
-      const chat = await model.startChat({ history: historyForSdk });
       
-      let response = "";
-      let totalTokens = 0;
-      let generatedImages: string[] = [];
+      if (isImageRequest) {
+        // Step 1: Use Text Model to derive image prompt & chat summary
+        let recentContext = "";
+        const baseImagePrompt = getStoredValue(LS_IMAGE_GEN_PROMPT, DEFAULT_IMAGE_GEN_PROMPT);
 
-      try {
-        const promptParts: any[] = [{ text: finalPrompt }];
-
-        if (isImageRequest && characterImages && characterImages.length > 0) {
-           for (const imgRef of characterImages) {
-              if (imgRef.startsWith('local:')) {
-                 try {
-                     const filename = imgRef.substring(6);
-                     const dirHandle = await dbService.getSetting("image_save_directory");
-                     if (dirHandle) {
-                        const fileHandle = await dirHandle.getFileHandle(filename);
-                        const file = await fileHandle.getFile();
-                        const buffer = await file.arrayBuffer();
-                        const base64d = btoa(
-                           new Uint8Array(buffer).reduce((data, byte) => data + String.fromCharCode(byte), '')
-                        );
-                        // infer mimetype
-                        const ext = filename.split('.').pop()?.toLowerCase();
-                        let mimeType = 'image/png';
-                        if (ext === 'jpg' || ext === 'jpeg') mimeType = 'image/jpeg';
-                        else if (ext === 'webp') mimeType = 'image/webp';
-                        
-                        promptParts.push({
-                           inlineData: {
-                              mimeType,
-                              data: base64d
-                           }
-                        });
-                     }
-                 } catch (e) {
-                     console.error("Failed to load local character image for AI context:", e);
-                 }
-              } else {
-                 const mimeMatch = imgRef.match(/data:(.*?);base64,/);
-                 if (mimeMatch) {
-                    promptParts.push({
-                       inlineData: {
-                          mimeType: mimeMatch[1],
-                          data: imgRef.split(',')[1]
-                       }
-                    });
-                 }
-              }
-           }
+        if (historyForSdk && historyForSdk.length > 0) {
+          const recentMsgs = historyForSdk.slice(-6).filter((m: any) => m?.parts?.[0]?.text);
+          if (recentMsgs.length > 0) {
+            recentContext = "Recent chat context:\n" + recentMsgs.map((m: any) => `${m.role === "user" ? "User" : "AI"}: ${m.parts[0].text}`).join("\n") + "\n\n";
+          }
         }
+
+        const derivationPrompt = `${recentContext}User request: "${prompt}"\n\nThe user wants to generate an image based on the current context.\nPlease output EXACTLY two sections formatted exactly like this:\n\nPROMPT:\n<write a highly detailed, descriptive image generation prompt combining the base instruction "${baseImagePrompt}" and the user request/context>\n\nSUMMARY:\n<write a short 1-line chat response acknowledging the requested drawing along with key details of what you are drawing (characters, clothes, setting) in brackets. e.g. "Here is the drawing you asked for! [Generated Image: monkey in a red hat]">`;
+
+        const derivationResult = await textModel.generateContent(derivationPrompt);
+        const derivationText = derivationResult.response.text();
+        totalTokens += derivationResult.response.usageMetadata?.totalTokenCount || 0;
+        
+        // Parse the segments
+        let derivedImagePrompt = prompt;
+        let derivedSummary = `[Generated Image requested: ${prompt}]`;
+        
+        const promptMatch = derivationText.match(/PROMPT:\s*([\s\S]*?)SUMMARY:/i);
+        const summaryMatch = derivationText.match(/SUMMARY:\s*([\s\S]*)/i);
+        
+        if (promptMatch && promptMatch[1]) {
+           derivedImagePrompt = promptMatch[1].trim();
+        }
+        if (summaryMatch && summaryMatch[1]) {
+           derivedSummary = summaryMatch[1].trim();
+        }
+        
+        response = derivedSummary;
+        
+        // Step 2: Use Image Model to actually generate the image
+        const imageModelParams: any = {
+           model: imageModelName,
+           safetySettings,
+        };
+        const imageModelInstance = genAI.getGenerativeModel(imageModelParams);
+        
+        try {
+           const imageRes = await imageModelInstance.generateContent([derivedImagePrompt]);
+           totalTokens += imageRes.response.usageMetadata?.totalTokenCount || 0;
+           const parts = imageRes.response.candidates?.[0]?.content?.parts || [];
+           for (const part of parts) {
+               if (part.inlineData) {
+                  const mimeType = part.inlineData.mimeType;
+                  const base64d = part.inlineData.data;
+                  generatedImages.push(`data:${mimeType};base64,${base64d}`);
+               }
+           }
+        } catch (err) {
+           console.error("Image generation failed:", err);
+           response += "\n\n[Warning: Image generation failed due to API error.]";
+        }
+      } else {
+        // Normal Text Chat
+        const chat = await textModel.startChat({ history: historyForSdk });
+        const promptParts: any[] = [{ text: finalPrompt }];
 
         const stream = await chat.sendMessageStream(promptParts);
         for await (const chunk of stream.stream) {
@@ -222,17 +208,9 @@ export const generateAIResponse = createAsyncThunk(
           }
           
           try {
-            // Check for potential image parts in candidates
             const parts = chunk.candidates?.[0]?.content?.parts || [];
             for (const part of parts) {
-               if (part.inlineData) {
-                  // Reconstruct base64 into a data URI
-                  const mimeType = part.inlineData.mimeType;
-                  const base64d = part.inlineData.data;
-                  const dataUri = `data:${mimeType};base64,${base64d}`;
-                  
-                  generatedImages.push(dataUri);
-               } else if (part.text) {
+               if (part.text) {
                   response += part.text;
                }
             }
@@ -242,29 +220,9 @@ export const generateAIResponse = createAsyncThunk(
         }
 
         const responseData = await stream.response;
-        totalTokens = responseData?.usageMetadata?.totalTokenCount || 0;
-      } catch (err: any) {
-         // Fallback if the streaming API rejects standard text handling for imagen models
-         console.warn("Stream failed, trying standard generateContent", err);
-         const res = await model.generateContent(finalPrompt);
-         const responseData = res.response;
-         totalTokens = responseData?.usageMetadata?.totalTokenCount || 0;
-         
-         const parts = responseData.candidates?.[0]?.content?.parts || [];
-         for (const part of parts) {
-               if (part.inlineData) {
-                  const mimeType = part.inlineData.mimeType;
-                  const base64d = part.inlineData.data;
-                  const dataUri = `data:${mimeType};base64,${base64d}`;
-                  
-                  generatedImages.push(dataUri);
-               } else if (part.text) {
-                  response += part.text;
-               }
-         }
+        totalTokens += responseData?.usageMetadata?.totalTokenCount || 0;
       }
 
-      let costPerMillion = 0.075; 
       if (selectedModel.includes("pro")) {
         costPerMillion = 1.25; 
       }
