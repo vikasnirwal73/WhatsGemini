@@ -145,6 +145,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ messages = [], onRegenerate, on
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [editText, setEditText] = useState("");
   const [editIsImageRequest, setEditIsImageRequest] = useState(false);
+  const [fullscreenImage, setFullscreenImage] = useState<string | null>(null);
   const [openMenuIndex, setOpenMenuIndex] = useState<number | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [isScrolledUp, setIsScrolledUp] = useState(false);
@@ -352,7 +353,13 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ messages = [], onRegenerate, on
                   <>
                     <MarkdownRenderer msgText={msg.txt || ""} isUser={isUser} />
                     {msg.images && msg.images.map((imgSrc, idx) => (
-                      <DisplayImage key={idx} srcContext={imgSrc} alt="Generated" className="mt-2 max-w-full rounded-lg shadow-sm border border-white/20 dark:border-slate-700" />
+                      <DisplayImage 
+                        key={idx} 
+                        srcContext={imgSrc} 
+                        alt="Generated" 
+                        onClick={() => setFullscreenImage(imgSrc)}
+                        className="mt-2 max-w-full rounded-lg shadow-sm border border-white/20 dark:border-slate-700 cursor-zoom-in hover:opacity-90 transition-opacity" 
+                      />
                     ))}
                     <div className="absolute top-2 right-2">
                       <button
@@ -491,6 +498,29 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ messages = [], onRegenerate, on
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Fullscreen Image Modal */}
+      {fullscreenImage && (
+        <div 
+          className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/90 p-4 cursor-zoom-out backdrop-blur-sm animate-[fadeIn_0.2s_ease-out]"
+          onClick={() => setFullscreenImage(null)}
+        >
+          <button 
+            className="absolute top-4 right-4 p-3 text-white/70 hover:text-white bg-black/50 hover:bg-black/80 rounded-full transition z-50"
+            onClick={(e) => { e.stopPropagation(); setFullscreenImage(null); }}
+            title="Close"
+          >
+            <FaTimes size={20} />
+          </button>
+          <div className="relative max-w-full max-h-full" onClick={(e) => e.stopPropagation()}>
+            <DisplayImage 
+              srcContext={fullscreenImage} 
+              alt="Fullscreen" 
+              className="max-w-[95vw] max-h-[90vh] object-contain rounded-lg shadow-2xl scale-100" 
+            />
           </div>
         </div>
       )}
