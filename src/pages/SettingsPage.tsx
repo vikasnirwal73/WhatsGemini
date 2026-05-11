@@ -38,6 +38,12 @@ const SettingsPage = () => {
   });
 
   const [modelList, setModelList] = useState<{value: string, label: string}[]>(models.map((m: string) => ({ value: m, label: m })));
+  
+  const [imageModelList, setImageModelList] = useState<{value: string, label: string}[]>(
+    models
+      .filter((m: string) => /gemini-(2|3)|imagen/i.test(m))
+      .map((m: string) => ({ value: m, label: m }))
+  );
 
   useEffect(() => {
     const fetchModels = async () => {
@@ -63,6 +69,10 @@ const SettingsPage = () => {
 
         if (validModels.length > 0) {
           setModelList(validModels);
+          const validImageModels = validModels.filter((m: {value: string}) => /gemini-(2|3)|imagen/i.test(m.value));
+          if (validImageModels.length > 0) {
+            setImageModelList(validImageModels);
+          }
         }
       } catch (error) {
         console.error("Error fetching models:", error);
@@ -515,7 +525,7 @@ const SettingsPage = () => {
           onChange={(e) => setImageModel(e.target.value)}
           className="w-full p-3 bg-app-light dark:bg-app-dark text-black dark:text-white rounded-xl border border-transparent focus:border-primary outline-none mb-4 transition-all"
         >
-          {modelList.map((model: {value: string, label: string}) => (
+          {imageModelList.map((model: {value: string, label: string}) => (
             <option key={model.value} value={model.value}>
               {model.label}
             </option>
