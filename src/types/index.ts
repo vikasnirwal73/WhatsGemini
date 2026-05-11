@@ -4,6 +4,7 @@ export interface Message {
   images?: string[]; // Array of local paths or object URLs
   characterId?: number;
   isSystem?: boolean;
+  isImageRequest?: boolean; // True if it triggered image generation
 }
 
 export interface Chat {

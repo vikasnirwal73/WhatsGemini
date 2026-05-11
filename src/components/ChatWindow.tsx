@@ -133,7 +133,7 @@ const MenuItem = ({ icon: Icon, label, onClick, disabled, danger }: { icon: any,
 interface ChatWindowProps {
   messages: Message[];
   onRegenerate?: (index: number) => void;
-  onEdit?: (index: number, text: string) => void;
+  onEdit?: (index: number, text: string, isImageRequest?: boolean) => void;
   onSend?: (text: string, isImageRequest?: boolean) => void;
   aiLoading?: boolean;
   characterName?: string;
@@ -144,6 +144,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ messages = [], onRegenerate, on
   const [typingDots, setTypingDots] = useState(".");
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [editText, setEditText] = useState("");
+  const [editIsImageRequest, setEditIsImageRequest] = useState(false);
   const [openMenuIndex, setOpenMenuIndex] = useState<number | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [isScrolledUp, setIsScrolledUp] = useState(false);
@@ -255,21 +256,24 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ messages = [], onRegenerate, on
     if (originalIndex !== -1) {
       setEditingIndex(originalIndex);
       setEditText(msg.txt || "");
+      setEditIsImageRequest(msg.isImageRequest || false);
     }
   }, [messages]);
 
   const cancelEdit = useCallback(() => {
     setEditingIndex(null);
     setEditText("");
+    setEditIsImageRequest(false);
   }, []);
 
   const saveEdit = useCallback(() => {
     if (editText.trim() && onEdit && editingIndex !== null) {
-      onEdit(editingIndex, editText.trim());
+      onEdit(editingIndex, editText.trim(), editIsImageRequest);
       setEditingIndex(null);
       setEditText("");
+      setEditIsImageRequest(false);
     }
-  }, [editText, editingIndex, onEdit]);
+  }, [editText, editIsImageRequest, editingIndex, onEdit]);
 
   const toggleMenu = useCallback((index: number) => {
     setOpenMenuIndex(prev => prev === index ? null : index);
@@ -458,21 +462,34 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ messages = [], onRegenerate, on
               </div>
             </div>
 
-            <div className="p-4 border-t border-gray-200 dark:border-slate-800 flex justify-end gap-3 bg-gray-50 dark:bg-slate-900/50 rounded-b-2xl">
-              <button 
-                onClick={cancelEdit}
-                className="px-5 py-2.5 rounded-xl font-medium text-slate-700 dark:text-slate-300 hover:bg-gray-200 dark:hover:bg-slate-800 transition"
-              >
-                Cancel
-              </button>
-              <button 
-                onClick={saveEdit}
-                disabled={!editText.trim()}
-                className="px-5 py-2.5 rounded-xl font-medium bg-primary text-white hover:bg-primary-hover transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-sm"
-              >
-                <FaCheck size={14} />
-                Save Changes
-              </button>
+            <div className="p-4 border-t border-gray-200 dark:border-slate-800 flex justify-between gap-3 bg-gray-50 dark:bg-slate-900/50 rounded-b-2xl items-center">
+              <label className="flex items-center gap-2 cursor-pointer text-sm text-gray-600 hover:text-gray-800 dark:text-slate-400 dark:hover:text-slate-200 transition select-none">
+                <input
+                  type="checkbox"
+                  checked={editIsImageRequest}
+                  onChange={(e) => setEditIsImageRequest(e.target.checked)}
+                  className="w-4 h-4 rounded border-gray-300 text-indigo-500 focus:ring-indigo-500 dark:bg-slate-700 dark:border-slate-600 bg-transparent"
+                  title="Request image generation"
+                />
+                <span>Generate Image</span>
+              </label>
+
+              <div className="flex gap-3">
+                <button 
+                  onClick={cancelEdit}
+                  className="px-5 py-2.5 rounded-xl font-medium text-slate-700 dark:text-slate-300 hover:bg-gray-200 dark:hover:bg-slate-800 transition"
+                >
+                  Cancel
+                </button>
+                <button 
+                  onClick={saveEdit}
+                  disabled={!editText.trim()}
+                  className="px-5 py-2.5 rounded-xl font-medium bg-primary text-white hover:bg-primary-hover transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-sm"
+                >
+                  <FaCheck size={14} />
+                  Save Changes
+                </button>
+              </div>
             </div>
           </div>
         </div>

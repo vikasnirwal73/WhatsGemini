@@ -56,7 +56,7 @@ export const addChat = createAsyncThunk(
 
 export const addMessage = createAsyncThunk(
   "chat/addMessage",
-  async ({ chatId, role, text, images }: { chatId: number; role: string; text: string; images?: string[] }, { dispatch, rejectWithValue }) => {
+  async ({ chatId, role, text, images, isImageRequest }: { chatId: number; role: string; text: string; images?: string[], isImageRequest?: boolean }, { dispatch, rejectWithValue }) => {
     try {
       const chat = await dbService.getChatById(chatId);
       
@@ -80,7 +80,7 @@ export const addMessage = createAsyncThunk(
         }
       }
 
-      chat.content.push({ role, txt: text, images });
+      chat.content.push({ role, txt: text, images, isImageRequest });
       await dbService.updateChat(chat);
       dispatch(fetchChats()); // Refresh state
       return chat.content;

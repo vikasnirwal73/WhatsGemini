@@ -147,7 +147,7 @@ const ChatPage = () => {
     setError(null);
 
     try {
-      const resultAction = await dispatch(addMessage({ chatId: chatIdNum, role: YOU, text }));
+      const resultAction = await dispatch(addMessage({ chatId: chatIdNum, role: YOU, text, isImageRequest }));
       const updatedMessages = resultAction.payload as Message[] || [];
 
       const chatHistory = createChatHistory(updatedMessages);
@@ -172,7 +172,7 @@ const ChatPage = () => {
     }
   };
 
-  const handleEditMessage = async (index: number, newText: string) => {
+  const handleEditMessage = async (index: number, newText: string, isImageRequest?: boolean) => {
     if (!newText.trim() || !chatIdNum) return;
 
     setError(null);
@@ -186,13 +186,13 @@ const ChatPage = () => {
         await dispatch(updateMessages({ chatId: chatIdNum, newMessages: truncatedMessages }));
 
         // Add the edited message
-        const resultAction = await dispatch(addMessage({ chatId: chatIdNum, role: YOU, text: newText }));
+        const resultAction = await dispatch(addMessage({ chatId: chatIdNum, role: YOU, text: newText, isImageRequest }));
         const updatedMessages = resultAction.payload as Message[] || [];
 
         // Generate new AI response
         const chatHistory = createChatHistory(updatedMessages);
         const { text: systemInstruction, images: characterImages } = getSystemInstruction();
-        aiPromiseRef.current = dispatch(generateAIResponse({ prompt: newText, history: chatHistory, systemInstruction, characterImages }));
+        aiPromiseRef.current = dispatch(generateAIResponse({ prompt: newText, history: chatHistory, systemInstruction, characterImages, isImageRequest }));
         const aiResponse = await aiPromiseRef.current;
         aiPromiseRef.current = null;
 
@@ -232,10 +232,12 @@ const ChatPage = () => {
         return;
       }
 
-      const lastUserMessage = updatedMessages[updatedMessages.length - 1].txt || "";
+      const lastUsrMsg = updatedMessages[updatedMessages.length - 1];
+      const lastUserMessage = lastUsrMsg.txt || "";
+      const isImageRequest = lastUsrMsg.isImageRequest || false;
       const chatHistory = createChatHistory(updatedMessages);
       const { text: systemInstruction, images: characterImages } = getSystemInstruction();
-      aiPromiseRef.current = dispatch(generateAIResponse({ prompt: lastUserMessage, history: chatHistory, systemInstruction, characterImages }));
+      aiPromiseRef.current = dispatch(generateAIResponse({ prompt: lastUserMessage, history: chatHistory, systemInstruction, characterImages, isImageRequest }));
       const aiResponse = await aiPromiseRef.current;
       aiPromiseRef.current = null;
 
