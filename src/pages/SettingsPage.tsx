@@ -221,6 +221,11 @@ const SettingsPage = () => {
     setSafetySettings((prev) => ({ ...prev, [category]: value }));
   }, []);
 
+  const handleInitialMessagesSave = useCallback(() => {
+    const randomRoast = roastMessages[Math.floor(Math.random() * roastMessages.length)];
+    addToast(randomRoast, "success");
+  }, [addToast, roastMessages]);
+
   const settingsFileInputRef = useRef<HTMLInputElement>(null);
 
   const handleExportSettings = () => {
@@ -636,7 +641,7 @@ const SettingsPage = () => {
               <div className="mt-4 border-t border-gray-200 dark:border-gray-800 pt-4">
                 <InitialMessages 
                   key={initialMessagesKey} 
-                  onSave={() => addToast(roastMessages[Math.floor(Math.random() * roastMessages.length)], "success")}
+                  onSave={handleInitialMessagesSave}
                 />
               </div>
             </div>

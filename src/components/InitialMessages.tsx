@@ -24,9 +24,15 @@ const InitialMessages: React.FC<InitialMessagesProps> = ({ onSave }) => {
   };
 
   const [initialMessages, setInitialMessages] = useState<InitialMessage[]>(getSavedMessages);
+  const isFirstRender = React.useRef(true);
 
   // Save messages to localStorage on state change
   useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+
     const nonEmptyMessages = initialMessages.filter((msg) => msg.message.trim() !== "");
     if (nonEmptyMessages.length && nonEmptyMessages[0].role !== YOU) {
       setInitialMessages((prevMessages) => [
