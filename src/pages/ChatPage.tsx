@@ -89,10 +89,8 @@ const ChatPage = () => {
         text = text.replace(/[A-Za-z0-9+/=]{1000,}/g, '');
       }
 
-      if ((msg.images && msg.images.length > 0) || hadBase64) {
-        text += text.trim() ? "\n[System Note: Included an image requested by the user.]" : "[System Note: Included an image requested by the user.]";
-      }
-      
+      // Instead of writing a literal system note that the AI might mimic, 
+      // rely on the space fallback if the text is completely stripped.
       return {
         role: msg.role === YOU ? USER : MODEL,
         parts: [{ text: text.trim() || " " }], // Gemini requires non-empty string, fallback to space
