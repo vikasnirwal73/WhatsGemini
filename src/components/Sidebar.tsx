@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from "react";
-import { fetchChats, deleteChat, addChat } from "../features/chatSlice";
+import { fetchChats, deleteChat, addChat, importChat } from "../features/chatSlice";
 import { fetchCharacters } from "../features/characterSlice";
 import { Link, useNavigate } from "react-router-dom";
 import { FaBars, FaTrash, FaUser, FaFileImport, FaEdit, FaPlus, FaCog, FaSignOutAlt, FaLightbulb, FaUserPlus, FaMoon, FaSun } from "react-icons/fa";
@@ -67,7 +67,6 @@ const Sidebar = () => {
     reader.onload = async (e) => {
       try {
         const chatData = JSON.parse(e.target?.result as string);
-        const { importChat } = await import("../features/chatSlice");
         const result = await dispatch(importChat(chatData)).unwrap();
         if (result && result.id) {
             navigate(`/chat/${result.id}`);

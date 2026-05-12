@@ -65,6 +65,51 @@ const formatSafetySettings = (settings: AISafetySettings | any) => [
 ];
 
 // Async Thunk for generating AI response
+
+const appendCharacterImages = async (targetArray: any[], images: string[] | undefined) => {
+  if (images && images.length > 0) {
+    for (const imgRef of images) {
+      if (imgRef.startsWith('local:')) {
+        try {
+          const filename = imgRef.substring(6);
+          const dirHandle = await dbService.getSetting("image_save_directory");
+          if (dirHandle) {
+            const fileHandle = await dirHandle.getFileHandle(filename);
+            const file = await fileHandle.getFile();
+            const buffer = await file.arrayBuffer();
+            const base64d = btoa(
+              new Uint8Array(buffer).reduce((data, byte) => data + String.fromCharCode(byte), '')
+            );
+            const ext = filename.split('.').pop()?.toLowerCase();
+            let mimeType = 'image/png';
+            if (ext === 'jpg' || ext === 'jpeg') mimeType = 'image/jpeg';
+            else if (ext === 'webp') mimeType = 'image/webp';
+            
+            targetArray.push({
+              inlineData: {
+                mimeType,
+                data: base64d
+              }
+            });
+          }
+        } catch (e) {
+          console.error("Failed to load local character image for AI context:", e);
+        }
+      } else {
+        const mimeMatch = imgRef.match(/data:(.*?);base64,/);
+        if (mimeMatch) {
+          targetArray.push({
+            inlineData: {
+              mimeType: mimeMatch[1],
+              data: imgRef.split(',')[1]
+            }
+          });
+        }
+      }
+    }
+  }
+};
+
 export const generateAIResponse = createAsyncThunk(
   "ai/generateResponse",
   async ({ prompt, history = [], systemInstruction, characterImages, isImageRequest = false }: { prompt: string; history?: any[], systemInstruction?: string, characterImages?: string[], isImageRequest?: boolean }, { rejectWithValue, signal }) => {
@@ -141,19 +186,15 @@ export const generateAIResponse = createAsyncThunk(
       
       if (isImageRequest) {
         // Step 1: Use Text Model to derive image prompt & chat summary
-        let recentContext = "";
         const baseImagePrompt = getStoredValue(LS_IMAGE_GEN_PROMPT, DEFAULT_IMAGE_GEN_PROMPT);
 
-        if (historyForSdk && historyForSdk.length > 0) {
-          const recentMsgs = historyForSdk.slice(-6).filter((m: any) => m?.parts?.[0]?.text);
-          if (recentMsgs.length > 0) {
-            recentContext = "Recent chat context:\n" + recentMsgs.map((m: any) => `${m.role === "user" ? "User" : "AI"}: ${m.parts[0].text}`).join("\n") + "\n\n";
-          }
-        }
+        const derivationPrompt = `User request: "${prompt}"\n\nThe user wants to generate an image based on the current context.\nPlease output EXACTLY two sections formatted exactly like this:\n\nPROMPT:\n<write a highly detailed, descriptive image generation prompt combining the Image Generation Base Prompt ("${baseImagePrompt}") with the current chat context and user request>\n\nSUMMARY:\n<write a short 1-line chat response acknowledging the requested drawing along with key details of what you are drawing (characters, clothes, setting) in brackets. e.g. "Here is the drawing you asked for! [Generated Image: monkey in a red hat]">`;
 
-        const derivationPrompt = `${recentContext}User request: "${prompt}"\n\nThe user wants to generate an image based on the current context.\nPlease output EXACTLY two sections formatted exactly like this:\n\nPROMPT:\n<write a highly detailed, descriptive image generation prompt combining the base instruction "${baseImagePrompt}" and the user request/context>\n\nSUMMARY:\n<write a short 1-line chat response acknowledging the requested drawing along with key details of what you are drawing (characters, clothes, setting) in brackets. e.g. "Here is the drawing you asked for! [Generated Image: monkey in a red hat]">`;
-
-        const derivationResult = await textModel.generateContent(derivationPrompt);
+        const derivationChat = await textModel.startChat({ history: [...historyForSdk] });
+        const derivationPromptParts: any[] = [{ text: derivationPrompt }];
+        await appendCharacterImages(derivationPromptParts, characterImages);
+        
+        const derivationResult = await derivationChat.sendMessage(derivationPromptParts);
         const derivationText = derivationResult.response.text();
         totalTokens += derivationResult.response.usageMetadata?.totalTokenCount || 0;
         
@@ -181,7 +222,10 @@ export const generateAIResponse = createAsyncThunk(
         const imageModelInstance = genAI.getGenerativeModel(imageModelParams);
         
         try {
-           const imageRes = await imageModelInstance.generateContent([derivedImagePrompt]);
+           const imagePromptParts: any[] = [{ text: derivedImagePrompt }];
+           await appendCharacterImages(imagePromptParts, characterImages);
+
+           const imageRes = await imageModelInstance.generateContent(imagePromptParts);
            totalTokens += imageRes.response.usageMetadata?.totalTokenCount || 0;
            const parts = imageRes.response.candidates?.[0]?.content?.parts || [];
            for (const part of parts) {
@@ -199,6 +243,7 @@ export const generateAIResponse = createAsyncThunk(
         // Normal Text Chat
         const chat = await textModel.startChat({ history: historyForSdk });
         const promptParts: any[] = [{ text: finalPrompt }];
+        await appendCharacterImages(promptParts, characterImages);
 
         const stream = await chat.sendMessageStream(promptParts);
         for await (const chunk of stream.stream) {

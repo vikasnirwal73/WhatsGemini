@@ -115,21 +115,16 @@ export const updateMessages = createAsyncThunk(
 
 export const importChat = createAsyncThunk("chat/import", async (chatData: any, { rejectWithValue }) => {
   try {
-    const isArray = Array.isArray(chatData);
-    const content = isArray ? chatData : (chatData.content || chatData.messages);
-    const title = !isArray && chatData.title ? chatData.title : "Imported Chat";
-    const characterId = !isArray && chatData.characterId ? chatData.characterId : null;
-    const timestamp = !isArray && chatData.timestamp ? chatData.timestamp : Date.now();
-
-    if (!content || !Array.isArray(content)) {
+    const { title, content, characterId, timestamp } = chatData;
+    if (!title || !content || !Array.isArray(content)) {
       throw new Error("Invalid chat data format.");
     }
 
     const newChat = {
       title,
       content,
-      characterId,
-      timestamp,
+      characterId: characterId || null,
+      timestamp: timestamp || Date.now(),
     };
 
     const id = await dbService.addChat(newChat);
