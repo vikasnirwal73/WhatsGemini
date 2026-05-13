@@ -5,7 +5,7 @@ import { fetchCharacterById } from "../features/characterSlice";
 import { generateAIResponse, compressChatHistory } from "../features/aiSlice";
 import ChatWindow from "../components/ChatWindow";
 import MessageInput from "../components/MessageInput";
-import { FaInfoCircle, FaCompressArrowsAlt, FaDownload } from "react-icons/fa";
+import { FaCog, FaCompressArrowsAlt, FaDownload } from "react-icons/fa";
 import { AI, MODEL, USER, YOU, LS_USER_PROFILE } from "../utils/constants";
 import { useAppDispatch, useAppSelector } from "../store/hooks";
 import { Message, UserProfile } from "../types";
@@ -93,7 +93,7 @@ const ChatPage = () => {
       // rely on the space fallback if the text is completely stripped.
       return {
         role: msg.role === YOU ? USER : MODEL,
-        parts: [{ text: text.trim() || " " }], // Gemini requires non-empty string, fallback to space
+        parts: [{ text: text.trim() || " " }] // Gemini requires non-empty string, fallback to space
       };
     }), []);
 
@@ -159,7 +159,9 @@ const ChatPage = () => {
           chatId: chatIdNum, 
           role: AI, 
           text: typeof (aiResponse.payload as any)?.text === 'string' ? (aiResponse.payload as any).text : (aiResponse.payload as string),
-          images: (aiResponse.payload as any)?.images || undefined
+          images: (aiResponse.payload as any)?.images || undefined,
+          imagePrompt: (aiResponse.payload as any)?.imagePrompt,
+          imageParams: (aiResponse.payload as any)?.imageParams
         }));
       }
 
@@ -222,6 +224,10 @@ const ChatPage = () => {
     setError(null);
 
     try {
+      const aiMessageBeingDropped = messages[index];
+      const existingImagePrompt = aiMessageBeingDropped?.imagePrompt;
+      const existingImageParams = aiMessageBeingDropped?.imageParams;
+
       const updatedMessages = messages.slice(0, index);
       await dispatch(updateMessages({ chatId: chatIdNum, newMessages: updatedMessages }));
 
@@ -235,7 +241,7 @@ const ChatPage = () => {
       const isImageRequest = lastUsrMsg.isImageRequest || false;
       const chatHistory = createChatHistory(updatedMessages);
       const { text: systemInstruction, images: characterImages } = getSystemInstruction();
-      aiPromiseRef.current = dispatch(generateAIResponse({ prompt: lastUserMessage, history: chatHistory, systemInstruction, characterImages, isImageRequest }));
+      aiPromiseRef.current = dispatch(generateAIResponse({ prompt: lastUserMessage, history: chatHistory, systemInstruction, characterImages, isImageRequest, existingImagePrompt, existingImageParams }));
       const aiResponse = await aiPromiseRef.current;
       aiPromiseRef.current = null;
 
@@ -244,7 +250,9 @@ const ChatPage = () => {
           chatId: chatIdNum, 
           role: AI, 
           text: typeof (aiResponse.payload as any)?.text === 'string' ? (aiResponse.payload as any).text : (aiResponse.payload as string),
-          images: (aiResponse.payload as any)?.images || undefined
+          images: (aiResponse.payload as any)?.images || undefined,
+          imagePrompt: (aiResponse.payload as any)?.imagePrompt,
+          imageParams: (aiResponse.payload as any)?.imageParams
         }));
       }
 
@@ -363,7 +371,7 @@ const ChatHeader = ({ onInfoClick, onCompressClick, onExportClick, isCompressing
         className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-slate-800 transition text-gray-500 dark:text-slate-400 dark:hover:text-slate-200"
         title="Gemini Context"
       >
-        <FaInfoCircle size={22} />
+        <FaCog size={22} />
       </button>
     </div>
   </div>

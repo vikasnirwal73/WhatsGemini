@@ -7,7 +7,8 @@ export const CHARACTER = "character";
 export const DEFAULT_TEMPRATURE = 0.7;
 export const DEFAULT_OUTPUT_TOKENS = 1000;
 export const DEFAULT_CHAT_LENGTH = 0;
-export const DEFAULT_AI_MODEL = "gemini-1.5-pro";
+export const DEFAULT_AI_MODEL = "gemini-1.5-flash";
+export const DEFAULT_COMPRESS_THRESHOLD = 0; // 0 means do not compress automatically
 export const harmThresholds = [
     { label: "None", value: "BLOCK_NONE" },
     { label: "Low", value: "BLOCK_LOW_AND_ABOVE" },
@@ -38,6 +39,7 @@ export const DARK = "dark";
 
 // Local storage variables
 export const LS_AI_MODEL = "ai_model";
+export const LS_COMPRESS_THRESHOLD = "compress_threshold";
 export const LS_IMAGE_MODEL = "image_model";
 export const DEFAULT_IMAGE_MODEL = "gemini-2.0-flash-exp";
 export const LS_IMAGE_GEN_PROMPT = "image_gen_prompt";
@@ -61,3 +63,17 @@ export const IMAGE_RESOLUTIONS = [
 ];
 export const DEFAULT_IMAGE_RESOLUTION = "512x512";
 export const LS_USER_PROFILE = "whatsgemini_user_profile";
+export const LS_USE_SD_WEBUI = "use_sd_webui";
+export const LS_SD_WEBUI_API_URL = "sd_webui_api_url";
+export const DEFAULT_SD_WEBUI_API_URL = "http://127.0.0.1:7860";
+export const LS_SD_WEBUI_BATCH_SIZE = "sd_webui_batch_size";
+export const DEFAULT_SD_WEBUI_BATCH_SIZE = 1;
+export const LS_SD_WEBUI_REF_MODE = "sd_webui_ref_mode";
+export const DEFAULT_SD_WEBUI_REF_MODE = "none";
+export const LS_SD_WEBUI_DENOISING = "sd_webui_denoising";
+export const DEFAULT_SD_WEBUI_DENOISING = 0.6;
+export const LS_SD_WEBUI_CONTROLNET_MODEL = "sd_webui_controlnet_model";
+export const DEFAULT_SD_WEBUI_CONTROLNET_MODEL = "ip-adapter_sd15";
+export const LS_SD_WEBUI_MODELS = "sd_webui_models";
+export const LS_SD_WEBUI_MODEL = "sd_webui_model";
+export const DEFAULT_SD_WEBUI_MODEL = "";

@@ -74,14 +74,14 @@ const InitialMessages: React.FC<InitialMessagesProps> = ({ onSave }) => {
   }, []);
 
   return (
-    <div className="p-3">
+    <div>
       <label className="block font-semibold text-black dark:text-white mb-5">
-        {initialMessages.length === 0 ? "Add a predefined system message" : "Predefined System Messages (For new chats only)"}
+        {initialMessages.length === 0 ? "Add a predefined system message" : "Predefined System Messages"}
       </label>
       {initialMessages.map((msg, idx) => (
         <div
           key={idx}
-          className="mb-5 shadow-sm rounded-2xl bg-panel-light dark:bg-panel-dark border border-gray-200 dark:border-gray-800 flex flex-col gap-4 relative"
+          className="mb-5 shadow-sm rounded-2xl bg-panel-light dark:bg-panel-dark border border-gray-200 dark:border-gray-800 flex flex-col gap-2 relative"
         >
           <select
             value={msg.role}

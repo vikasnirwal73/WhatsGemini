@@ -5,6 +5,9 @@ export interface Message {
   characterId?: number;
   isSystem?: boolean;
   isImageRequest?: boolean; // True if it triggered image generation
+  imagePrompt?: string; // The derived SD prompt used to generate this image
+  imageParams?: any; // The derived SD params
+  sampler_name?: string; // The specific sampler name used
 }
 
 export interface Chat {

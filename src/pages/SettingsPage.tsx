@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { FaArrowLeft, FaDownload, FaUpload, FaGlobe, FaPython, FaGoogle, FaInfoCircle, FaChevronDown, FaChevronUp } from "react-icons/fa";
+import { FaArrowLeft, FaDownload, FaUpload, FaInfoCircle, FaChevronDown, FaChevronUp } from "react-icons/fa";
 import InitialMessages from "../components/InitialMessages";
 import { ToastContainer, ToastData } from "../components/Toast";
 import { getApiKey } from "../utils/apiKeyManager";
@@ -25,7 +25,23 @@ import {
   DEFAULT_IMAGE_MODEL,
   LS_IMAGE_GEN_PROMPT,
   DEFAULT_IMAGE_GEN_PROMPT,
+  LS_USE_SD_WEBUI,
+  LS_SD_WEBUI_API_URL,
+  DEFAULT_SD_WEBUI_API_URL,
+  LS_SD_WEBUI_BATCH_SIZE,
+  DEFAULT_SD_WEBUI_BATCH_SIZE,
+  LS_SD_WEBUI_REF_MODE,
+  DEFAULT_SD_WEBUI_REF_MODE,
+  LS_SD_WEBUI_DENOISING,
+  DEFAULT_SD_WEBUI_DENOISING,
+  LS_SD_WEBUI_CONTROLNET_MODEL,
+  DEFAULT_SD_WEBUI_CONTROLNET_MODEL,
+  LS_SD_WEBUI_MODELS,
+  LS_SD_WEBUI_MODEL,
+  DEFAULT_SD_WEBUI_MODEL,
   models,
+  LS_COMPRESS_THRESHOLD,
+  DEFAULT_COMPRESS_THRESHOLD,
 } from "../utils/constants";
 import { AISafetySettings, UserProfile } from "../types";
 import { dbService } from "../services/dbService";
@@ -34,18 +50,26 @@ const SettingsPage = () => {
   const navigate = useNavigate();
   const [initialMessagesKey, setInitialMessagesKey] = useState(0);
   const [toasts, setToasts] = useState<ToastData[]>([]);
-  const [customModel, setCustomModel] = useState(() => {
-    const stored = localStorage.getItem(LS_AI_MODEL);
-    return stored && !models.includes(stored) ? stored : "";
-  });
 
-  const [modelList, setModelList] = useState<{value: string, label: string}[]>(models.map((m: string) => ({ value: m, label: m })));
+  const [modelList, setModelList] = useState<{value: string, label: string}[]>(() => {
+    const list = models.map((m: string) => ({ value: m, label: m }));
+    const stored = localStorage.getItem(LS_AI_MODEL);
+    if (stored && !models.includes(stored)) {
+      list.push({ value: stored, label: stored });
+    }
+    return list;
+  });
   
-  const [imageModelList, setImageModelList] = useState<{value: string, label: string}[]>(
-    models
+  const [imageModelList, setImageModelList] = useState<{value: string, label: string}[]>(() => {
+    const list = models
       .filter((m: string) => /gemini-(2|3)|imagen/i.test(m))
-      .map((m: string) => ({ value: m, label: m }))
-  );
+      .map((m: string) => ({ value: m, label: m }));
+    const stored = localStorage.getItem(LS_IMAGE_MODEL);
+    if (stored && !list.find(m => m.value === stored)) {
+      list.push({ value: stored, label: stored });
+    }
+    return list;
+  });
 
   useEffect(() => {
     const fetchModels = async () => {
@@ -84,6 +108,40 @@ const SettingsPage = () => {
     fetchModels();
   }, []);
 
+  const fetchSdModels = async () => {
+    try {
+      const response = await fetch(`${sdWebuiApiUrl.replace(/\/$/, '')}/sdapi/v1/sd-models`);
+      if (!response.ok) throw new Error("Failed to fetch SD models");
+      const data = await response.json();
+      const mappedModels = data.map((m: any) => ({ title: m.title, model_name: m.model_name }));
+      setSdWebuiModels(mappedModels);
+      localStorage.setItem(LS_SD_WEBUI_MODELS, JSON.stringify(mappedModels));
+      
+      // Select the first one if current is not in the list or empty
+      if (mappedModels.length > 0) {
+        if (!sdWebuiModel || !mappedModels.find((m: any) => m.title === sdWebuiModel)) {
+           setSdWebuiModel(mappedModels[0].title);
+           localStorage.setItem(LS_SD_WEBUI_MODEL, mappedModels[0].title);
+        }
+      }
+      
+      const newToast: ToastData = {
+        id: Date.now().toString(),
+        message: "Successfully fetched SD models",
+        type: "success",
+      };
+      setToasts((prev) => [...prev, newToast]);
+    } catch (e: any) {
+      console.error(e);
+      const newToast: ToastData = {
+        id: Date.now().toString(),
+        message: "Failed to fetch SD models: " + e.message,
+        type: "error",
+      };
+      setToasts((prev) => [...prev, newToast]);
+    }
+  };
+
   const getStoredValue = <T,>(key: string, defaultValue: T): T => {
     try {
       const val = localStorage.getItem(key);
@@ -95,7 +153,7 @@ const SettingsPage = () => {
 
   const [selectedModel, setSelectedModel] = useState(() => {
     const stored = localStorage.getItem(LS_AI_MODEL);
-    return stored && models.includes(stored) ? stored : models[0];
+    return stored ? stored : models[0];
   });
   
   const [imageModel, setImageModel] = useState(() => {
@@ -106,8 +164,44 @@ const SettingsPage = () => {
     return localStorage.getItem(LS_IMAGE_GEN_PROMPT) || DEFAULT_IMAGE_GEN_PROMPT;
   });
 
+  const [useSdWebui, setUseSdWebui] = useState<boolean>(() => {
+    return localStorage.getItem(LS_USE_SD_WEBUI) === "true";
+  });
+
+  const [sdWebuiApiUrl, setSdWebuiApiUrl] = useState<string>(() => {
+    return localStorage.getItem(LS_SD_WEBUI_API_URL) || DEFAULT_SD_WEBUI_API_URL;
+  });
+
+  const [sdWebuiBatchSize, setSdWebuiBatchSize] = useState<number>(() => {
+    return parseInt(localStorage.getItem(LS_SD_WEBUI_BATCH_SIZE) || "1", 10) || DEFAULT_SD_WEBUI_BATCH_SIZE;
+  });
+
+  const [sdWebuiRefMode, setSdWebuiRefMode] = useState<string>(() => {
+    return localStorage.getItem(LS_SD_WEBUI_REF_MODE) || DEFAULT_SD_WEBUI_REF_MODE;
+  });
+
+  const [sdWebuiDenoising, setSdWebuiDenoising] = useState<number>(() => {
+    return parseFloat(localStorage.getItem(LS_SD_WEBUI_DENOISING) || String(DEFAULT_SD_WEBUI_DENOISING));
+  });
+
+  const [sdWebuiControlnetModel, setSdWebuiControlnetModel] = useState<string>(() => {
+    return localStorage.getItem(LS_SD_WEBUI_CONTROLNET_MODEL) || DEFAULT_SD_WEBUI_CONTROLNET_MODEL;
+  });
+
+  const [sdWebuiModels, setSdWebuiModels] = useState<{title: string, model_name: string}[]>(() => {
+    const stored = localStorage.getItem(LS_SD_WEBUI_MODELS);
+    return stored ? JSON.parse(stored) : [];
+  });
+
+  const [sdWebuiModel, setSdWebuiModel] = useState<string>(() => {
+    return localStorage.getItem(LS_SD_WEBUI_MODEL) || DEFAULT_SD_WEBUI_MODEL;
+  });
+
   const [maxOutputTokens, setMaxOutputTokens] = useState<number>(
     getStoredValue(LS_MAX_OUTPUT_TOKENS, DEFAULT_OUTPUT_TOKENS)
+  );
+  const [compressThreshold, setCompressThreshold] = useState<number>(
+    getStoredValue(LS_COMPRESS_THRESHOLD, DEFAULT_COMPRESS_THRESHOLD)
   );
   const [maxChatLength, setMaxChatLength] = useState<number>(
     getStoredValue(LS_MAX_CHAT_LENGTH, DEFAULT_CHAT_LENGTH)
@@ -205,11 +299,17 @@ const SettingsPage = () => {
     // Debounce the save operation
     saveTimeoutRef.current = setTimeout(() => {
       try {
-        const modelToStore = customModel.trim() || selectedModel;
-        localStorage.setItem(LS_AI_MODEL, modelToStore);
+        localStorage.setItem(LS_AI_MODEL, selectedModel);
         localStorage.setItem(LS_IMAGE_MODEL, imageModel);
         localStorage.setItem(LS_IMAGE_GEN_PROMPT, imageGenPrompt);
+        localStorage.setItem(LS_USE_SD_WEBUI, String(useSdWebui));
+        localStorage.setItem(LS_SD_WEBUI_API_URL, sdWebuiApiUrl);
+        localStorage.setItem(LS_SD_WEBUI_BATCH_SIZE, String(sdWebuiBatchSize));
+        localStorage.setItem(LS_SD_WEBUI_REF_MODE, sdWebuiRefMode);
+        localStorage.setItem(LS_SD_WEBUI_DENOISING, String(sdWebuiDenoising));
+        localStorage.setItem(LS_SD_WEBUI_CONTROLNET_MODEL, sdWebuiControlnetModel);
         localStorage.setItem(LS_MAX_OUTPUT_TOKENS, JSON.stringify(maxOutputTokens));
+        localStorage.setItem(LS_COMPRESS_THRESHOLD, JSON.stringify(compressThreshold));
         localStorage.setItem(LS_TEMPRATURE, JSON.stringify(temperature));
         localStorage.setItem(LS_SAFETY_SETTINGS, JSON.stringify(safetySettings));
         localStorage.setItem(LS_MAX_CHAT_LENGTH, JSON.stringify(maxChatLength));
@@ -232,7 +332,7 @@ const SettingsPage = () => {
         clearTimeout(saveTimeoutRef.current);
       }
     };
-  }, [customModel, selectedModel, imageModel, imageGenPrompt, maxOutputTokens, temperature, safetySettings, maxChatLength, fontSize, imageResolution, userProfile, roastMessages, addToast]);
+  }, [selectedModel, imageModel, imageGenPrompt, useSdWebui, sdWebuiApiUrl, sdWebuiBatchSize, sdWebuiRefMode, sdWebuiDenoising, sdWebuiControlnetModel, maxOutputTokens, compressThreshold, temperature, safetySettings, maxChatLength, fontSize, imageResolution, userProfile, roastMessages, addToast]);
   
   const handleSafetyChange = useCallback((category: keyof AISafetySettings, value: string) => {
     setSafetySettings((prev) => ({ ...prev, [category]: value }));
@@ -247,8 +347,9 @@ const SettingsPage = () => {
 
   const handleExportSettings = () => {
     const settings = {
-      [LS_AI_MODEL]: customModel.trim() || selectedModel,
+      [LS_AI_MODEL]: selectedModel,
       [LS_MAX_OUTPUT_TOKENS]: maxOutputTokens,
+      [LS_COMPRESS_THRESHOLD]: compressThreshold,
       [LS_TEMPRATURE]: temperature,
       [LS_SAFETY_SETTINGS]: safetySettings,
       [LS_MAX_CHAT_LENGTH]: maxChatLength,
@@ -288,12 +389,19 @@ const SettingsPage = () => {
             const model = settings[LS_AI_MODEL];
             if (models.includes(model)) {
                 setSelectedModel(model);
-                setCustomModel("");
             } else {
-                 setCustomModel(model);
+                // If it's a custom model from old settings, just keep it, or fallback
+                setSelectedModel(model);
+                setModelList(prev => {
+                  if (!prev.find(m => m.value === model)) {
+                     return [...prev, { value: model, label: model }];
+                  }
+                  return prev;
+                });
             }
         }
         if (settings[LS_MAX_OUTPUT_TOKENS]) setMaxOutputTokens(settings[LS_MAX_OUTPUT_TOKENS]);
+        if (settings[LS_COMPRESS_THRESHOLD]) setCompressThreshold(settings[LS_COMPRESS_THRESHOLD]);
         if (settings[LS_TEMPRATURE]) setTemperature(settings[LS_TEMPRATURE]);
         if (settings[LS_SAFETY_SETTINGS]) setSafetySettings(settings[LS_SAFETY_SETTINGS]);
         if (settings[LS_MAX_CHAT_LENGTH]) setMaxChatLength(settings[LS_MAX_CHAT_LENGTH]);
@@ -337,8 +445,8 @@ const SettingsPage = () => {
   };
 
   return (
-    <div className="w-full h-screen flex justify-center bg-app-light dark:bg-app-dark overflow-auto p-4 md:p-8">
-      <div className="w-full max-w-md bg-transparent">
+    <div className="w-full h-screen flex justify-center bg-app-light dark:bg-app-dark overflow-auto p-4 md:p-4">
+      <div className="w-full max-w-[32rem] bg-transparent">
         
         {/* Header */}
         <div className="flex items-center justify-between mb-6 pb-4 border-b border-gray-200 dark:border-slate-800">
@@ -415,52 +523,43 @@ const SettingsPage = () => {
             </div>
           </div>
 
-          <select
-            value={selectedModel}
-            onChange={(e) => setSelectedModel(e.target.value)}
-            className="w-full p-3 bg-app-light dark:bg-slate-900/50 text-black dark:text-white rounded-xl border border-transparent dark:border-slate-700 focus:border-indigo-500 outline-none transition-all appearance-none"
-          >
-            {modelList.map((model: {value: string, label: string}) => (
-              <option key={model.value} value={model.value}>
-                {model.label}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {/* Active Plugins Card (UI Mockup) */}
-        <div className="bg-panel-light dark:bg-panel-dark rounded-2xl p-5 mb-4 shadow-sm border border-gray-100 dark:border-slate-700/50">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="text-lg font-medium text-gray-900 dark:text-white">Active Plugins</h3>
-            <FaInfoCircle className="text-gray-400 dark:text-slate-500" size={14} title="Coming Soon!" />
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            Text Generation Model
+          </label>
+          <div className="relative mb-6">
+            <select
+              value={selectedModel}
+              onChange={(e) => setSelectedModel(e.target.value)}
+              className="w-full p-3 pr-10 bg-app-light dark:bg-slate-900/50 text-black dark:text-white rounded-xl border border-transparent dark:border-slate-700 focus:border-indigo-500 outline-none transition-all appearance-none cursor-pointer"
+            >
+              {modelList.map((model: {value: string, label: string}) => (
+                <option key={model.value} value={model.value}>
+                  {model.label}
+                </option>
+              ))}
+            </select>
+            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-4">
+              <FaChevronDown size={12} className="text-gray-500 dark:text-gray-400" />
+            </div>
           </div>
 
-          <div className="flex flex-col gap-4">
-            {[
-              { label: "Web Search", icon: FaGlobe },
-              { label: "Python Interpreter", icon: FaPython },
-              { label: "Google Workspace connection", icon: FaGoogle },
-            ].map(({ label, icon: Icon }, i) => (
-              <div key={i} className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-gemini-logo flex items-center justify-center shadow-sm">
-                    <Icon size={14} className="text-white" />
-                  </div>
-                  <span className="text-sm text-gray-700 dark:text-slate-200">{label}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-bold text-gray-500 dark:text-slate-400">ON</span>
-                  <div className="w-10 h-5 rounded-full flex items-center px-1 cursor-pointer bg-indigo-500">
-                    <div className="w-4 h-4 rounded-full bg-white translate-x-4"></div>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            Auto-Compress History Threshold
+          </label>
+          <div className="mb-2">
+            <input
+              type="number"
+              min="0"
+              value={compressThreshold}
+              onChange={(e) => setCompressThreshold(Number(e.target.value))}
+              placeholder="0 to disable"
+              className="w-full p-3 bg-app-light dark:bg-slate-900/50 text-black dark:text-white rounded-xl border border-transparent dark:border-slate-700 focus:border-indigo-500 outline-none transition-all"
+            />
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">If history length exceeds this, older messages will be summarized to save tokens. (0 means disabled)</p>
         </div>
 
         {/* Advanced Settings Accordion */}
-        <div className="bg-panel-light dark:bg-panel-dark rounded-2xl p-5 mb-10 shadow-sm border border-gray-100 dark:border-slate-700/50">
+        <div className="bg-panel-light dark:bg-panel-dark rounded-2xl px-5 py-3 mb-10 shadow-sm border border-gray-100 dark:border-slate-700/50 mt-4">
           <button 
             className="w-full flex justify-between items-center text-lg font-medium text-gray-900 dark:text-white"
             onClick={() => setShowAdvanced(!showAdvanced)}
@@ -470,11 +569,11 @@ const SettingsPage = () => {
           </button>
           
           {showAdvanced && (
-            <div className="mt-6 flex flex-col gap-4">
+            <div className="mt-6 flex flex-col">
               <div className="flex flex-col sm:flex-row gap-4 border-b border-gray-200 dark:border-gray-800 pb-6 mb-2">
                  <button
                     onClick={handleExportSettings}
-                    className="flex-1 bg-primary text-white py-2 px-4 rounded-lg hover:bg-primary-hover transition flex items-center justify-center gap-2"
+                    className="flex-1 bg-indigo-500 text-white py-2 px-4 rounded-lg hover:bg-indigo-600 transition flex items-center justify-center gap-2"
                  >
                     <FaDownload /> Export Settings
                  </button>
@@ -494,52 +593,167 @@ const SettingsPage = () => {
             </div>
 
         {/* AI Model Selection */}
-        <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-          <strong>Using Model:</strong> {customModel.trim() || selectedModel}
-        </p>
-        <label className="block font-semibold mb-2 text-black dark:text-white">
-          Custom AI Model Name (optional)
-        </label>
-        <input
-          type="text"
-          placeholder="Enter custom model name"
-          value={customModel}
-          onChange={(e) => setCustomModel(e.target.value)}
-          className="w-full p-3 bg-app-light dark:bg-app-dark text-black dark:text-white rounded-xl border border-transparent focus:border-primary outline-none mb-4 transition-all"
-        />
+        <div className="mb-4">
+          <label className="flex items-center space-x-3 cursor-pointer mb-2">
+            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+              Use Local/Remote SD WebUI Forge
+            </span>
+            <div className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${useSdWebui ? 'bg-indigo-500' : 'bg-gray-300 dark:bg-slate-700'}`}>
+              <input
+                type="checkbox"
+                className="sr-only"
+                checked={useSdWebui}
+                onChange={(e) => setUseSdWebui(e.target.checked)}
+              />
+              <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${useSdWebui ? 'translate-x-6' : 'translate-x-1'}`} />
+            </div>
+          </label>
+        </div>
 
-        <label className="block font-semibold mb-2 text-black dark:text-white">
-          Or Select AI text Model
-        </label>
-        <select
-          value={selectedModel}
-          onChange={(e) => setSelectedModel(e.target.value)}
-          className="w-full p-3 bg-app-light dark:bg-app-dark text-black dark:text-white rounded-xl border border-transparent focus:border-primary outline-none mb-4 transition-all"
-        >
-          {modelList.map((model: {value: string, label: string}) => (
-            <option key={model.value} value={model.value}>
-              {model.label}
-            </option>
-          ))}
-        </select>
+        {useSdWebui ? (
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              SD WebUI Forge API URL
+            </label>
+            <input
+              type="text"
+              value={sdWebuiApiUrl}
+              onChange={(e) => setSdWebuiApiUrl(e.target.value)}
+              placeholder="http://127.0.0.1:7860"
+              className="w-full p-3 bg-app-light dark:bg-slate-900/50 text-black dark:text-white rounded-xl border border-transparent dark:border-slate-700 focus:border-indigo-500 outline-none transition-all mb-4"
+            />
+            
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Batch Size (Number of Images)
+            </label>
+            <input
+              type="number"
+              min="1"
+              max="8"
+              value={sdWebuiBatchSize}
+              onChange={(e) => setSdWebuiBatchSize(parseInt(e.target.value, 10))}
+              className="w-full p-3 bg-app-light dark:bg-slate-900/50 text-black dark:text-white rounded-xl border border-transparent dark:border-slate-700 focus:border-indigo-500 outline-none transition-all mb-4"
+            />
+
+            <div className="flex justify-between items-center mb-1">
+               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                 SD Model
+               </label>
+               <button type="button" onClick={fetchSdModels} className="text-xs text-indigo-500 hover:text-indigo-400">
+                 Refresh Models
+               </button>
+            </div>
+            <div className="relative mb-4">
+              <select
+                value={sdWebuiModel}
+                onChange={(e) => {
+                  setSdWebuiModel(e.target.value);
+                  localStorage.setItem(LS_SD_WEBUI_MODEL, e.target.value);
+                }}
+                className="w-full p-3 pr-10 bg-app-light dark:bg-slate-900/50 text-black dark:text-white rounded-xl border border-transparent dark:border-slate-700 focus:border-indigo-500 outline-none transition-all appearance-none cursor-pointer"
+              >
+                <option value="">Default (From SD WebUI)</option>
+                {sdWebuiModels.map((m) => (
+                  <option key={m.title} value={m.title}>
+                    {m.model_name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Reference Image Mode
+            </label>
+            <p className="text-xs text-gray-500 mb-2">How to use the character's appearance images</p>
+            <div className="relative mb-4">
+              <select
+                value={sdWebuiRefMode}
+                onChange={(e) => setSdWebuiRefMode(e.target.value)}
+                className="w-full p-3 pr-10 bg-app-light dark:bg-slate-900/50 text-black dark:text-white rounded-xl border border-transparent dark:border-slate-700 focus:border-indigo-500 outline-none transition-all appearance-none cursor-pointer"
+              >
+                <option value="none">None (Text to Image only)</option>
+                <option value="img2img">img2img API</option>
+                <option value="controlnet">ControlNet (Alwayson Scripts)</option>
+                <option value="reactor">Face Swap (ReActor Extension)</option>
+              </select>
+              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-4">
+                <FaChevronDown size={12} className="text-gray-500 dark:text-gray-400" />
+              </div>
+            </div>
+
+            {sdWebuiRefMode === "reactor" && (
+              <div className="mb-4">
+                <p className="text-xs text-indigo-500 font-medium mb-1">
+                  ReActor requires the "sd-webui-reactor-sfw" extension installed in Forge.
+                </p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  This passes the character image natively to inswapper to perform a highly accurate post-process face swap over the generated subject.
+                </p>
+              </div>
+            )}
+
+            {sdWebuiRefMode === "img2img" && (
+              <div className="mb-4">
+                <div className="flex justify-between text-sm text-gray-500 dark:text-slate-400 mb-2">
+                  <span>Denoising Strength: {sdWebuiDenoising}</span>
+                </div>
+                <input
+                  type="range"
+                  min="0"
+                  max="1"
+                  step="0.05"
+                  value={sdWebuiDenoising}
+                  onChange={(e) => setSdWebuiDenoising(Number(e.target.value))}
+                  className="w-full h-2 rounded-lg appearance-none cursor-pointer accent-indigo-500"
+                  style={{ 
+                    background: `linear-gradient(to right, #a78bfa, #fb923c, #38bdf8) 0% 0% / ${(sdWebuiDenoising / 1) * 100}% 100% no-repeat, #334155` 
+                  }}
+                />
+              </div>
+            )}
+
+            {sdWebuiRefMode === "controlnet" && (
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  ControlNet Model Name
+                </label>
+                <input
+                  type="text"
+                  value={sdWebuiControlnetModel}
+                  onChange={(e) => setSdWebuiControlnetModel(e.target.value)}
+                  placeholder="e.g. ip-adapter_sd15"
+                  className="w-full p-3 bg-app-light dark:bg-slate-900/50 text-black dark:text-white rounded-xl border border-transparent dark:border-slate-700 focus:border-indigo-500 outline-none transition-all"
+                />
+                <p className="text-xs text-gray-500 mt-1">Make sure this model is installed in your Forge/WebUI.</p>
+              </div>
+            )}
+          </div>
+        ) : (
+          <>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Image Generation Model
+            </label>
+            <p className="text-xs text-gray-500 mb-2">Used when "send pic" or similar is queried.</p>
+            <div className="relative mb-4">
+              <select
+                value={imageModel}
+                onChange={(e) => setImageModel(e.target.value)}
+                className="w-full p-3 pr-10 bg-app-light dark:bg-slate-900/50 text-black dark:text-white rounded-xl border border-transparent dark:border-slate-700 focus:border-indigo-500 outline-none transition-all appearance-none cursor-pointer"
+              >
+                {imageModelList.map((model: {value: string, label: string}) => (
+                  <option key={model.value} value={model.value}>
+                    {model.label}
+                  </option>
+                ))}
+              </select>
+              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-4">
+                <FaChevronDown size={12} className="text-gray-500 dark:text-gray-400" />
+              </div>
+            </div>
+          </>
+        )}
         
-        <label className="block font-semibold mb-2 text-black dark:text-white mt-4">
-          Image Generation Model
-        </label>
-        <p className="text-xs text-gray-500 mb-2">Used when "send pic" or similar is queried.</p>
-        <select
-          value={imageModel}
-          onChange={(e) => setImageModel(e.target.value)}
-          className="w-full p-3 bg-app-light dark:bg-app-dark text-black dark:text-white rounded-xl border border-transparent focus:border-primary outline-none mb-4 transition-all"
-        >
-          {imageModelList.map((model: {value: string, label: string}) => (
-            <option key={model.value} value={model.value}>
-              {model.label}
-            </option>
-          ))}
-        </select>
-        
-        <label className="block font-semibold mb-2 text-black dark:text-white mt-4">
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mt-4 mb-1">
           Image Generation Base Prompt
         </label>
         <p className="text-xs text-gray-500 mb-2">Used as the base instruction whenever an image is requested.</p>
@@ -547,79 +761,61 @@ const SettingsPage = () => {
           value={imageGenPrompt}
           onChange={(e) => setImageGenPrompt(e.target.value)}
           placeholder="e.g. Create a high quality, detailed image..."
-          className="w-full p-3 bg-app-light dark:bg-app-dark text-black dark:text-white rounded-xl border border-transparent focus:border-primary outline-none mb-4 transition-all resize-y min-h-[80px]"
+          className="w-full p-3 bg-app-light dark:bg-slate-900/50 text-black dark:text-white rounded-xl border border-transparent dark:border-slate-700 focus:border-indigo-500 outline-none transition-all resize-y min-h-[80px]"
         />
 
-        <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-          <strong>Selected Model:</strong>{" "}
-          {customModel.trim() || selectedModel}
-        </p>
-
         {/* Max Output Tokens */}
-        <label className="block font-semibold mb-2 text-black dark:text-white">
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mt-4 mb-1">
           Max Output Tokens
         </label>
         <input
           type="number"
           value={maxOutputTokens}
           onChange={(e) => setMaxOutputTokens(Number(e.target.value))}
-          className="w-full p-3 bg-app-light dark:bg-app-dark text-black dark:text-white rounded-xl border border-transparent focus:border-primary outline-none mb-4 transition-all"
+          className="w-full p-3 bg-app-light dark:bg-slate-900/50 text-black dark:text-white rounded-xl border border-transparent dark:border-slate-700 focus:border-indigo-500 outline-none transition-all"
           min="1"
         />
 
         {/* Max chat length */}
-        <label className="block font-semibold mb-2 text-black dark:text-white">
-          Max Chat Length (old messages will be deleted, 0 for unlimited length)
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mt-4 mb-1">
+          Max Chat Length (0 for unlimited)
         </label>
         <input
           type="number"
           value={maxChatLength}
           onChange={(e) => setMaxChatLength(Number(e.target.value))}
-          className="w-full p-3 bg-app-light dark:bg-app-dark text-black dark:text-white rounded-xl border border-transparent focus:border-primary outline-none mb-4 transition-all"
+          className="w-full p-3 bg-app-light dark:bg-slate-900/50 text-black dark:text-white rounded-xl border border-transparent dark:border-slate-700 focus:border-indigo-500 outline-none transition-all"
           min="1"
         />
-
-        {/* Temperature */}
-        <label className="block font-semibold mb-2 text-black dark:text-white">
-          Temperature (Creativity Level)
-        </label>
-        <input
-          type="range"
-          min="0"
-          max="1"
-          step="0.1"
-          value={temperature}
-          onChange={(e) => setTemperature(Number(e.target.value))}
-          className="w-full mb-2"
-        />
-        <p className="text-gray-600 dark:text-gray-400 text-sm mb-4">
-          Current: {temperature}
-        </p>
-
         {/* Image Generation Settings */}
-        <h3 className="font-semibold mb-2 text-black dark:text-white mt-6">Image Generation</h3>
-        <div className="mb-4">
-          <label className="block text-sm text-gray-700 dark:text-gray-300 mb-1">
+        <h3 className="text-lg font-medium text-gray-900 dark:text-white mt-6 mb-4">Image Generation</h3>
+        <div className="mb-4 mt-4">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
             Default Image Resolution
           </label>
-          <select
-            value={imageResolution}
-            onChange={(e) => setImageResolution(e.target.value)}
-            className="w-full p-3 bg-app-light dark:bg-app-dark text-black dark:text-white rounded-xl border border-transparent focus:border-primary outline-none transition-all mb-4"
-          >
-            {IMAGE_RESOLUTIONS.map((res) => (
-              <option key={res} value={res}>{res}</option>
-            ))}
-          </select>
+          <div className="relative mb-4">
+            <select
+              value={imageResolution}
+              onChange={(e) => setImageResolution(e.target.value)}
+              className="w-full p-3 pr-10 bg-app-light dark:bg-slate-900/50 text-black dark:text-white rounded-xl border border-transparent dark:border-slate-700 focus:border-indigo-500 outline-none transition-all appearance-none cursor-pointer"
+            >
+              {IMAGE_RESOLUTIONS.map((res) => (
+                <option key={res} value={res}>{res}</option>
+              ))}
+            </select>
+            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-4">
+              <FaChevronDown size={12} className="text-gray-500 dark:text-gray-400" />
+            </div>
+          </div>
 
-          <label className="block text-sm text-gray-700 dark:text-gray-300 mb-1">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
             Save Generated Images To:
           </label>
-          <div className="flex items-center justify-between bg-app-light dark:bg-app-dark p-3 rounded-xl border border-transparent mb-2">
-            <span className="text-black dark:text-white truncate pr-2">{imageSaveDirName}</span>
+          <div className="flex items-center justify-between bg-app-light dark:bg-slate-900/50 p-3 rounded-xl border border-transparent dark:border-slate-700 mb-2">
+            <span className="text-black dark:text-white text-sm truncate pr-2">{imageSaveDirName}</span>
             <button 
               onClick={handleSelectDirectory}
-              className="px-3 py-1.5 bg-primary text-white text-sm rounded-lg hover:bg-primary-hover transition whitespace-nowrap"
+              className="px-3 py-1.5 bg-indigo-500 text-white text-sm rounded-lg hover:bg-indigo-600 transition whitespace-nowrap"
             >
               Select Folder
             </button>
@@ -630,40 +826,50 @@ const SettingsPage = () => {
         </div>
 
         {/* Safety Settings */}
-        <h3 className="font-semibold mb-2 text-black dark:text-white mt-6">Safety Settings</h3>
+        <h3 className="text-lg font-medium text-gray-900 dark:text-white mt-6 mb-4">Safety Settings</h3>
         {safetyCategories.map((category) => (
-          <div key={category} className="mb-2">
-            <label className="block text-black dark:text-white capitalize mb-1">
+          <div key={category} className="mb-4">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 capitalize mb-1">
               Block {category.replace("_", " ")}
             </label>
-            <select
-              value={safetySettings[category]}
-              onChange={(e) => handleSafetyChange(category, e.target.value)}
-              className="w-full mb-2 p-2 bg-app-light dark:bg-app-dark text-black dark:text-white rounded-xl border border-transparent focus:border-primary outline-none transition-all"
-            >
-              {harmThresholds.map(({ label, value }: {label: string, value: string}) => (
-                <option key={value} value={value}>
-                  {label}
-                </option>
-              ))}
-            </select>
+            <div className="relative mb-2">
+              <select
+                value={safetySettings[category]}
+                onChange={(e) => handleSafetyChange(category, e.target.value)}
+                className="w-full p-3 pr-10 bg-app-light dark:bg-slate-900/50 text-black dark:text-white rounded-xl border border-transparent dark:border-slate-700 focus:border-indigo-500 outline-none transition-all appearance-none cursor-pointer"
+              >
+                {harmThresholds.map(({ label, value }: {label: string, value: string}) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-4">
+                <FaChevronDown size={12} className="text-gray-500 dark:text-gray-400" />
+              </div>
+            </div>
           </div>
         ))}
 
         {/* Font Size */}
-        <label className="block font-semibold mt-4 mb-2 text-black dark:text-white">
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mt-6 mb-1">
           Chat Font Size
         </label>
-        <select
-          value={fontSize}
-          onChange={(e) => setFontSize(e.target.value)}
-          className="w-full p-3 bg-app-light dark:bg-app-dark text-black dark:text-white rounded-xl border border-transparent focus:border-primary outline-none mb-4 transition-all"
-        >
-          <option value="14px">Small</option>
-          <option value="16px">Medium (Default)</option>
-          <option value="18px">Large</option>
-          <option value="20px">Extra Large</option>
-        </select>
+        <div className="relative mb-4">
+          <select
+            value={fontSize}
+            onChange={(e) => setFontSize(e.target.value)}
+            className="w-full p-3 pr-10 bg-app-light dark:bg-slate-900/50 text-black dark:text-white rounded-xl border border-transparent dark:border-slate-700 focus:border-indigo-500 outline-none transition-all appearance-none cursor-pointer"
+          >
+            <option value="14px">Small</option>
+            <option value="16px">Medium (Default)</option>
+            <option value="18px">Large</option>
+            <option value="20px">Extra Large</option>
+          </select>
+          <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-4">
+            <FaChevronDown size={12} className="text-gray-500 dark:text-gray-400" />
+          </div>
+        </div>
 
               {/* Initial Chat Message */}
               <div className="mt-4 border-t border-gray-200 dark:border-gray-800 pt-4">
@@ -676,6 +882,7 @@ const SettingsPage = () => {
           )}
         </div>
       </div>
+    </div>
     </div>
   );
 };

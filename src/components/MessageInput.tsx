@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useRef } from "react";
-import { FaPaperPlane, FaStop, FaPlus } from "react-icons/fa";
+import { FaPaperPlane, FaStop } from "react-icons/fa";
 import { cn } from "../utils/cn";
+import ToggleSwitch from "./ToggleSwitch";
 
 interface MessageInputProps {
   onSend: (text: string, isImageRequest?: boolean) => void;
@@ -44,21 +45,14 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSend, disabled = false, o
         </div>
       )}
       <div className="flex items-center gap-3 bg-slate-900/60 dark:bg-slate-800/60 backdrop-blur-md border border-gray-300 dark:border-slate-600/50 rounded-full p-2 px-4 shadow-xl">
-        <button className="text-gray-400 hover:text-gray-600 dark:text-slate-400 dark:hover:text-slate-200 p-2 transition">
-          <FaPlus size={18} />
-        </button>
-
-        <label className="flex items-center gap-1.5 cursor-pointer text-sm text-gray-500 hover:text-gray-700 dark:text-slate-400 dark:hover:text-slate-200 transition select-none ml-1 mr-1">
-          <input
-            type="checkbox"
-            checked={isImageRequest}
-            onChange={(e) => setIsImageRequest(e.target.checked)}
-            disabled={disabled}
-            className="w-4 h-4 rounded border-gray-300 text-indigo-500 focus:ring-indigo-500 dark:bg-slate-700 dark:border-slate-600 bg-transparent disabled:opacity-50"
-            title="Request image generation"
-          />
-          <span className="hidden sm:inline">Image</span>
-        </label>
+        <ToggleSwitch
+          checked={isImageRequest}
+          onChange={setIsImageRequest}
+          disabled={disabled}
+          title="Request image generation"
+          className="ml-1 mr-1"
+          label={<span className="hidden sm:inline">Image</span>}
+        />
 
         <input
         ref={inputRef}

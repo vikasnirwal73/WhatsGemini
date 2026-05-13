@@ -8,6 +8,7 @@ import { AI, YOU, LS_INITIAL_MESSAGES } from "../utils/constants";
 import { Message } from "../types";
 import { cn } from "../utils/cn";
 import { DisplayImage } from "./DisplayImage";
+import ToggleSwitch from "./ToggleSwitch";
 
 // CodeBlock Component to handle syntax highlighting and copying
 const CodeBlock = ({ node, className, children, ...props }: any) => {
@@ -470,16 +471,12 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ messages = [], onRegenerate, on
             </div>
 
             <div className="p-4 border-t border-gray-200 dark:border-slate-800 flex justify-between gap-3 bg-gray-50 dark:bg-slate-900/50 rounded-b-2xl items-center">
-              <label className="flex items-center gap-2 cursor-pointer text-sm text-gray-600 hover:text-gray-800 dark:text-slate-400 dark:hover:text-slate-200 transition select-none">
-                <input
-                  type="checkbox"
-                  checked={editIsImageRequest}
-                  onChange={(e) => setEditIsImageRequest(e.target.checked)}
-                  className="w-4 h-4 rounded border-gray-300 text-indigo-500 focus:ring-indigo-500 dark:bg-slate-700 dark:border-slate-600 bg-transparent"
-                  title="Request image generation"
-                />
-                <span>Generate Image</span>
-              </label>
+              <ToggleSwitch
+                checked={editIsImageRequest}
+                onChange={setEditIsImageRequest}
+                title="Request image generation"
+                label="Generate Image"
+              />
 
               <div className="flex gap-3">
                 <button 
