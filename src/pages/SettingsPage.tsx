@@ -1,8 +1,20 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
+import { useDispatch, useSelector } from "react-redux";
+import { RootState } from "../store/store";
+import {
+  setUserProfile, setSelectedModel, setImageModel, setImageGenPrompt,
+  setUseSdWebui, setSdWebuiApiUrl, setSdWebuiBatchSize, setSdWebuiRefMode,
+  setSdWebuiDenoising, setSdWebuiControlnetModel, setSdWebuiModels,
+  setSdWebuiModel, setMaxOutputTokens, setCompressThreshold, setMaxChatLength,
+  setTemperature, setSafetySettings, setFontSize, setImageResolution
+} from "../features/settingsSlice";
 import { FaArrowLeft, FaDownload, FaUpload, FaInfoCircle, FaChevronDown, FaChevronUp } from "react-icons/fa";
 import InitialMessages from "../components/InitialMessages";
 import { ToastContainer, ToastData } from "../components/Toast";
+import UserProfileSettings from "../components/settings/UserProfileSettings";
+import TextModelSettings from "../components/settings/TextModelSettings";
+import ImageGenerationSettings from "../components/settings/ImageGenerationSettings";
 import { getApiKey } from "../utils/apiKeyManager";
 import {
   DEFAULT_CHAT_LENGTH,
@@ -114,14 +126,12 @@ const SettingsPage = () => {
       if (!response.ok) throw new Error("Failed to fetch SD models");
       const data = await response.json();
       const mappedModels = data.map((m: any) => ({ title: m.title, model_name: m.model_name }));
-      setSdWebuiModels(mappedModels);
-      localStorage.setItem(LS_SD_WEBUI_MODELS, JSON.stringify(mappedModels));
+      dispatch(setSdWebuiModels(mappedModels));
       
       // Select the first one if current is not in the list or empty
       if (mappedModels.length > 0) {
         if (!sdWebuiModel || !mappedModels.find((m: any) => m.title === sdWebuiModel)) {
-           setSdWebuiModel(mappedModels[0].title);
-           localStorage.setItem(LS_SD_WEBUI_MODEL, mappedModels[0].title);
+           dispatch(setSdWebuiModel(mappedModels[0].title));
         }
       }
       
@@ -142,93 +152,21 @@ const SettingsPage = () => {
     }
   };
 
-  const getStoredValue = <T,>(key: string, defaultValue: T): T => {
-    try {
-      const val = localStorage.getItem(key);
-      return val ? JSON.parse(val) : defaultValue;
-    } catch {
-      return defaultValue;
-    }
-  };
+  const dispatch = useDispatch();
+  const settings = useSelector((state: RootState) => state.settings);
 
-  const [selectedModel, setSelectedModel] = useState(() => {
-    const stored = localStorage.getItem(LS_AI_MODEL);
-    return stored ? stored : models[0];
-  });
-  
-  const [imageModel, setImageModel] = useState(() => {
-    return localStorage.getItem(LS_IMAGE_MODEL) || DEFAULT_IMAGE_MODEL;
-  });
+  const {
+    userProfile, selectedModel, imageModel, imageGenPrompt, useSdWebui, sdWebuiApiUrl,
+    sdWebuiBatchSize, sdWebuiRefMode, sdWebuiDenoising, sdWebuiControlnetModel, sdWebuiModels,
+    sdWebuiModel, maxOutputTokens, compressThreshold, maxChatLength, temperature,
+    safetySettings, fontSize, imageResolution
+  } = settings;
 
-  const [imageGenPrompt, setImageGenPrompt] = useState(() => {
-    return localStorage.getItem(LS_IMAGE_GEN_PROMPT) || DEFAULT_IMAGE_GEN_PROMPT;
-  });
-
-  const [useSdWebui, setUseSdWebui] = useState<boolean>(() => {
-    return localStorage.getItem(LS_USE_SD_WEBUI) === "true";
-  });
-
-  const [sdWebuiApiUrl, setSdWebuiApiUrl] = useState<string>(() => {
-    return localStorage.getItem(LS_SD_WEBUI_API_URL) || DEFAULT_SD_WEBUI_API_URL;
-  });
-
-  const [sdWebuiBatchSize, setSdWebuiBatchSize] = useState<number>(() => {
-    return parseInt(localStorage.getItem(LS_SD_WEBUI_BATCH_SIZE) || "1", 10) || DEFAULT_SD_WEBUI_BATCH_SIZE;
-  });
-
-  const [sdWebuiRefMode, setSdWebuiRefMode] = useState<string>(() => {
-    return localStorage.getItem(LS_SD_WEBUI_REF_MODE) || DEFAULT_SD_WEBUI_REF_MODE;
-  });
-
-  const [sdWebuiDenoising, setSdWebuiDenoising] = useState<number>(() => {
-    return parseFloat(localStorage.getItem(LS_SD_WEBUI_DENOISING) || String(DEFAULT_SD_WEBUI_DENOISING));
-  });
-
-  const [sdWebuiControlnetModel, setSdWebuiControlnetModel] = useState<string>(() => {
-    return localStorage.getItem(LS_SD_WEBUI_CONTROLNET_MODEL) || DEFAULT_SD_WEBUI_CONTROLNET_MODEL;
-  });
-
-  const [sdWebuiModels, setSdWebuiModels] = useState<{title: string, model_name: string}[]>(() => {
-    const stored = localStorage.getItem(LS_SD_WEBUI_MODELS);
-    return stored ? JSON.parse(stored) : [];
-  });
-
-  const [sdWebuiModel, setSdWebuiModel] = useState<string>(() => {
-    return localStorage.getItem(LS_SD_WEBUI_MODEL) || DEFAULT_SD_WEBUI_MODEL;
-  });
-
-  const [maxOutputTokens, setMaxOutputTokens] = useState<number>(
-    getStoredValue(LS_MAX_OUTPUT_TOKENS, DEFAULT_OUTPUT_TOKENS)
-  );
-  const [compressThreshold, setCompressThreshold] = useState<number>(
-    getStoredValue(LS_COMPRESS_THRESHOLD, DEFAULT_COMPRESS_THRESHOLD)
-  );
-  const [maxChatLength, setMaxChatLength] = useState<number>(
-    getStoredValue(LS_MAX_CHAT_LENGTH, DEFAULT_CHAT_LENGTH)
-  );
-  const [temperature, setTemperature] = useState<number>(
-    getStoredValue(LS_TEMPRATURE, DEFAULT_TEMPRATURE)
-  );
-  const [safetySettings, setSafetySettings] = useState<AISafetySettings>(
-    getStoredValue(LS_SAFETY_SETTINGS, DEFAULT_SAFETY_SETTINGS as unknown as AISafetySettings)
-  );
-  const [fontSize, setFontSize] = useState<string>(
-    localStorage.getItem(LS_FONT_SIZE) || "16px"
-  );
-  
   const [openSection, setOpenSection] = useState<string>("profile");
 
   const toggleSection = (section: string) => {
     setOpenSection(prev => prev === section ? "" : section);
   };
-
-  const [userProfile, setUserProfile] = useState<UserProfile>(() => {
-    return getStoredValue<UserProfile>(LS_USER_PROFILE, { name: "", bio: "" });
-  });
-  
-  const [imageResolution, setImageResolution] = useState<string>(() => {
-    return localStorage.getItem(LS_IMAGE_RESOLUTION) || DEFAULT_IMAGE_RESOLUTION;
-  });
 
   const [imageSaveDirName, setImageSaveDirName] = useState<string>("Not Selected");
 
@@ -281,8 +219,6 @@ const SettingsPage = () => {
     "Saved! That's definitely going to fix all your problems.",
   ], []);
 
-  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-
   // Add a toast notification
   const addToast = useCallback((message: string, type: "success" | "error" = "success", duration = 5000) => {
     const id = Date.now().toString();
@@ -294,53 +230,36 @@ const SettingsPage = () => {
     setToasts((prev) => prev.filter((toast) => toast.id !== id));
   }, []);
 
-  useEffect(() => {
-    // Clear any existing timeout
-    if (saveTimeoutRef.current) {
-      clearTimeout(saveTimeoutRef.current);
-    }
+  // Debounced roast toast for any setting change
+  const roastTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const prevSettingsRef = useRef(settings);
 
-    // Debounce the save operation
-    saveTimeoutRef.current = setTimeout(() => {
-      try {
-        localStorage.setItem(LS_AI_MODEL, selectedModel);
-        localStorage.setItem(LS_IMAGE_MODEL, imageModel);
-        localStorage.setItem(LS_IMAGE_GEN_PROMPT, imageGenPrompt);
-        localStorage.setItem(LS_USE_SD_WEBUI, String(useSdWebui));
-        localStorage.setItem(LS_SD_WEBUI_API_URL, sdWebuiApiUrl);
-        localStorage.setItem(LS_SD_WEBUI_BATCH_SIZE, String(sdWebuiBatchSize));
-        localStorage.setItem(LS_SD_WEBUI_REF_MODE, sdWebuiRefMode);
-        localStorage.setItem(LS_SD_WEBUI_DENOISING, String(sdWebuiDenoising));
-        localStorage.setItem(LS_SD_WEBUI_CONTROLNET_MODEL, sdWebuiControlnetModel);
-        localStorage.setItem(LS_MAX_OUTPUT_TOKENS, JSON.stringify(maxOutputTokens));
-        localStorage.setItem(LS_COMPRESS_THRESHOLD, JSON.stringify(compressThreshold));
-        localStorage.setItem(LS_TEMPRATURE, JSON.stringify(temperature));
-        localStorage.setItem(LS_SAFETY_SETTINGS, JSON.stringify(safetySettings));
-        localStorage.setItem(LS_MAX_CHAT_LENGTH, JSON.stringify(maxChatLength));
-        localStorage.setItem(LS_FONT_SIZE, fontSize);
-        localStorage.setItem(LS_IMAGE_RESOLUTION, imageResolution);
-        localStorage.setItem(LS_USER_PROFILE, JSON.stringify(userProfile));
-        document.documentElement.style.setProperty('--chat-font-size', fontSize);
-        
-        // Pick a random roast message
+  useEffect(() => {
+    const hasChanged = Object.keys(settings).some(
+      (key) => settings[key as keyof typeof settings] !== prevSettingsRef.current[key as keyof typeof settings]
+    );
+
+    if (hasChanged) {
+      prevSettingsRef.current = settings;
+      if (roastTimeoutRef.current) clearTimeout(roastTimeoutRef.current);
+      
+      roastTimeoutRef.current = setTimeout(() => {
         const randomRoast = roastMessages[Math.floor(Math.random() * roastMessages.length)];
         addToast(randomRoast, "success");
-      } catch (err) {
-        console.error("Error saving settings:", err);
-        addToast("Failed to save settings. Please try again.", "error");
-      }
-    }, 1000); // 1 second debounce
+      }, 1000);
+    }
 
     return () => {
-      if (saveTimeoutRef.current) {
-        clearTimeout(saveTimeoutRef.current);
-      }
+      if (roastTimeoutRef.current) clearTimeout(roastTimeoutRef.current);
     };
-  }, [selectedModel, imageModel, imageGenPrompt, useSdWebui, sdWebuiApiUrl, sdWebuiBatchSize, sdWebuiRefMode, sdWebuiDenoising, sdWebuiControlnetModel, maxOutputTokens, compressThreshold, temperature, safetySettings, maxChatLength, fontSize, imageResolution, userProfile, roastMessages, addToast]);
+  }, [settings, addToast, roastMessages]);
+
+  // Redux automatically handles syncing to localStorage via store.subscribe, 
+  // so we don't need the 100-line useEffect for localStorage synchronization anymore.
   
   const handleSafetyChange = useCallback((category: keyof AISafetySettings, value: string) => {
-    setSafetySettings((prev) => ({ ...prev, [category]: value }));
-  }, []);
+    dispatch(setSafetySettings({ ...safetySettings, [category]: value }));
+  }, [dispatch, safetySettings]);
 
   const handleInitialMessagesSave = useCallback(() => {
     const randomRoast = roastMessages[Math.floor(Math.random() * roastMessages.length)];
@@ -392,10 +311,10 @@ const SettingsPage = () => {
         if (settings[LS_AI_MODEL]) {
             const model = settings[LS_AI_MODEL];
             if (models.includes(model)) {
-                setSelectedModel(model);
+                dispatch(setSelectedModel(model));
             } else {
                 // If it's a custom model from old settings, just keep it, or fallback
-                setSelectedModel(model);
+                dispatch(setSelectedModel(model));
                 setModelList(prev => {
                   if (!prev.find(m => m.value === model)) {
                      return [...prev, { value: model, label: model }];
@@ -404,20 +323,20 @@ const SettingsPage = () => {
                 });
             }
         }
-        if (settings[LS_MAX_OUTPUT_TOKENS]) setMaxOutputTokens(settings[LS_MAX_OUTPUT_TOKENS]);
-        if (settings[LS_COMPRESS_THRESHOLD]) setCompressThreshold(settings[LS_COMPRESS_THRESHOLD]);
-        if (settings[LS_TEMPRATURE]) setTemperature(settings[LS_TEMPRATURE]);
-        if (settings[LS_SAFETY_SETTINGS]) setSafetySettings(settings[LS_SAFETY_SETTINGS]);
-        if (settings[LS_MAX_CHAT_LENGTH]) setMaxChatLength(settings[LS_MAX_CHAT_LENGTH]);
+        if (settings[LS_MAX_OUTPUT_TOKENS]) dispatch(setMaxOutputTokens(settings[LS_MAX_OUTPUT_TOKENS]));
+        if (settings[LS_COMPRESS_THRESHOLD]) dispatch(setCompressThreshold(settings[LS_COMPRESS_THRESHOLD]));
+        if (settings[LS_TEMPRATURE]) dispatch(setTemperature(settings[LS_TEMPRATURE]));
+        if (settings[LS_SAFETY_SETTINGS]) dispatch(setSafetySettings(settings[LS_SAFETY_SETTINGS]));
+        if (settings[LS_MAX_CHAT_LENGTH]) dispatch(setMaxChatLength(settings[LS_MAX_CHAT_LENGTH]));
         if (settings[LS_FONT_SIZE]) {
-            setFontSize(settings[LS_FONT_SIZE]);
+            dispatch(setFontSize(settings[LS_FONT_SIZE]));
             document.documentElement.style.setProperty('--chat-font-size', settings[LS_FONT_SIZE]);
         }
         if (settings[LS_IMAGE_RESOLUTION]) {
-            setImageResolution(settings[LS_IMAGE_RESOLUTION]);
+            dispatch(setImageResolution(settings[LS_IMAGE_RESOLUTION]));
         }
         if (settings[LS_USER_PROFILE]) {
-            setUserProfile(settings[LS_USER_PROFILE]);
+            dispatch(setUserProfile(settings[LS_USER_PROFILE]));
         }
         if (settings[LS_INITIAL_MESSAGES]) {
             localStorage.setItem(LS_INITIAL_MESSAGES, JSON.stringify(settings[LS_INITIAL_MESSAGES]));
@@ -493,314 +412,55 @@ const SettingsPage = () => {
         <ToastContainer toasts={toasts} removeToast={removeToast} />
 
         {renderAccordion("profile", "User Profile",
-          <>
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Your Name</label>
-              <input
-                type="text"
-                placeholder="How should characters address you?"
-                value={userProfile.name}
-                onChange={(e) => setUserProfile({ ...userProfile, name: e.target.value })}
-                className="w-full p-3 bg-app-light dark:bg-slate-900/50 text-black dark:text-white rounded-xl border border-transparent dark:border-slate-700 focus:border-indigo-500 outline-none transition-all"
-              />
-            </div>
-            
-            <div className="mb-2">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">About You (Bio/Preferences)</label>
-              <textarea
-                placeholder="Tell characters a bit about yourself (e.g., your hobbies, communication style)..."
-                value={userProfile.bio}
-                onChange={(e) => setUserProfile({ ...userProfile, bio: e.target.value })}
-                className="w-full p-3 bg-app-light dark:bg-slate-900/50 text-black dark:text-white rounded-xl border border-transparent dark:border-slate-700 focus:border-indigo-500 outline-none transition-all resize-y min-h-[80px]"
-              />
-            </div>
-            <p className="text-xs text-gray-500 dark:text-gray-400">
-              This information is shared with characters to personalize conversations.
-            </p>
-          </>
+          <UserProfileSettings 
+            userProfile={userProfile} 
+            setUserProfile={(val) => dispatch(setUserProfile(val))} 
+          />
         )}
 
         {renderAccordion("text", "Text Generation Model",
-          <>
-            <div className="mb-6">
-              <div className="flex justify-between text-sm text-gray-500 dark:text-slate-400 mb-2">
-                <span>Creativity</span>
-              </div>
-              <input
-                type="range"
-                min="0"
-                max="1"
-                step="0.1"
-                value={temperature}
-                onChange={(e) => setTemperature(Number(e.target.value))}
-                className="w-full h-2 rounded-lg appearance-none cursor-pointer accent-indigo-500"
-                style={{ 
-                  background: `linear-gradient(to right, #a78bfa, #fb923c, #38bdf8) 0% 0% / ${(temperature / 1) * 100}% 100% no-repeat, #334155` 
-                }}
-              />
-              <div className="flex justify-between text-xs text-gray-400 dark:text-slate-500 mt-2">
-                <span>Precise</span>
-                <span>Creative</span>
-              </div>
-            </div>
-
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Text Generation Model
-            </label>
-            <div className="relative mb-6">
-              <select
-                value={selectedModel}
-                onChange={(e) => setSelectedModel(e.target.value)}
-                className="w-full p-3 pr-10 bg-app-light dark:bg-slate-900/50 text-black dark:text-white rounded-xl border border-transparent dark:border-slate-700 focus:border-indigo-500 outline-none transition-all appearance-none cursor-pointer"
-              >
-                {modelList.map((model: {value: string, label: string}) => (
-                  <option key={model.value} value={model.value}>
-                    {model.label}
-                  </option>
-                ))}
-              </select>
-              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-4">
-                <FaChevronDown size={12} className="text-gray-500 dark:text-gray-400" />
-              </div>
-            </div>
-
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Max Output Tokens
-            </label>
-            <input
-              type="number"
-              value={maxOutputTokens}
-              onChange={(e) => setMaxOutputTokens(Number(e.target.value))}
-              className="w-full p-3 bg-app-light dark:bg-slate-900/50 text-black dark:text-white rounded-xl border border-transparent dark:border-slate-700 focus:border-indigo-500 outline-none transition-all mb-6"
-              min="1"
-            />
-
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Auto-Compress History Threshold
-            </label>
-            <div className="mb-2">
-              <input
-                type="number"
-                min="0"
-                value={compressThreshold}
-                onChange={(e) => setCompressThreshold(Number(e.target.value))}
-                placeholder="0 to disable"
-                className="w-full p-3 bg-app-light dark:bg-slate-900/50 text-black dark:text-white rounded-xl border border-transparent dark:border-slate-700 focus:border-indigo-500 outline-none transition-all"
-              />
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">If history length exceeds this, older messages will be summarized to save tokens. (0 means disabled)</p>
-            </div>
-          </>
+          <TextModelSettings 
+            temperature={temperature}
+            setTemperature={(val) => dispatch(setTemperature(val))}
+            selectedModel={selectedModel}
+            setSelectedModel={(val) => dispatch(setSelectedModel(val))}
+            modelList={modelList}
+            maxOutputTokens={maxOutputTokens}
+            setMaxOutputTokens={(val) => dispatch(setMaxOutputTokens(val))}
+            compressThreshold={compressThreshold}
+            setCompressThreshold={(val) => dispatch(setCompressThreshold(val))}
+          />
         )}
 
         {renderAccordion("image", "Image Generation Settings",
-          <>
-            <div className="mb-4">
-              <label className="flex items-center space-x-3 cursor-pointer mb-2">
-                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Use Local/Remote SD WebUI Forge
-                </span>
-                <div className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${useSdWebui ? 'bg-indigo-500' : 'bg-gray-300 dark:bg-slate-700'}`}>
-                  <input
-                    type="checkbox"
-                    className="sr-only"
-                    checked={useSdWebui}
-                    onChange={(e) => setUseSdWebui(e.target.checked)}
-                  />
-                  <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${useSdWebui ? 'translate-x-6' : 'translate-x-1'}`} />
-                </div>
-              </label>
-            </div>
-
-            {useSdWebui ? (
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  SD WebUI Forge API URL
-                </label>
-                <input
-                  type="text"
-                  value={sdWebuiApiUrl}
-                  onChange={(e) => setSdWebuiApiUrl(e.target.value)}
-                  placeholder="http://127.0.0.1:7860"
-                  className="w-full p-3 bg-app-light dark:bg-slate-900/50 text-black dark:text-white rounded-xl border border-transparent dark:border-slate-700 focus:border-indigo-500 outline-none transition-all mb-4"
-                />
-                
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Batch Size (Number of Images)
-                </label>
-                <input
-                  type="number"
-                  min="1"
-                  max="8"
-                  value={sdWebuiBatchSize}
-                  onChange={(e) => setSdWebuiBatchSize(parseInt(e.target.value, 10))}
-                  className="w-full p-3 bg-app-light dark:bg-slate-900/50 text-black dark:text-white rounded-xl border border-transparent dark:border-slate-700 focus:border-indigo-500 outline-none transition-all mb-4"
-                />
-
-                <div className="flex justify-between items-center mb-1">
-                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                     SD Model
-                   </label>
-                   <button type="button" onClick={fetchSdModels} className="text-xs text-indigo-500 hover:text-indigo-400">
-                     Refresh Models
-                   </button>
-                </div>
-                <div className="relative mb-4">
-                  <select
-                    value={sdWebuiModel}
-                    onChange={(e) => {
-                      setSdWebuiModel(e.target.value);
-                      localStorage.setItem(LS_SD_WEBUI_MODEL, e.target.value);
-                    }}
-                    className="w-full p-3 pr-10 bg-app-light dark:bg-slate-900/50 text-black dark:text-white rounded-xl border border-transparent dark:border-slate-700 focus:border-indigo-500 outline-none transition-all appearance-none cursor-pointer"
-                  >
-                    <option value="">Default (From SD WebUI)</option>
-                    {sdWebuiModels.map((m) => (
-                      <option key={m.title} value={m.title}>
-                        {m.model_name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Reference Image Mode
-                </label>
-                <p className="text-xs text-gray-500 mb-2">How to use the character's appearance images</p>
-                <div className="relative mb-4">
-                  <select
-                    value={sdWebuiRefMode}
-                    onChange={(e) => setSdWebuiRefMode(e.target.value)}
-                    className="w-full p-3 pr-10 bg-app-light dark:bg-slate-900/50 text-black dark:text-white rounded-xl border border-transparent dark:border-slate-700 focus:border-indigo-500 outline-none transition-all appearance-none cursor-pointer"
-                  >
-                    <option value="none">None (Text to Image only)</option>
-                    <option value="img2img">img2img API</option>
-                    <option value="controlnet">ControlNet (Alwayson Scripts)</option>
-                    <option value="reactor">Face Swap (ReActor Extension)</option>
-                  </select>
-                  <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-4">
-                    <FaChevronDown size={12} className="text-gray-500 dark:text-gray-400" />
-                  </div>
-                </div>
-
-                {sdWebuiRefMode === "reactor" && (
-                  <div className="mb-4">
-                    <p className="text-xs text-indigo-500 font-medium mb-1">
-                      ReActor requires the "sd-webui-reactor-sfw" extension installed in Forge.
-                    </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
-                      This passes the character image natively to inswapper to perform a highly accurate post-process face swap over the generated subject.
-                    </p>
-                  </div>
-                )}
-
-                {sdWebuiRefMode === "img2img" && (
-                  <div className="mb-4">
-                    <div className="flex justify-between text-sm text-gray-500 dark:text-slate-400 mb-2">
-                      <span>Denoising Strength: {sdWebuiDenoising}</span>
-                    </div>
-                    <input
-                      type="range"
-                      min="0"
-                      max="1"
-                      step="0.05"
-                      value={sdWebuiDenoising}
-                      onChange={(e) => setSdWebuiDenoising(Number(e.target.value))}
-                      className="w-full h-2 rounded-lg appearance-none cursor-pointer accent-indigo-500"
-                      style={{ 
-                        background: `linear-gradient(to right, #a78bfa, #fb923c, #38bdf8) 0% 0% / ${(sdWebuiDenoising / 1) * 100}% 100% no-repeat, #334155` 
-                      }}
-                    />
-                  </div>
-                )}
-
-                {sdWebuiRefMode === "controlnet" && (
-                  <div className="mb-4">
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      ControlNet Model Name
-                    </label>
-                    <input
-                      type="text"
-                      value={sdWebuiControlnetModel}
-                      onChange={(e) => setSdWebuiControlnetModel(e.target.value)}
-                      placeholder="e.g. ip-adapter_sd15"
-                      className="w-full p-3 bg-app-light dark:bg-slate-900/50 text-black dark:text-white rounded-xl border border-transparent dark:border-slate-700 focus:border-indigo-500 outline-none transition-all"
-                    />
-                    <p className="text-xs text-gray-500 mt-1">Make sure this model is installed in your Forge/WebUI.</p>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Image Generation Model
-                </label>
-                <p className="text-xs text-gray-500 mb-2">Used when "send pic" or similar is queried.</p>
-                <div className="relative mb-4">
-                  <select
-                    value={imageModel}
-                    onChange={(e) => setImageModel(e.target.value)}
-                    className="w-full p-3 pr-10 bg-app-light dark:bg-slate-900/50 text-black dark:text-white rounded-xl border border-transparent dark:border-slate-700 focus:border-indigo-500 outline-none transition-all appearance-none cursor-pointer"
-                  >
-                    {imageModelList.map((model: {value: string, label: string}) => (
-                      <option key={model.value} value={model.value}>
-                        {model.label}
-                      </option>
-                    ))}
-                  </select>
-                  <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-4">
-                    <FaChevronDown size={12} className="text-gray-500 dark:text-gray-400" />
-                  </div>
-                </div>
-              </>
-            )}
-            
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mt-4 mb-1">
-              Image Generation Base Prompt
-            </label>
-            <p className="text-xs text-gray-500 mb-2">Used as the base instruction whenever an image is requested.</p>
-            <textarea
-              value={imageGenPrompt}
-              onChange={(e) => setImageGenPrompt(e.target.value)}
-              placeholder="e.g. Create a high quality, detailed image..."
-              className="w-full p-3 bg-app-light dark:bg-slate-900/50 text-black dark:text-white rounded-xl border border-transparent dark:border-slate-700 focus:border-indigo-500 outline-none transition-all resize-y min-h-[80px]"
-            />
-
-            <div className="mb-4 mt-6">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Default Image Resolution
-              </label>
-              <div className="relative mb-4">
-                <select
-                  value={imageResolution}
-                  onChange={(e) => setImageResolution(e.target.value)}
-                  className="w-full p-3 pr-10 bg-app-light dark:bg-slate-900/50 text-black dark:text-white rounded-xl border border-transparent dark:border-slate-700 focus:border-indigo-500 outline-none transition-all appearance-none cursor-pointer"
-                >
-                  {IMAGE_RESOLUTIONS.map((res) => (
-                    <option key={res} value={res}>{res}</option>
-                  ))}
-                </select>
-                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-4">
-                  <FaChevronDown size={12} className="text-gray-500 dark:text-gray-400" />
-                </div>
-              </div>
-
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Save Generated Images To:
-              </label>
-              <div className="flex items-center justify-between bg-app-light dark:bg-slate-900/50 p-3 rounded-xl border border-transparent dark:border-slate-700 mb-2">
-                <span className="text-black dark:text-white text-sm truncate pr-2">{imageSaveDirName}</span>
-                <button 
-                  onClick={handleSelectDirectory}
-                  className="px-3 py-1.5 bg-indigo-500 text-white text-sm rounded-lg hover:bg-indigo-600 transition whitespace-nowrap"
-                >
-                  Select Folder
-                </button>
-              </div>
-              <p className="text-xs text-gray-500 dark:text-gray-400">
-                Note: Browsers may prompt you to re-approve write permissions to this folder when resuming the app.
-              </p>
-            </div>
-          </>
+          <ImageGenerationSettings 
+            useSdWebui={useSdWebui}
+            setUseSdWebui={(val) => dispatch(setUseSdWebui(val))}
+            sdWebuiApiUrl={sdWebuiApiUrl}
+            setSdWebuiApiUrl={(val) => dispatch(setSdWebuiApiUrl(val))}
+            sdWebuiBatchSize={sdWebuiBatchSize}
+            setSdWebuiBatchSize={(val) => dispatch(setSdWebuiBatchSize(val))}
+            fetchSdModels={fetchSdModels}
+            sdWebuiModel={sdWebuiModel}
+            setSdWebuiModel={(val) => dispatch(setSdWebuiModel(val))}
+            sdWebuiModels={sdWebuiModels}
+            sdWebuiRefMode={sdWebuiRefMode}
+            setSdWebuiRefMode={(val) => dispatch(setSdWebuiRefMode(val))}
+            sdWebuiDenoising={sdWebuiDenoising}
+            setSdWebuiDenoising={(val) => dispatch(setSdWebuiDenoising(val))}
+            sdWebuiControlnetModel={sdWebuiControlnetModel}
+            setSdWebuiControlnetModel={(val) => dispatch(setSdWebuiControlnetModel(val))}
+            imageModel={imageModel}
+            setImageModel={(val) => dispatch(setImageModel(val))}
+            imageModelList={imageModelList}
+            imageGenPrompt={imageGenPrompt}
+            setImageGenPrompt={(val) => dispatch(setImageGenPrompt(val))}
+            imageResolution={imageResolution}
+            setImageResolution={(val) => dispatch(setImageResolution(val))}
+            imageSaveDirName={imageSaveDirName}
+            handleSelectDirectory={handleSelectDirectory}
+            LS_SD_WEBUI_MODEL={LS_SD_WEBUI_MODEL}
+          />
         )}
 
         {renderAccordion("chat", "Chat Interface Settings",
@@ -811,7 +471,7 @@ const SettingsPage = () => {
             <input
               type="number"
               value={maxChatLength}
-              onChange={(e) => setMaxChatLength(Number(e.target.value))}
+              onChange={(e) => dispatch(setMaxChatLength(Number(e.target.value)))}
               className="w-full p-3 bg-app-light dark:bg-slate-900/50 text-black dark:text-white rounded-xl border border-transparent dark:border-slate-700 focus:border-indigo-500 outline-none transition-all mb-6"
               min="1"
             />
@@ -822,7 +482,7 @@ const SettingsPage = () => {
             <div className="relative mb-6">
               <select
                 value={fontSize}
-                onChange={(e) => setFontSize(e.target.value)}
+                onChange={(e) => dispatch(setFontSize(e.target.value))}
                 className="w-full p-3 pr-10 bg-app-light dark:bg-slate-900/50 text-black dark:text-white rounded-xl border border-transparent dark:border-slate-700 focus:border-indigo-500 outline-none transition-all appearance-none cursor-pointer"
               >
                 <option value="14px">Small</option>

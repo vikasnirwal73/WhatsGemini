@@ -1,135 +1,11 @@
 import React, { useRef, useEffect, useCallback, useMemo, useState } from "react";
-import ReactMarkdown from 'react-markdown';
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
-import remarkGfm from 'remark-gfm';
-import { FaRedo, FaEdit, FaCheck, FaTimes, FaEllipsisV, FaCopy, FaArrowDown } from "react-icons/fa";
-import { AI, YOU, LS_INITIAL_MESSAGES } from "../utils/constants";
+import { FaCheck, FaTimes, FaArrowDown } from "react-icons/fa";
+import { YOU, LS_INITIAL_MESSAGES } from "../utils/constants";
 import { Message } from "../types";
 import { cn } from "../utils/cn";
 import { DisplayImage } from "./DisplayImage";
 import ToggleSwitch from "./ToggleSwitch";
-
-// CodeBlock Component to handle syntax highlighting and copying
-const CodeBlock = ({ node, className, children, ...props }: any) => {
-  const [copied, setCopied] = useState(false);
-  const match = /language-(\w+)/.exec(className || '');
-  const lang = match ? match[1] : '';
-  const codeString = String(children).replace(/\n$/, '');
-
-  const handleCopy = () => {
-    navigator.clipboard.writeText(codeString);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
-  if (!match) {
-    return (
-      <code className="bg-black/10 dark:bg-white/10 rounded px-1.5 py-0.5 text-sm font-mono" {...props}>
-        {children}
-      </code>
-    );
-  }
-
-  return (
-    <div className="relative group my-4 rounded-md overflow-hidden border border-gray-200 dark:border-gray-700">
-      <div className="flex items-center justify-between px-4 py-1.5 bg-gray-100 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 text-xs text-gray-500 dark:text-gray-400 font-mono">
-        <span>{lang || 'text'}</span>
-        <button 
-          onClick={handleCopy}
-          className="flex items-center gap-1.5 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
-          title="Copy code"
-        >
-          {copied ? <FaCheck size={12} /> : <FaCopy size={12} />}
-          <span>{copied ? 'Copied!' : 'Copy'}</span>
-        </button>
-      </div>
-      <SyntaxHighlighter
-        style={vscDarkPlus as any}
-        language={lang}
-        PreTag="div"
-        customStyle={{ margin: 0, padding: '1rem', background: 'transparent' }}
-        className="bg-[#1E1E1E] text-sm overflow-x-auto"
-        {...props}
-      >
-        {codeString}
-      </SyntaxHighlighter>
-    </div>
-  );
-};
-
-// Markdown Renderer memoized to prevent re-renders of old messages
-const MarkdownRenderer = React.memo(({ msgText, isUser }: { msgText: string | any; isUser: boolean }) => {
-  const safeText = typeof msgText === 'string' ? msgText : (typeof msgText?.text === 'string' ? msgText.text : JSON.stringify(msgText));
-  return (
-    <div className="markdown-content text-left break-words min-w-0">
-      <ReactMarkdown 
-        remarkPlugins={[remarkGfm]}
-        components={{
-          p: ({node, ...props}) => <p className="mb-2 last:mb-0" {...props} />,
-          em: ({node, ...props}) => <em className={cn("italic", isUser ? 'text-white/80' : 'text-gray-500 dark:text-gray-400')} {...props} />,
-          // eslint-disable-next-line jsx-a11y/anchor-has-content
-          a: ({node, ...props}) => <a className={cn(isUser ? 'text-white underline' : 'text-blue-500 hover:underline')} target="_blank" rel="noopener noreferrer" {...props} aria-hidden="true" />,
-          ul: ({node, ...props}) => <ul className="list-disc ml-5 mb-2" {...props} />,
-          ol: ({node, ...props}) => <ol className="list-decimal ml-5 mb-2" {...props} />,
-          li: ({node, ...props}) => <li className="mb-1" {...props} />,
-          code: CodeBlock,
-          blockquote: ({node, ...props}) => <blockquote className={cn("border-l-4 pl-4 py-1 my-2 italic", isUser ? 'border-white/50' : 'border-gray-300')} {...props} />,
-          table: ({node, ...props}) => <div className="overflow-x-auto my-2"><table className={cn("min-w-full divide-y border", isUser ? 'divide-white/20 border-white/20' : 'divide-gray-200 dark:divide-gray-700 border-gray-200 dark:border-gray-700')} {...props} /></div>,
-          th: ({node, ...props}) => <th className={cn("px-3 py-2 text-left text-xs font-medium uppercase tracking-wider border-b", isUser ? 'bg-white/10 border-white/20 text-white' : 'bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-300')} {...props} />,
-          td: ({node, ...props}) => <td className={cn("px-3 py-2 whitespace-nowrap text-sm border-b", isUser ? 'border-white/20 text-white' : 'border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300')} {...props} />,
-        }}
-      >
-        {safeText}
-      </ReactMarkdown>
-    </div>
-  );
-});
-MarkdownRenderer.displayName = "MarkdownRenderer";
-
-// Message Menu Component
-const MessageMenu = ({ isOpen, onClose, children }: { isOpen: boolean, onClose: () => void, children: React.ReactNode, isUserMessage?: boolean }) => {
-  const menuRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-        onClose();
-      }
-    };
-
-    if (isOpen) {
-      document.addEventListener("mousedown", handleClickOutside);
-      return () => document.removeEventListener("mousedown", handleClickOutside);
-    }
-  }, [isOpen, onClose]);
-
-  if (!isOpen) return null;
-
-  return (
-    <div
-      ref={menuRef}
-      className="absolute top-8 right-0 z-50 min-w-[140px] py-1 rounded-lg shadow-lg border bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700"
-    >
-      {children}
-    </div>
-  );
-};
-
-const MenuItem = ({ icon: Icon, label, onClick, disabled, danger }: { icon: any, label: string, onClick: () => void, disabled?: boolean, danger?: boolean }) => (
-  <button
-    onClick={onClick}
-    disabled={disabled}
-    className={cn(
-      "w-full flex items-center gap-3 px-4 py-2 text-sm transition",
-      disabled ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-100 dark:hover:bg-gray-700',
-      danger ? 'text-red-500' : 'text-gray-700 dark:text-gray-200'
-    )}
-  >
-    <Icon size={14} />
-    <span>{label}</span>
-  </button>
-);
+import ChatMessage from "./chat/ChatMessage";
 
 interface ChatWindowProps {
   messages: Message[];
@@ -147,7 +23,6 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ messages = [], onRegenerate, on
   const [editText, setEditText] = useState("");
   const [editIsImageRequest, setEditIsImageRequest] = useState(false);
   const [fullscreenImage, setFullscreenImage] = useState<string | null>(null);
-  const [openMenuIndex, setOpenMenuIndex] = useState<number | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [isScrolledUp, setIsScrolledUp] = useState(false);
 
@@ -277,18 +152,9 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ messages = [], onRegenerate, on
     }
   }, [editText, editIsImageRequest, editingIndex, onEdit]);
 
-  const toggleMenu = useCallback((index: number) => {
-    setOpenMenuIndex(prev => prev === index ? null : index);
-  }, []);
-
-  const closeMenu = useCallback(() => {
-    setOpenMenuIndex(null);
-  }, []);
-
-  const copyMessage = useCallback((text: string) => {
+  const handleCopyMessage = useCallback((text: string) => {
     navigator.clipboard.writeText(text);
-    closeMenu();
-  }, [closeMenu]);
+  }, []);
 
   const getInitials = (name?: string) => {
     if (!name || name === "New Chat" || name.trim() === "Chat") return "G";
@@ -330,88 +196,18 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ messages = [], onRegenerate, on
           </div> */}
         </div>
       ) : (
-        filteredMessages.map((msg, i) => {
-          const isUser = msg.role === YOU;
-
-          return (
-            <div key={i} className={cn("flex w-full mb-6", isUser ? "justify-end" : "justify-start")}>
-              {/* AI Avatar */}
-              {!isUser && (
-                <div className="w-8 h-8 rounded-full bg-gemini-logo flex items-center justify-center flex-shrink-0 mt-1 mr-3 shadow-md">
-                  <span className="text-white font-bold text-sm">{charInitials}</span>
-                </div>
-              )}
-
-              <div
-                className={cn(
-                  "relative p-4 rounded-3xl max-w-[85%] md:max-w-[70%] shadow-sm min-w-0 group",
-                  isUser 
-                    ? "bg-primary text-white rounded-tr-sm" 
-                    : "bg-slate-200 dark:bg-slate-700/60 text-gray-900 dark:text-slate-100 rounded-tl-sm border border-transparent dark:border-slate-600/50"
-                )}
-                style={{ fontSize: 'var(--chat-font-size, 16px)' }}
-              >
-                  <>
-                    <MarkdownRenderer msgText={msg.txt || ""} isUser={isUser} />
-                    {msg.images && msg.images.map((imgSrc, idx) => (
-                      <DisplayImage 
-                        key={idx} 
-                        srcContext={imgSrc} 
-                        alt="Generated" 
-                        onClick={() => setFullscreenImage(imgSrc)}
-                        className="mt-2 max-w-full rounded-lg shadow-sm border border-white/20 dark:border-slate-700 cursor-zoom-in hover:opacity-90 transition-opacity" 
-                      />
-                    ))}
-                    <div className="absolute top-2 right-2">
-                      <button
-                        onClick={() => toggleMenu(i)}
-                        className={cn(
-                          "p-1.5 rounded-full transition opacity-0 group-hover:opacity-100",
-                          isUser ? 'text-white/80 hover:text-white hover:bg-white/20' : 'text-gray-500 hover:text-gray-700 dark:text-slate-400 dark:hover:text-white hover:bg-gray-300 dark:hover:bg-slate-600'
-                        )}
-                        title="More options"
-                        aria-label="Message options"
-                      >
-                        <FaEllipsisV size={12} />
-                      </button>
-                      <button
-                        onClick={() => startEdit(msg)}
-                        className={cn(
-                          "p-1.5 rounded-full transition opacity-0 group-hover:opacity-100 ml-1",
-                          isUser ? 'text-white/80 hover:text-white hover:bg-white/20' : 'text-gray-500 hover:text-gray-700 dark:text-slate-400 dark:hover:text-white hover:bg-gray-300 dark:hover:bg-slate-600'
-                        )}
-                        title="Edit message"
-                        aria-label="Edit message"
-                      >
-                        <FaEdit size={12} />
-                      </button>
-                      <MessageMenu isOpen={openMenuIndex === i} onClose={closeMenu} isUserMessage={isUser}>
-                        <MenuItem icon={FaCopy} label="Copy" onClick={() => copyMessage(msg.txt || "")} />
-                        {msg.role === AI && (
-                          <MenuItem icon={FaRedo} label="Regenerate" onClick={() => { handleRegenerate(msg); closeMenu(); }} disabled={aiLoading} />
-                        )}
-                        <MenuItem icon={FaEdit} label="Edit" onClick={() => { startEdit(msg); closeMenu(); }} disabled={aiLoading} />
-                      </MessageMenu>
-                    </div>
-                    {/* Action Row for AI Messages */}
-                    {!isUser && (
-                      <div className="flex items-center gap-4 mt-3 pt-2 text-xs text-gray-500 dark:text-slate-400">
-                        <button onClick={() => copyMessage(msg.txt || "")} className="flex items-center gap-1.5 hover:text-gray-800 dark:hover:text-slate-200 transition">
-                          <FaCopy size={12} /> Copy
-                        </button>
-                        <button onClick={() => handleRegenerate(msg)} className="flex items-center gap-1.5 hover:text-gray-800 dark:hover:text-slate-200 transition">
-                          <FaRedo size={12} /> Regenerate
-                        </button>
-                        <button onClick={() => startEdit(msg)} className="flex items-center gap-1.5 hover:text-gray-800 dark:hover:text-slate-200 transition">
-                          <FaEdit size={12} /> Edit
-                        </button>
-                      </div>
-                    )}
-                  </>
-              </div>
-            </div>
-          );
-        })
+        filteredMessages.map((msg, i) => (
+          <ChatMessage
+            key={i}
+            msg={msg}
+            charInitials={charInitials}
+            aiLoading={aiLoading || false}
+            onCopy={handleCopyMessage}
+            onRegenerate={handleRegenerate}
+            onStartEdit={startEdit}
+            setFullscreenImage={setFullscreenImage}
+          />
+        ))
       )}
       {aiLoading && (
         <div className="flex justify-start">

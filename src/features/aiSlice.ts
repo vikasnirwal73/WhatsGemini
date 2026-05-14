@@ -40,17 +40,24 @@ import {
 import { AISafetySettings } from "../types";
 import { getStoredValue, getInitialMessages, getAPIKey, formatSafetySettings } from "./ai/utils/settings";
 import { appendCharacterImages } from "./ai/utils/imageProcessing";
+import { extractAndSaveBase64ImagesLocally } from "./ai/utils/apiUtils";
+import { generateSDImage } from "./ai/utils/sdWebuiUtils";
+import { RootState } from "../store/store";
 
 // Async Thunk for generating AI response
 
 export const generateAIResponse = createAsyncThunk(
   "ai/generateResponse",
-  async ({ prompt, history = [], systemInstruction, characterImages, isImageRequest = false, existingImagePrompt, existingImageParams }: { prompt: string; history?: any[], systemInstruction?: string, characterImages?: string[], isImageRequest?: boolean, existingImagePrompt?: string, existingImageParams?: any }, { rejectWithValue, signal }) => {
+  async ({ prompt, history = [], systemInstruction, characterImages, isImageRequest = false, existingImagePrompt, existingImageParams }: { prompt: string; history?: any[], systemInstruction?: string, characterImages?: string[], isImageRequest?: boolean, existingImagePrompt?: string, existingImageParams?: any }, { getState, rejectWithValue, signal }) => {
     try {
+      const state = getState() as RootState;
+      const settings = state.settings;
+      
       const apiKey = getAPIKey();
       if (!apiKey) throw new Error("API key is missing. Please log in.");
-      const maxHistoryLength = parseInt(localStorage.getItem(LS_MAX_CHAT_LENGTH) || "0", 10);
-      let selectedModel = getStoredValue(LS_AI_MODEL, DEFAULT_AI_MODEL);
+      
+      const maxHistoryLength = settings.maxChatLength;
+      let selectedModel = settings.selectedModel;
       
       let finalPrompt = prompt;
       let generatedImages: string[] = [];
@@ -61,17 +68,12 @@ export const generateAIResponse = createAsyncThunk(
       let finalDerivedImagePrompt = "";
       let finalDerivedImageParams: any = {};
       
-      let imageModelName = getStoredValue(LS_IMAGE_MODEL, DEFAULT_IMAGE_MODEL);
+      let imageModelName = settings.imageModel;
       const ai = new GoogleGenAI({ apiKey });
 
-      const maxTokens = getStoredValue(LS_MAX_OUTPUT_TOKENS, DEFAULT_OUTPUT_TOKENS, Number);
-      const temperature = getStoredValue(LS_TEMPRATURE, DEFAULT_TEMPRATURE, parseFloat);
-      const storedSafetySettings = getStoredValue<AISafetySettings | any>(
-        LS_SAFETY_SETTINGS,
-        DEFAULT_SAFETY_SETTINGS,
-        JSON.parse
-      );
-      const safetySettings: any = formatSafetySettings(storedSafetySettings);
+      const maxTokens = settings.maxOutputTokens;
+      const temperature = settings.temperature;
+      const safetySettings: any = formatSafetySettings(settings.safetySettings);
 
       const textModelConfig: any = {
         maxOutputTokens: maxTokens,
@@ -107,7 +109,7 @@ export const generateAIResponse = createAsyncThunk(
         validHistory.pop();
       }
       
-      const compressThreshold = getStoredValue(LS_COMPRESS_THRESHOLD, DEFAULT_COMPRESS_THRESHOLD, Number);
+      const compressThreshold = settings.compressThreshold;
       
       if (compressThreshold > 0 && validHistory.length > compressThreshold) {
         const messagesToCompress = validHistory.length - Math.floor(compressThreshold / 2);
@@ -190,7 +192,7 @@ ${conversationText}`;
       
       if (isImageRequest) {
         // Step 1: Use Text Model to derive image prompt & chat summary
-        const useSdWebui = getStoredValue(LS_USE_SD_WEBUI, false, (val) => val === "true");
+        const useSdWebui = settings.useSdWebui;
 
         let derivedImagePrompt = prompt;
         let derivedSummary = `[Generated Image requested: ${prompt}]`;
@@ -201,8 +203,8 @@ ${conversationText}`;
           if (existingImageParams) derivedParams = existingImageParams;
           derivedSummary = "Here is the regenerated image you requested.\n[Image Context: Retrying generation of the previous scene]";
         } else {
-        const baseImagePrompt = getStoredValue(LS_IMAGE_GEN_PROMPT, DEFAULT_IMAGE_GEN_PROMPT);
-        const sdModel = getStoredValue(LS_SD_WEBUI_MODEL, "");
+        const baseImagePrompt = settings.imageGenPrompt;
+        const sdModel = settings.sdWebuiModel;
         const sdModelInfo = sdModel ? ` The currently active model checkpoint is "${sdModel}". Tailor your prompt and parameters (especially "sampler_name" and "steps") for this specific model.` : " We are using a Stable Diffusion 1.5 model. Use tag-based prompting (e.g., masterpiece, best quality, highly detailed, comma-separated keywords) tailored for SD 1.5.";
 
         const sdInstruction = useSdWebui ? 
@@ -249,108 +251,8 @@ ${conversationText}`;
         // Step 2: Use Image Model to actually generate the image
         try {
            if (useSdWebui) {
-             const sdApiUrl = getStoredValue(LS_SD_WEBUI_API_URL, DEFAULT_SD_WEBUI_API_URL);
-             const refMode = getStoredValue<string>(LS_SD_WEBUI_REF_MODE, DEFAULT_SD_WEBUI_REF_MODE);
-             const denoising = getStoredValue(LS_SD_WEBUI_DENOISING, DEFAULT_SD_WEBUI_DENOISING, parseFloat);
-             const controlnetModel = getStoredValue(LS_SD_WEBUI_CONTROLNET_MODEL, DEFAULT_SD_WEBUI_CONTROLNET_MODEL);
-             const sdModel = getStoredValue(LS_SD_WEBUI_MODEL, DEFAULT_SD_WEBUI_MODEL);
-             const batchSize = getStoredValue(LS_SD_WEBUI_BATCH_SIZE, DEFAULT_SD_WEBUI_BATCH_SIZE, parseInt);
-             
-             const resolution = getStoredValue(LS_IMAGE_RESOLUTION, DEFAULT_IMAGE_RESOLUTION);
-             const [widthStr, heightStr] = resolution.split('x');
-             const width = parseInt(widthStr) || 512;
-             const height = parseInt(heightStr) || 512;
-
-             // Extract character image if reference mode is used
-             let refImageBase64 = null;
-             if (refMode !== "none" && characterImages && characterImages.length > 0) {
-                 const tempParts: any[] = [];
-                 await appendCharacterImages(tempParts, characterImages);
-                 if (tempParts.length > 0 && tempParts[0].inlineData) {
-                     refImageBase64 = tempParts[0].inlineData.data;
-                 }
-             }
-
-             let endpoint = '/sdapi/v1/txt2img';
-             const payload: any = {
-               prompt: derivedImagePrompt,
-               negative_prompt: "lowres, bad anatomy, bad hands, text, error, missing fingers, extra digit, fewer digits, cropped, worst quality, low quality, normal quality, jpeg artifacts, signature, watermark, username, blurry",
-               width: derivedParams.width || width,
-               height: derivedParams.height || height,
-               steps: derivedParams.steps || 20,
-               sampler_name: derivedParams.sampler_name || "Euler a",
-               batch_size: batchSize,
-             };
-             if (derivedParams.cfg_scale !== undefined) payload.cfg_scale = derivedParams.cfg_scale;
-             if (derivedParams.seed !== undefined) payload.seed = derivedParams.seed;
-             
-             if (sdModel) {
-                 payload.override_settings = {
-                     sd_model_checkpoint: sdModel
-                 };
-             }
-
-             if (refImageBase64) {
-                 if (refMode === "img2img") {
-                     endpoint = '/sdapi/v1/img2img';
-                     payload.init_images = [refImageBase64];
-                     payload.denoising_strength = denoising;
-                 } else if (refMode === "controlnet") {
-                     payload.alwayson_scripts = {
-                         controlnet: {
-                             args: [
-                                 {
-                                     input_image: refImageBase64,
-                                     model: controlnetModel,
-                                     enabled: true
-                                 }
-                             ]
-                         }
-                     };
-                 } else if (refMode === "reactor") {
-                     payload.alwayson_scripts = {
-                         reactor: {
-                             args: [
-                                 refImageBase64,       // 0: img
-                                 true,                 // 1: enable
-                                 '0',                  // 2: source faces index
-                                 '0',                  // 3: target faces index
-                                 'inswapper_128.onnx', // 4: model path
-                                 'None',               // 5: restorer name (Disabled to keep max resemblance)
-                                 0,                    // 6: restorer visibility
-                                 false,                // 7: restore face (false ensures inswapper doesn't get smoothed over)
-                                 'None',               // 8: upscaler name
-                                 1.0,                  // 9: upscaler visibility
-                                 1.0,                  // 10: upscaler scale 
-                                 1.0,                  // 11: blend
-                                 0,                    // 12: gender filter
-                                 false                 // 13: save original
-                             ]
-                         }
-                     };
-                 }
-             }
-             
-             const response = await fetch(`${sdApiUrl.replace(/\/$/, '')}${endpoint}`, {
-               method: 'POST',
-               headers: {
-                 'Content-Type': 'application/json',
-               },
-               body: JSON.stringify(payload)
-             });
-             
-             if (!response.ok) {
-               throw new Error(`SD WebUI API error: ${response.status} ${response.statusText}`);
-             }
-             
-             const data = await response.json();
-             if (data.images && data.images.length > 0) {
-               for (const base64d of data.images) {
-                 generatedImages.push(`data:image/png;base64,${base64d}`);
-               }
-             } else {
-               throw new Error("No images returned from SD WebUI");
-             }
+             const sdImages = await generateSDImage(derivedImagePrompt, derivedParams, characterImages);
+             generatedImages.push(...sdImages);
            } else {
              const imagePromptParts: any[] = [{ text: derivedImagePrompt }];
              if (characterImages && characterImages.length > 0) {
@@ -408,68 +310,7 @@ ${conversationText}`;
 
       let finalResponseText = response;
 
-      // Extract and remove any raw base64 images that might contain whitespace/newlines
-      const markdownBase64Regex = /!\[.*?\]\(\s*(data:image\/[a-zA-Z0-9+.-]+;base64,[A-Za-z0-9+/=\s]+)\s*\)/g;
-      finalResponseText = finalResponseText.replace(markdownBase64Regex, (match, base64Str) => {
-          const cleanBase64 = base64Str.replace(/\s+/g, '');
-          if (!generatedImages.includes(cleanBase64)) {
-              generatedImages.push(cleanBase64);
-          }
-          return ''; // Strip the markdown image from the text
-      });
-      
-      // Also catch HTML img tags with base64
-      const htmlImgRegex = /<img[^>]+src=["'](data:image\/[a-zA-Z0-9+.-]+;base64,[A-Za-z0-9+/=\s]+)["'][^>]*>/gi;
-      finalResponseText = finalResponseText.replace(htmlImgRegex, (match, base64Str) => {
-          const cleanBase64 = base64Str.replace(/\s+/g, '');
-          if (!generatedImages.includes(cleanBase64)) {
-              generatedImages.push(cleanBase64);
-          }
-          return '';
-      });
-
-      // Also catch any bare data URIs floating in the text
-      const bareBase64Regex = /data:image\/[a-zA-Z0-9+.-]+;base64,[A-Za-z0-9+/=\s]+/g;
-      finalResponseText = finalResponseText.replace(bareBase64Regex, (match) => {
-          const cleanBase64 = match.replace(/\s+/g, '');
-          if (!generatedImages.includes(cleanBase64)) {
-              generatedImages.push(cleanBase64);
-          }
-          return ''; // Strip it from the text
-      });
-
-      // Clean up any stray long base64 blocks that might have been output directly without data:image prefix
-      const strayBase64 = /[A-Za-z0-9+/=]{1000,}/g; 
-      finalResponseText = finalResponseText.replace(strayBase64, '');
-
-      // Once all base64 URIs are extracted into generatedImages, flush them to disk to strip size from Redux state
-      for (let i = 0; i < generatedImages.length; i++) {
-        if (generatedImages[i].startsWith('data:')) {
-          try {
-            const dirHandle = await dbService.getSetting("image_save_directory");
-            if (dirHandle && typeof dirHandle.getFileHandle === 'function') {
-               const mimeMatch = generatedImages[i].match(/data:(.*?);base64,/);
-               const ext = mimeMatch && mimeMatch[1] === 'image/jpeg' ? 'jpg' : 'png';
-               const filename = `gemini_img_${Date.now()}_${Math.random().toString(36).substr(2, 5)}.${ext}`;
-               const fileHandle = await dirHandle.getFileHandle(filename, { create: true });
-               const writable = await fileHandle.createWritable();
-               
-               const base64Data = generatedImages[i].split(',')[1];
-               const bstr = atob(base64Data);
-               let n = bstr.length;
-               let u8arr = new Uint8Array(n);
-               while(n--) { u8arr[n] = bstr.charCodeAt(n); }
-               
-               await writable.write(u8arr.buffer);
-               await writable.close();
-               
-               generatedImages[i] = `local:${filename}`; // Replace base64 in array with local reference
-            }
-          } catch (err) {
-            console.warn("Failed to write fully extracted image to FileSystem API directory", err);
-          }
-        }
-      }
+      finalResponseText = await extractAndSaveBase64ImagesLocally(finalResponseText, generatedImages);
 
       const returnPayload: any = {
         text: finalResponseText.trim(),
