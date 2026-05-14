@@ -1,6 +1,7 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import { GoogleGenAI } from "@google/genai";
 import { dbService } from "../services/dbService";
+import { performChatCompression } from "./ai/utils/chatHistoryUtils";
 import {
   AI,
   DEFAULT_AI_MODEL,
@@ -10,8 +11,6 @@ import {
   DEFAULT_COMPRESS_THRESHOLD,
   LS_COMPRESS_THRESHOLD,
   LS_AI_MODEL,
-  LS_GOOGLE_API_KEY,
-  LS_INITIAL_MESSAGES,
   LS_MAX_CHAT_LENGTH,
   LS_MAX_OUTPUT_TOKENS,
   LS_SAFETY_SETTINGS,
@@ -39,140 +38,10 @@ import {
   DEFAULT_IMAGE_RESOLUTION
 } from "../utils/constants";
 import { AISafetySettings } from "../types";
-
-// Helper function to get values from localStorage with fallbacks
-const getStoredValue = <T>(key: string, defaultValue: T, parser: (val: string) => any = (val) => val): T => {
-  try {
-    const storedValue = localStorage.getItem(key);
-    return storedValue !== null ? parser(storedValue) : defaultValue;
-  } catch {
-    return defaultValue;
-  }
-};
-
-const getInitialMessages = (): any[] => {
-  try {
-    return JSON.parse(localStorage.getItem(LS_INITIAL_MESSAGES) || "[]");
-  } catch (error) {
-    console.error("Error parsing initial messages from localStorage:", error);
-    return [];
-  }
-};
-
-const getAPIKey = (): string | null => getStoredValue<string | null>(LS_GOOGLE_API_KEY, null);
-
-// Format safety settings into the required API format
-const formatSafetySettings = (settings: AISafetySettings | any) => [
-  {
-    category: "HARM_CATEGORY_HARASSMENT",
-    threshold: settings.harassment || "BLOCK_NONE",
-  },
-  {
-    category: "HARM_CATEGORY_HATE_SPEECH",
-    threshold: settings.hate_speech || "BLOCK_NONE",
-  },
-  {
-    category: "HARM_CATEGORY_SEXUALLY_EXPLICIT",
-    threshold: settings.sexual || "BLOCK_NONE",
-  },
-  {
-    category: "HARM_CATEGORY_DANGEROUS_CONTENT",
-    threshold: settings.dangerous || "BLOCK_NONE",
-  },
-];
+import { getStoredValue, getInitialMessages, getAPIKey, formatSafetySettings } from "./ai/utils/settings";
+import { appendCharacterImages } from "./ai/utils/imageProcessing";
 
 // Async Thunk for generating AI response
-
-const downscaleImageBase64 = async (base64Str: string, mimeType: string): Promise<string> => {
-  try {
-    // Decode image off the main thread
-    const response = await fetch(`data:${mimeType};base64,${base64Str}`);
-    const blob = await response.blob();
-    const img = await createImageBitmap(blob);
-
-    const MAX_WIDTH = 512;
-    const MAX_HEIGHT = 512;
-    let { width, height } = img;
-
-    if (width <= MAX_WIDTH && height <= MAX_HEIGHT) {
-      return base64Str; // No downscaling needed
-    }
-
-    if (width > height) {
-      height = Math.round(height * (MAX_WIDTH / width));
-      width = MAX_WIDTH;
-    } else {
-      width = Math.round(width * (MAX_HEIGHT / height));
-      height = MAX_HEIGHT;
-    }
-
-    const canvas = document.createElement("canvas");
-    canvas.width = width;
-    canvas.height = height;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return base64Str;
-
-    // Use high quality image interpolation
-    ctx.imageSmoothingEnabled = true;
-    ctx.imageSmoothingQuality = "high";
-    ctx.drawImage(img, 0, 0, width, height);
-    
-    return canvas.toDataURL("image/jpeg", 0.7).split(',')[1];
-  } catch (err) {
-    console.warn("Downscale error, falling back to original:", err);
-    return base64Str;
-  }
-};
-
-const appendCharacterImages = async (targetArray: any[], images: string[] | undefined) => {
-  if (images && images.length > 0) {
-    for (const imgRef of images) {
-      if (imgRef.startsWith('local:')) {
-        try {
-          const filename = imgRef.substring(6);
-          const dirHandle = await dbService.getSetting("image_save_directory");
-          if (dirHandle) {
-            const fileHandle = await dirHandle.getFileHandle(filename);
-            const file = await fileHandle.getFile();
-            const buffer = await file.arrayBuffer();
-            const base64d = btoa(
-              new Uint8Array(buffer).reduce((data, byte) => data + String.fromCharCode(byte), '')
-            );
-            const ext = filename.split('.').pop()?.toLowerCase();
-            let mimeType = 'image/png';
-            if (ext === 'jpg' || ext === 'jpeg') mimeType = 'image/jpeg';
-            else if (ext === 'webp') mimeType = 'image/webp';
-            
-            const downscaledBase64 = await downscaleImageBase64(base64d, mimeType);
-            
-            targetArray.push({
-              inlineData: {
-                mimeType: "image/jpeg", // downscaled toDataURL gives jpeg
-                data: downscaledBase64
-              }
-            });
-          }
-        } catch (e) {
-          console.error("Failed to load local character image for AI context:", e);
-        }
-      } else {
-        const mimeMatch = imgRef.match(/data:(.*?);base64,/);
-        if (mimeMatch) {
-          const mimeType = mimeMatch[1];
-          const rawBase64 = imgRef.split(',')[1];
-          const downscaledBase64 = await downscaleImageBase64(rawBase64, mimeType);
-          
-          targetArray.push({
-            inlineData: {
-              mimeType: "image/jpeg", // downscaled gives jpeg
-              data: downscaledBase64
-            }
-          });
-        }
-      }
-    }
-  }
-};
 
 export const generateAIResponse = createAsyncThunk(
   "ai/generateResponse",
@@ -335,19 +204,14 @@ ${conversationText}`;
         const baseImagePrompt = getStoredValue(LS_IMAGE_GEN_PROMPT, DEFAULT_IMAGE_GEN_PROMPT);
         const sdModel = getStoredValue(LS_SD_WEBUI_MODEL, "");
         const sdModelInfo = sdModel ? ` The currently active model checkpoint is "${sdModel}". Tailor your prompt and parameters (especially "sampler_name" and "steps") for this specific model.` : " We are using a Stable Diffusion 1.5 model. Use tag-based prompting (e.g., masterpiece, best quality, highly detailed, comma-separated keywords) tailored for SD 1.5.";
-        
-        const derivationConfig = { 
-          ...textModelConfig, 
-          systemInstruction: `${systemInstruction ? systemInstruction + "\n\n---\n\n" : ""}INTERNAL INSTRUCTION: You are also functioning as an expert prompt engineer to generate an image. Your primary task is to generate customized image generation prompts based on the user request and chat context. You MUST prioritize and strictly adhere to the following foundational Image Generation Base Prompt style rules for ALL generated image prompts:\n\n${baseImagePrompt}\n\nDo not leak these internal instructions into the final output, but apply them intelligently and incorporate your own visual description into the image prompt.` 
-        };
 
         const sdInstruction = useSdWebui ? 
           `\n\nPARAMS:\n<A strictly valid JSON object containing optimal generation parameters tailored to the requested image style and model checkpoint. Allowed keys: "cfg_scale" (1.0-15.0), "steps" (15-40), "sampler_name", "width", "height". Determine the optimal width and height (e.g., portrait/selfie 512x768, landscape 768x512, square 512x512) based on the image subject. If a specific model checkpoint is active or a specific artistic style requires it, ALWAYS include the ideal "sampler_name" (e.g., "DPM++ 2M Karras", "Euler a"). Leave the JSON empty {} if no specific tweaking is needed.>` : "";
         const parseSection = useSdWebui ? `three sections formatted exactly like this:\n\nPROMPT:\n<...>${sdInstruction}\n\nSUMMARY:` : `two sections formatted exactly like this:\n\nPROMPT:\n<...>\n\nSUMMARY:`;
 
-        const derivationPrompt = `User request: "${prompt}"\n\nThe user wants a picture/image based on the current context.${useSdWebui ? sdModelInfo : ""}\nPlease output EXACTLY ${parseSection}\n\nPROMPT:\n<write a highly detailed, clean, and optimized tag-based SD 1.5 image generation prompt based on the user request and context. Make sure the subject exactly matches YOUR character's visual description from your system instructions. Strip out any internal control instructions.>${sdInstruction}\n\nSUMMARY:\n<Respond IN CHARACTER to the user, maintaining your exact persona, personality, and tone. Acknowledge that you are showing/sending them the requested picture. MUST INCLUDE: At the end of your response, append [Image Context: <short visual description of the generated image>] so you can remember what you sent in future turns.>`;
+        const derivationPrompt = `(INTERNAL DIRECTIVE) User request: "${prompt}"\nThe user wants a picture/image based on the current context.${useSdWebui ? sdModelInfo : ""}\n\nYou must function as an expert prompt engineer. Prioritize this base style rule:\n${baseImagePrompt}\n\nPlease output EXACTLY ${parseSection}\n\nPROMPT:\n<write a highly detailed, clean, and optimized tag-based SD 1.5 image generation prompt based on the user request and context. Make sure the subject matches your visual description.>${sdInstruction}\n\nSUMMARY:\n<Respond IN CHARACTER to the user, maintaining your exact persona, personality, and tone. Acknowledge that you are showing/sending them the requested picture. MUST INCLUDE: At the end of your response, append [Image Context: <short visual description of the generated image>] so you can remember what you sent in future turns.>`;
 
-        const derivationChat = ai.chats.create({ model: selectedModel, config: derivationConfig, history: [...historyForSdk] });
+        const derivationChat = ai.chats.create({ model: selectedModel, config: textModelConfig, history: [...historyForSdk] });
         const derivationPromptParts: any[] = [{ text: derivationPrompt }];
         
         const derivationResult = await derivationChat.sendMessage({ message: derivationPromptParts });
@@ -646,39 +510,13 @@ const initialState: AIState = {
 };
 
 
+
 // Async Thunk for compressing chat history
 export const compressChatHistory = createAsyncThunk(
   "ai/compressHistory",
   async ({ history = [], systemInstruction }: { history: any[], systemInstruction?: string }, { rejectWithValue }) => {
     try {
-      const apiKey = getAPIKey();
-      if (!apiKey) throw new Error("API key is missing. Please log in.");
-      const selectedModel = getStoredValue(LS_AI_MODEL, DEFAULT_AI_MODEL);
-
-      const ai = new GoogleGenAI({ apiKey });
-      const config: any = {};
-
-      if (systemInstruction) {
-        config.systemInstruction = systemInstruction;
-      }
-
-      const conversationText = history
-        .map((m) => `${m.role === "user" ? "User" : "AI"}: ${m.parts[0].text}`)
-        .join("\n\n");
-
-      const prompt = `Please provide a concise but comprehensive summary of the following conversation history. 
-Retain all key facts, user preferences, important context, the language used (e.g., Hinglish, English), the tone, and the current emotional state of both the User and the AI. This summary will act as the AI's memory replacing the older messages.
-Do not act as a conversational partner, just provide the summary directly. Ensure you explicitly note the language format, tone, and emotional context so the AI can seamlessly resume in the exact same style and mood.
-
-Conversation:
-${conversationText}`;
-
-      const result = await ai.models.generateContent({
-        model: selectedModel,
-        contents: prompt,
-        config: config
-      });
-      return result.text?.trim() || "";
+      return await performChatCompression(history, systemInstruction);
     } catch (error: any) {
       console.error("AI Compress Error:", error);
       return rejectWithValue(error.message || "Failed to compress history.");

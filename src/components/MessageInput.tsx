@@ -1,7 +1,8 @@
 import React, { useState, useCallback, useRef } from "react";
-import { FaPaperPlane, FaStop } from "react-icons/fa";
+import { FaPaperPlane, FaStop, FaCog, FaImage } from "react-icons/fa";
 import { cn } from "../utils/cn";
 import ToggleSwitch from "./ToggleSwitch";
+import ImageSettingsModal from "./ImageSettingsModal";
 
 interface MessageInputProps {
   onSend: (text: string, isImageRequest?: boolean) => void;
@@ -14,6 +15,7 @@ interface MessageInputProps {
 const MessageInput: React.FC<MessageInputProps> = ({ onSend, disabled = false, onStop, tokenCount = 0, costEstimate = 0 }) => {
   const [text, setText] = useState("");
   const [isImageRequest, setIsImageRequest] = useState(false);
+  const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
 
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -45,14 +47,23 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSend, disabled = false, o
         </div>
       )}
       <div className="flex items-center gap-3 bg-slate-900/60 dark:bg-slate-800/60 backdrop-blur-md border border-gray-300 dark:border-slate-600/50 rounded-full p-2 px-4 shadow-xl">
-        <ToggleSwitch
-          checked={isImageRequest}
-          onChange={setIsImageRequest}
-          disabled={disabled}
-          title="Request image generation"
-          className="ml-1 mr-1"
-          label={<span className="hidden sm:inline">Image</span>}
-        />
+        <div className="flex items-center gap-1">
+          <ToggleSwitch
+            checked={isImageRequest}
+            onChange={setIsImageRequest}
+            disabled={disabled}
+            title="Request image generation"
+            className="ml-1"
+            label={<FaImage size={18} title="Image Generation" className="text-gray-500 dark:text-gray-400 mr-2" />}
+          />
+          <button 
+             onClick={() => setIsSettingsModalOpen(true)}
+             className="p-2 text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white transition"
+             title="Image Generation Settings"
+          >
+             <FaCog size={14} />
+          </button>
+        </div>
 
         <input
         ref={inputRef}
@@ -99,7 +110,12 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSend, disabled = false, o
           <FaPaperPlane size={16} className={cn("relative z-10", canSend ? "ml-0.5 text-indigo-500 dark:text-indigo-400" : "")} />
         </button>
       )}
-    </div>
+      </div>
+      
+      <ImageSettingsModal
+        isOpen={isSettingsModalOpen}
+        onClose={() => setIsSettingsModalOpen(false)}
+      />
     </div>
   );
 };

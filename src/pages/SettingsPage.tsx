@@ -216,7 +216,11 @@ const SettingsPage = () => {
     localStorage.getItem(LS_FONT_SIZE) || "16px"
   );
   
-  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [openSection, setOpenSection] = useState<string>("profile");
+
+  const toggleSection = (section: string) => {
+    setOpenSection(prev => prev === section ? "" : section);
+  };
 
   const [userProfile, setUserProfile] = useState<UserProfile>(() => {
     return getStoredValue<UserProfile>(LS_USER_PROFILE, { name: "", bio: "" });
@@ -444,6 +448,26 @@ const SettingsPage = () => {
     }
   };
 
+  const renderAccordion = (id: string, title: string, children: React.ReactNode) => {
+    const isOpen = openSection === id;
+    return (
+      <div className="bg-panel-light dark:bg-panel-dark rounded-2xl mb-4 shadow-sm border border-gray-100 dark:border-slate-700/50 overflow-hidden transition-all duration-200">
+        <button 
+          className="w-full flex justify-between items-center p-5 text-lg font-medium text-gray-900 dark:text-white"
+          onClick={() => toggleSection(id)}
+        >
+          <span>{title}</span>
+          {isOpen ? <FaChevronUp size={14} /> : <FaChevronDown size={14} />}
+        </button>
+        {isOpen && (
+          <div className="px-5 pb-5 border-t border-gray-100 dark:border-slate-700/50 pt-4">
+            {children}
+          </div>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div className="w-full h-screen flex justify-center bg-app-light dark:bg-app-dark overflow-auto p-4 md:p-4">
       <div className="w-full max-w-[32rem] bg-transparent">
@@ -468,279 +492,68 @@ const SettingsPage = () => {
         {/* Toast Notifications */}
         <ToastContainer toasts={toasts} removeToast={removeToast} />
 
-        {/* User Profile Card */}
-        <div className="bg-panel-light dark:bg-panel-dark rounded-2xl p-5 mb-4 shadow-sm border border-gray-100 dark:border-slate-700/50">
-          <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">User Profile</h3>
-          
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Your Name</label>
-            <input
-              type="text"
-              placeholder="How should characters address you?"
-              value={userProfile.name}
-              onChange={(e) => setUserProfile({ ...userProfile, name: e.target.value })}
-              className="w-full p-3 bg-app-light dark:bg-slate-900/50 text-black dark:text-white rounded-xl border border-transparent dark:border-slate-700 focus:border-indigo-500 outline-none transition-all"
-            />
-          </div>
-          
-          <div className="mb-2">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">About You (Bio/Preferences)</label>
-            <textarea
-              placeholder="Tell characters a bit about yourself (e.g., your hobbies, communication style)..."
-              value={userProfile.bio}
-              onChange={(e) => setUserProfile({ ...userProfile, bio: e.target.value })}
-              className="w-full p-3 bg-app-light dark:bg-slate-900/50 text-black dark:text-white rounded-xl border border-transparent dark:border-slate-700 focus:border-indigo-500 outline-none transition-all resize-y min-h-[80px]"
-            />
-          </div>
-          <p className="text-xs text-gray-500 dark:text-gray-400">
-            This information is shared with characters to personalize conversations.
-          </p>
-        </div>
-
-        {/* Model Settings Card */}
-        <div className="bg-panel-light dark:bg-panel-dark rounded-2xl p-5 mb-4 shadow-sm border border-gray-100 dark:border-slate-700/50">
-          <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Model Settings</h3>
-          
-          <div className="mb-6">
-            <div className="flex justify-between text-sm text-gray-500 dark:text-slate-400 mb-2">
-              <span>Creativity</span>
-            </div>
-            <input
-              type="range"
-              min="0"
-              max="1"
-              step="0.1"
-              value={temperature}
-              onChange={(e) => setTemperature(Number(e.target.value))}
-              className="w-full h-2 rounded-lg appearance-none cursor-pointer accent-indigo-500"
-              style={{ 
-                background: `linear-gradient(to right, #a78bfa, #fb923c, #38bdf8) 0% 0% / ${(temperature / 1) * 100}% 100% no-repeat, #334155` 
-              }}
-            />
-            <div className="flex justify-between text-xs text-gray-400 dark:text-slate-500 mt-2">
-              <span>Precise</span>
-              <span>Creative</span>
-            </div>
-          </div>
-
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-            Text Generation Model
-          </label>
-          <div className="relative mb-6">
-            <select
-              value={selectedModel}
-              onChange={(e) => setSelectedModel(e.target.value)}
-              className="w-full p-3 pr-10 bg-app-light dark:bg-slate-900/50 text-black dark:text-white rounded-xl border border-transparent dark:border-slate-700 focus:border-indigo-500 outline-none transition-all appearance-none cursor-pointer"
-            >
-              {modelList.map((model: {value: string, label: string}) => (
-                <option key={model.value} value={model.value}>
-                  {model.label}
-                </option>
-              ))}
-            </select>
-            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-4">
-              <FaChevronDown size={12} className="text-gray-500 dark:text-gray-400" />
-            </div>
-          </div>
-
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-            Auto-Compress History Threshold
-          </label>
-          <div className="mb-2">
-            <input
-              type="number"
-              min="0"
-              value={compressThreshold}
-              onChange={(e) => setCompressThreshold(Number(e.target.value))}
-              placeholder="0 to disable"
-              className="w-full p-3 bg-app-light dark:bg-slate-900/50 text-black dark:text-white rounded-xl border border-transparent dark:border-slate-700 focus:border-indigo-500 outline-none transition-all"
-            />
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">If history length exceeds this, older messages will be summarized to save tokens. (0 means disabled)</p>
-        </div>
-
-        {/* Advanced Settings Accordion */}
-        <div className="bg-panel-light dark:bg-panel-dark rounded-2xl px-5 py-3 mb-10 shadow-sm border border-gray-100 dark:border-slate-700/50 mt-4">
-          <button 
-            className="w-full flex justify-between items-center text-lg font-medium text-gray-900 dark:text-white"
-            onClick={() => setShowAdvanced(!showAdvanced)}
-          >
-            <span>Advanced Settings</span>
-            {showAdvanced ? <FaChevronUp size={14} /> : <FaChevronDown size={14} />}
-          </button>
-          
-          {showAdvanced && (
-            <div className="mt-6 flex flex-col">
-              <div className="flex flex-col sm:flex-row gap-4 border-b border-gray-200 dark:border-gray-800 pb-6 mb-2">
-                 <button
-                    onClick={handleExportSettings}
-                    className="flex-1 bg-indigo-500 text-white py-2 px-4 rounded-lg hover:bg-indigo-600 transition flex items-center justify-center gap-2"
-                 >
-                    <FaDownload /> Export Settings
-                 </button>
-                 <button
-                    onClick={handleImportSettingsClick}
-                    className="flex-1 bg-gray-600 text-white py-2 px-4 rounded-lg hover:bg-gray-700 transition flex items-center justify-center gap-2"
-                 >
-                    <FaUpload /> Import Settings
-                 </button>
-                 <input
-                    type="file"
-                    ref={settingsFileInputRef}
-                    onChange={handleSettingsFileChange}
-                    accept=".json"
-                    style={{ display: "none" }}
-                 />
-            </div>
-
-        {/* AI Model Selection */}
-        <div className="mb-4">
-          <label className="flex items-center space-x-3 cursor-pointer mb-2">
-            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-              Use Local/Remote SD WebUI Forge
-            </span>
-            <div className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${useSdWebui ? 'bg-indigo-500' : 'bg-gray-300 dark:bg-slate-700'}`}>
-              <input
-                type="checkbox"
-                className="sr-only"
-                checked={useSdWebui}
-                onChange={(e) => setUseSdWebui(e.target.checked)}
-              />
-              <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${useSdWebui ? 'translate-x-6' : 'translate-x-1'}`} />
-            </div>
-          </label>
-        </div>
-
-        {useSdWebui ? (
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              SD WebUI Forge API URL
-            </label>
-            <input
-              type="text"
-              value={sdWebuiApiUrl}
-              onChange={(e) => setSdWebuiApiUrl(e.target.value)}
-              placeholder="http://127.0.0.1:7860"
-              className="w-full p-3 bg-app-light dark:bg-slate-900/50 text-black dark:text-white rounded-xl border border-transparent dark:border-slate-700 focus:border-indigo-500 outline-none transition-all mb-4"
-            />
-            
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Batch Size (Number of Images)
-            </label>
-            <input
-              type="number"
-              min="1"
-              max="8"
-              value={sdWebuiBatchSize}
-              onChange={(e) => setSdWebuiBatchSize(parseInt(e.target.value, 10))}
-              className="w-full p-3 bg-app-light dark:bg-slate-900/50 text-black dark:text-white rounded-xl border border-transparent dark:border-slate-700 focus:border-indigo-500 outline-none transition-all mb-4"
-            />
-
-            <div className="flex justify-between items-center mb-1">
-               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                 SD Model
-               </label>
-               <button type="button" onClick={fetchSdModels} className="text-xs text-indigo-500 hover:text-indigo-400">
-                 Refresh Models
-               </button>
-            </div>
-            <div className="relative mb-4">
-              <select
-                value={sdWebuiModel}
-                onChange={(e) => {
-                  setSdWebuiModel(e.target.value);
-                  localStorage.setItem(LS_SD_WEBUI_MODEL, e.target.value);
-                }}
-                className="w-full p-3 pr-10 bg-app-light dark:bg-slate-900/50 text-black dark:text-white rounded-xl border border-transparent dark:border-slate-700 focus:border-indigo-500 outline-none transition-all appearance-none cursor-pointer"
-              >
-                <option value="">Default (From SD WebUI)</option>
-                {sdWebuiModels.map((m) => (
-                  <option key={m.title} value={m.title}>
-                    {m.model_name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Reference Image Mode
-            </label>
-            <p className="text-xs text-gray-500 mb-2">How to use the character's appearance images</p>
-            <div className="relative mb-4">
-              <select
-                value={sdWebuiRefMode}
-                onChange={(e) => setSdWebuiRefMode(e.target.value)}
-                className="w-full p-3 pr-10 bg-app-light dark:bg-slate-900/50 text-black dark:text-white rounded-xl border border-transparent dark:border-slate-700 focus:border-indigo-500 outline-none transition-all appearance-none cursor-pointer"
-              >
-                <option value="none">None (Text to Image only)</option>
-                <option value="img2img">img2img API</option>
-                <option value="controlnet">ControlNet (Alwayson Scripts)</option>
-                <option value="reactor">Face Swap (ReActor Extension)</option>
-              </select>
-              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-4">
-                <FaChevronDown size={12} className="text-gray-500 dark:text-gray-400" />
-              </div>
-            </div>
-
-            {sdWebuiRefMode === "reactor" && (
-              <div className="mb-4">
-                <p className="text-xs text-indigo-500 font-medium mb-1">
-                  ReActor requires the "sd-webui-reactor-sfw" extension installed in Forge.
-                </p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">
-                  This passes the character image natively to inswapper to perform a highly accurate post-process face swap over the generated subject.
-                </p>
-              </div>
-            )}
-
-            {sdWebuiRefMode === "img2img" && (
-              <div className="mb-4">
-                <div className="flex justify-between text-sm text-gray-500 dark:text-slate-400 mb-2">
-                  <span>Denoising Strength: {sdWebuiDenoising}</span>
-                </div>
-                <input
-                  type="range"
-                  min="0"
-                  max="1"
-                  step="0.05"
-                  value={sdWebuiDenoising}
-                  onChange={(e) => setSdWebuiDenoising(Number(e.target.value))}
-                  className="w-full h-2 rounded-lg appearance-none cursor-pointer accent-indigo-500"
-                  style={{ 
-                    background: `linear-gradient(to right, #a78bfa, #fb923c, #38bdf8) 0% 0% / ${(sdWebuiDenoising / 1) * 100}% 100% no-repeat, #334155` 
-                  }}
-                />
-              </div>
-            )}
-
-            {sdWebuiRefMode === "controlnet" && (
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  ControlNet Model Name
-                </label>
-                <input
-                  type="text"
-                  value={sdWebuiControlnetModel}
-                  onChange={(e) => setSdWebuiControlnetModel(e.target.value)}
-                  placeholder="e.g. ip-adapter_sd15"
-                  className="w-full p-3 bg-app-light dark:bg-slate-900/50 text-black dark:text-white rounded-xl border border-transparent dark:border-slate-700 focus:border-indigo-500 outline-none transition-all"
-                />
-                <p className="text-xs text-gray-500 mt-1">Make sure this model is installed in your Forge/WebUI.</p>
-              </div>
-            )}
-          </div>
-        ) : (
+        {renderAccordion("profile", "User Profile",
           <>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Your Name</label>
+              <input
+                type="text"
+                placeholder="How should characters address you?"
+                value={userProfile.name}
+                onChange={(e) => setUserProfile({ ...userProfile, name: e.target.value })}
+                className="w-full p-3 bg-app-light dark:bg-slate-900/50 text-black dark:text-white rounded-xl border border-transparent dark:border-slate-700 focus:border-indigo-500 outline-none transition-all"
+              />
+            </div>
+            
+            <div className="mb-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">About You (Bio/Preferences)</label>
+              <textarea
+                placeholder="Tell characters a bit about yourself (e.g., your hobbies, communication style)..."
+                value={userProfile.bio}
+                onChange={(e) => setUserProfile({ ...userProfile, bio: e.target.value })}
+                className="w-full p-3 bg-app-light dark:bg-slate-900/50 text-black dark:text-white rounded-xl border border-transparent dark:border-slate-700 focus:border-indigo-500 outline-none transition-all resize-y min-h-[80px]"
+              />
+            </div>
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              This information is shared with characters to personalize conversations.
+            </p>
+          </>
+        )}
+
+        {renderAccordion("text", "Text Generation Model",
+          <>
+            <div className="mb-6">
+              <div className="flex justify-between text-sm text-gray-500 dark:text-slate-400 mb-2">
+                <span>Creativity</span>
+              </div>
+              <input
+                type="range"
+                min="0"
+                max="1"
+                step="0.1"
+                value={temperature}
+                onChange={(e) => setTemperature(Number(e.target.value))}
+                className="w-full h-2 rounded-lg appearance-none cursor-pointer accent-indigo-500"
+                style={{ 
+                  background: `linear-gradient(to right, #a78bfa, #fb923c, #38bdf8) 0% 0% / ${(temperature / 1) * 100}% 100% no-repeat, #334155` 
+                }}
+              />
+              <div className="flex justify-between text-xs text-gray-400 dark:text-slate-500 mt-2">
+                <span>Precise</span>
+                <span>Creative</span>
+              </div>
+            </div>
+
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Image Generation Model
+              Text Generation Model
             </label>
-            <p className="text-xs text-gray-500 mb-2">Used when "send pic" or similar is queried.</p>
-            <div className="relative mb-4">
+            <div className="relative mb-6">
               <select
-                value={imageModel}
-                onChange={(e) => setImageModel(e.target.value)}
+                value={selectedModel}
+                onChange={(e) => setSelectedModel(e.target.value)}
                 className="w-full p-3 pr-10 bg-app-light dark:bg-slate-900/50 text-black dark:text-white rounded-xl border border-transparent dark:border-slate-700 focus:border-indigo-500 outline-none transition-all appearance-none cursor-pointer"
               >
-                {imageModelList.map((model: {value: string, label: string}) => (
+                {modelList.map((model: {value: string, label: string}) => (
                   <option key={model.value} value={model.value}>
                     {model.label}
                   </option>
@@ -750,139 +563,341 @@ const SettingsPage = () => {
                 <FaChevronDown size={12} className="text-gray-500 dark:text-gray-400" />
               </div>
             </div>
+
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Max Output Tokens
+            </label>
+            <input
+              type="number"
+              value={maxOutputTokens}
+              onChange={(e) => setMaxOutputTokens(Number(e.target.value))}
+              className="w-full p-3 bg-app-light dark:bg-slate-900/50 text-black dark:text-white rounded-xl border border-transparent dark:border-slate-700 focus:border-indigo-500 outline-none transition-all mb-6"
+              min="1"
+            />
+
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Auto-Compress History Threshold
+            </label>
+            <div className="mb-2">
+              <input
+                type="number"
+                min="0"
+                value={compressThreshold}
+                onChange={(e) => setCompressThreshold(Number(e.target.value))}
+                placeholder="0 to disable"
+                className="w-full p-3 bg-app-light dark:bg-slate-900/50 text-black dark:text-white rounded-xl border border-transparent dark:border-slate-700 focus:border-indigo-500 outline-none transition-all"
+              />
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">If history length exceeds this, older messages will be summarized to save tokens. (0 means disabled)</p>
+            </div>
           </>
         )}
-        
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mt-4 mb-1">
-          Image Generation Base Prompt
-        </label>
-        <p className="text-xs text-gray-500 mb-2">Used as the base instruction whenever an image is requested.</p>
-        <textarea
-          value={imageGenPrompt}
-          onChange={(e) => setImageGenPrompt(e.target.value)}
-          placeholder="e.g. Create a high quality, detailed image..."
-          className="w-full p-3 bg-app-light dark:bg-slate-900/50 text-black dark:text-white rounded-xl border border-transparent dark:border-slate-700 focus:border-indigo-500 outline-none transition-all resize-y min-h-[80px]"
-        />
 
-        {/* Max Output Tokens */}
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mt-4 mb-1">
-          Max Output Tokens
-        </label>
-        <input
-          type="number"
-          value={maxOutputTokens}
-          onChange={(e) => setMaxOutputTokens(Number(e.target.value))}
-          className="w-full p-3 bg-app-light dark:bg-slate-900/50 text-black dark:text-white rounded-xl border border-transparent dark:border-slate-700 focus:border-indigo-500 outline-none transition-all"
-          min="1"
-        />
-
-        {/* Max chat length */}
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mt-4 mb-1">
-          Max Chat Length (0 for unlimited)
-        </label>
-        <input
-          type="number"
-          value={maxChatLength}
-          onChange={(e) => setMaxChatLength(Number(e.target.value))}
-          className="w-full p-3 bg-app-light dark:bg-slate-900/50 text-black dark:text-white rounded-xl border border-transparent dark:border-slate-700 focus:border-indigo-500 outline-none transition-all"
-          min="1"
-        />
-        {/* Image Generation Settings */}
-        <h3 className="text-lg font-medium text-gray-900 dark:text-white mt-6 mb-4">Image Generation</h3>
-        <div className="mb-4 mt-4">
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-            Default Image Resolution
-          </label>
-          <div className="relative mb-4">
-            <select
-              value={imageResolution}
-              onChange={(e) => setImageResolution(e.target.value)}
-              className="w-full p-3 pr-10 bg-app-light dark:bg-slate-900/50 text-black dark:text-white rounded-xl border border-transparent dark:border-slate-700 focus:border-indigo-500 outline-none transition-all appearance-none cursor-pointer"
-            >
-              {IMAGE_RESOLUTIONS.map((res) => (
-                <option key={res} value={res}>{res}</option>
-              ))}
-            </select>
-            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-4">
-              <FaChevronDown size={12} className="text-gray-500 dark:text-gray-400" />
+        {renderAccordion("image", "Image Generation Settings",
+          <>
+            <div className="mb-4">
+              <label className="flex items-center space-x-3 cursor-pointer mb-2">
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Use Local/Remote SD WebUI Forge
+                </span>
+                <div className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${useSdWebui ? 'bg-indigo-500' : 'bg-gray-300 dark:bg-slate-700'}`}>
+                  <input
+                    type="checkbox"
+                    className="sr-only"
+                    checked={useSdWebui}
+                    onChange={(e) => setUseSdWebui(e.target.checked)}
+                  />
+                  <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${useSdWebui ? 'translate-x-6' : 'translate-x-1'}`} />
+                </div>
+              </label>
             </div>
-          </div>
 
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-            Save Generated Images To:
-          </label>
-          <div className="flex items-center justify-between bg-app-light dark:bg-slate-900/50 p-3 rounded-xl border border-transparent dark:border-slate-700 mb-2">
-            <span className="text-black dark:text-white text-sm truncate pr-2">{imageSaveDirName}</span>
-            <button 
-              onClick={handleSelectDirectory}
-              className="px-3 py-1.5 bg-indigo-500 text-white text-sm rounded-lg hover:bg-indigo-600 transition whitespace-nowrap"
-            >
-              Select Folder
-            </button>
-          </div>
-          <p className="text-xs text-gray-500 dark:text-gray-400">
-            Note: Browsers may prompt you to re-approve write permissions to this folder when resuming the app.
-          </p>
-        </div>
+            {useSdWebui ? (
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  SD WebUI Forge API URL
+                </label>
+                <input
+                  type="text"
+                  value={sdWebuiApiUrl}
+                  onChange={(e) => setSdWebuiApiUrl(e.target.value)}
+                  placeholder="http://127.0.0.1:7860"
+                  className="w-full p-3 bg-app-light dark:bg-slate-900/50 text-black dark:text-white rounded-xl border border-transparent dark:border-slate-700 focus:border-indigo-500 outline-none transition-all mb-4"
+                />
+                
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Batch Size (Number of Images)
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  max="8"
+                  value={sdWebuiBatchSize}
+                  onChange={(e) => setSdWebuiBatchSize(parseInt(e.target.value, 10))}
+                  className="w-full p-3 bg-app-light dark:bg-slate-900/50 text-black dark:text-white rounded-xl border border-transparent dark:border-slate-700 focus:border-indigo-500 outline-none transition-all mb-4"
+                />
 
-        {/* Safety Settings */}
-        <h3 className="text-lg font-medium text-gray-900 dark:text-white mt-6 mb-4">Safety Settings</h3>
-        {safetyCategories.map((category) => (
-          <div key={category} className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 capitalize mb-1">
-              Block {category.replace("_", " ")}
+                <div className="flex justify-between items-center mb-1">
+                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                     SD Model
+                   </label>
+                   <button type="button" onClick={fetchSdModels} className="text-xs text-indigo-500 hover:text-indigo-400">
+                     Refresh Models
+                   </button>
+                </div>
+                <div className="relative mb-4">
+                  <select
+                    value={sdWebuiModel}
+                    onChange={(e) => {
+                      setSdWebuiModel(e.target.value);
+                      localStorage.setItem(LS_SD_WEBUI_MODEL, e.target.value);
+                    }}
+                    className="w-full p-3 pr-10 bg-app-light dark:bg-slate-900/50 text-black dark:text-white rounded-xl border border-transparent dark:border-slate-700 focus:border-indigo-500 outline-none transition-all appearance-none cursor-pointer"
+                  >
+                    <option value="">Default (From SD WebUI)</option>
+                    {sdWebuiModels.map((m) => (
+                      <option key={m.title} value={m.title}>
+                        {m.model_name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Reference Image Mode
+                </label>
+                <p className="text-xs text-gray-500 mb-2">How to use the character's appearance images</p>
+                <div className="relative mb-4">
+                  <select
+                    value={sdWebuiRefMode}
+                    onChange={(e) => setSdWebuiRefMode(e.target.value)}
+                    className="w-full p-3 pr-10 bg-app-light dark:bg-slate-900/50 text-black dark:text-white rounded-xl border border-transparent dark:border-slate-700 focus:border-indigo-500 outline-none transition-all appearance-none cursor-pointer"
+                  >
+                    <option value="none">None (Text to Image only)</option>
+                    <option value="img2img">img2img API</option>
+                    <option value="controlnet">ControlNet (Alwayson Scripts)</option>
+                    <option value="reactor">Face Swap (ReActor Extension)</option>
+                  </select>
+                  <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-4">
+                    <FaChevronDown size={12} className="text-gray-500 dark:text-gray-400" />
+                  </div>
+                </div>
+
+                {sdWebuiRefMode === "reactor" && (
+                  <div className="mb-4">
+                    <p className="text-xs text-indigo-500 font-medium mb-1">
+                      ReActor requires the "sd-webui-reactor-sfw" extension installed in Forge.
+                    </p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      This passes the character image natively to inswapper to perform a highly accurate post-process face swap over the generated subject.
+                    </p>
+                  </div>
+                )}
+
+                {sdWebuiRefMode === "img2img" && (
+                  <div className="mb-4">
+                    <div className="flex justify-between text-sm text-gray-500 dark:text-slate-400 mb-2">
+                      <span>Denoising Strength: {sdWebuiDenoising}</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="0"
+                      max="1"
+                      step="0.05"
+                      value={sdWebuiDenoising}
+                      onChange={(e) => setSdWebuiDenoising(Number(e.target.value))}
+                      className="w-full h-2 rounded-lg appearance-none cursor-pointer accent-indigo-500"
+                      style={{ 
+                        background: `linear-gradient(to right, #a78bfa, #fb923c, #38bdf8) 0% 0% / ${(sdWebuiDenoising / 1) * 100}% 100% no-repeat, #334155` 
+                      }}
+                    />
+                  </div>
+                )}
+
+                {sdWebuiRefMode === "controlnet" && (
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      ControlNet Model Name
+                    </label>
+                    <input
+                      type="text"
+                      value={sdWebuiControlnetModel}
+                      onChange={(e) => setSdWebuiControlnetModel(e.target.value)}
+                      placeholder="e.g. ip-adapter_sd15"
+                      className="w-full p-3 bg-app-light dark:bg-slate-900/50 text-black dark:text-white rounded-xl border border-transparent dark:border-slate-700 focus:border-indigo-500 outline-none transition-all"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">Make sure this model is installed in your Forge/WebUI.</p>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Image Generation Model
+                </label>
+                <p className="text-xs text-gray-500 mb-2">Used when "send pic" or similar is queried.</p>
+                <div className="relative mb-4">
+                  <select
+                    value={imageModel}
+                    onChange={(e) => setImageModel(e.target.value)}
+                    className="w-full p-3 pr-10 bg-app-light dark:bg-slate-900/50 text-black dark:text-white rounded-xl border border-transparent dark:border-slate-700 focus:border-indigo-500 outline-none transition-all appearance-none cursor-pointer"
+                  >
+                    {imageModelList.map((model: {value: string, label: string}) => (
+                      <option key={model.value} value={model.value}>
+                        {model.label}
+                      </option>
+                    ))}
+                  </select>
+                  <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-4">
+                    <FaChevronDown size={12} className="text-gray-500 dark:text-gray-400" />
+                  </div>
+                </div>
+              </>
+            )}
+            
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mt-4 mb-1">
+              Image Generation Base Prompt
             </label>
-            <div className="relative mb-2">
+            <p className="text-xs text-gray-500 mb-2">Used as the base instruction whenever an image is requested.</p>
+            <textarea
+              value={imageGenPrompt}
+              onChange={(e) => setImageGenPrompt(e.target.value)}
+              placeholder="e.g. Create a high quality, detailed image..."
+              className="w-full p-3 bg-app-light dark:bg-slate-900/50 text-black dark:text-white rounded-xl border border-transparent dark:border-slate-700 focus:border-indigo-500 outline-none transition-all resize-y min-h-[80px]"
+            />
+
+            <div className="mb-4 mt-6">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Default Image Resolution
+              </label>
+              <div className="relative mb-4">
+                <select
+                  value={imageResolution}
+                  onChange={(e) => setImageResolution(e.target.value)}
+                  className="w-full p-3 pr-10 bg-app-light dark:bg-slate-900/50 text-black dark:text-white rounded-xl border border-transparent dark:border-slate-700 focus:border-indigo-500 outline-none transition-all appearance-none cursor-pointer"
+                >
+                  {IMAGE_RESOLUTIONS.map((res) => (
+                    <option key={res} value={res}>{res}</option>
+                  ))}
+                </select>
+                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-4">
+                  <FaChevronDown size={12} className="text-gray-500 dark:text-gray-400" />
+                </div>
+              </div>
+
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Save Generated Images To:
+              </label>
+              <div className="flex items-center justify-between bg-app-light dark:bg-slate-900/50 p-3 rounded-xl border border-transparent dark:border-slate-700 mb-2">
+                <span className="text-black dark:text-white text-sm truncate pr-2">{imageSaveDirName}</span>
+                <button 
+                  onClick={handleSelectDirectory}
+                  className="px-3 py-1.5 bg-indigo-500 text-white text-sm rounded-lg hover:bg-indigo-600 transition whitespace-nowrap"
+                >
+                  Select Folder
+                </button>
+              </div>
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                Note: Browsers may prompt you to re-approve write permissions to this folder when resuming the app.
+              </p>
+            </div>
+          </>
+        )}
+
+        {renderAccordion("chat", "Chat Interface Settings",
+          <>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Max Chat Length (0 for unlimited)
+            </label>
+            <input
+              type="number"
+              value={maxChatLength}
+              onChange={(e) => setMaxChatLength(Number(e.target.value))}
+              className="w-full p-3 bg-app-light dark:bg-slate-900/50 text-black dark:text-white rounded-xl border border-transparent dark:border-slate-700 focus:border-indigo-500 outline-none transition-all mb-6"
+              min="1"
+            />
+            
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Chat Font Size
+            </label>
+            <div className="relative mb-6">
               <select
-                value={safetySettings[category]}
-                onChange={(e) => handleSafetyChange(category, e.target.value)}
+                value={fontSize}
+                onChange={(e) => setFontSize(e.target.value)}
                 className="w-full p-3 pr-10 bg-app-light dark:bg-slate-900/50 text-black dark:text-white rounded-xl border border-transparent dark:border-slate-700 focus:border-indigo-500 outline-none transition-all appearance-none cursor-pointer"
               >
-                {harmThresholds.map(({ label, value }: {label: string, value: string}) => (
-                  <option key={value} value={value}>
-                    {label}
-                  </option>
-                ))}
+                <option value="14px">Small</option>
+                <option value="16px">Medium (Default)</option>
+                <option value="18px">Large</option>
+                <option value="20px">Extra Large</option>
               </select>
               <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-4">
                 <FaChevronDown size={12} className="text-gray-500 dark:text-gray-400" />
               </div>
             </div>
-          </div>
-        ))}
 
-        {/* Font Size */}
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mt-6 mb-1">
-          Chat Font Size
-        </label>
-        <div className="relative mb-4">
-          <select
-            value={fontSize}
-            onChange={(e) => setFontSize(e.target.value)}
-            className="w-full p-3 pr-10 bg-app-light dark:bg-slate-900/50 text-black dark:text-white rounded-xl border border-transparent dark:border-slate-700 focus:border-indigo-500 outline-none transition-all appearance-none cursor-pointer"
-          >
-            <option value="14px">Small</option>
-            <option value="16px">Medium (Default)</option>
-            <option value="18px">Large</option>
-            <option value="20px">Extra Large</option>
-          </select>
-          <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-4">
-            <FaChevronDown size={12} className="text-gray-500 dark:text-gray-400" />
-          </div>
-        </div>
-
-              {/* Initial Chat Message */}
-              <div className="mt-4 border-t border-gray-200 dark:border-gray-800 pt-4">
-                <InitialMessages 
-                  key={initialMessagesKey} 
-                  onSave={handleInitialMessagesSave}
-                />
-              </div>
+            <div className="border-t border-gray-200 dark:border-gray-800 pt-4">
+              <InitialMessages 
+                key={initialMessagesKey} 
+                onSave={handleInitialMessagesSave}
+              />
             </div>
-          )}
-        </div>
+          </>
+        )}
+
+        {renderAccordion("safety", "Safety Settings",
+          <>
+            {safetyCategories.map((category) => (
+              <div key={category} className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 capitalize mb-1">
+                  Block {category.replace("_", " ")}
+                </label>
+                <div className="relative mb-2">
+                  <select
+                    value={safetySettings[category]}
+                    onChange={(e) => handleSafetyChange(category, e.target.value)}
+                    className="w-full p-3 pr-10 bg-app-light dark:bg-slate-900/50 text-black dark:text-white rounded-xl border border-transparent dark:border-slate-700 focus:border-indigo-500 outline-none transition-all appearance-none cursor-pointer"
+                  >
+                    {harmThresholds.map(({ label, value }: {label: string, value: string}) => (
+                      <option key={value} value={value}>
+                        {label}
+                      </option>
+                    ))}
+                  </select>
+                  <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-4">
+                    <FaChevronDown size={12} className="text-gray-500 dark:text-gray-400" />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </>
+        )}
+
+        {renderAccordion("data", "Data & Import/Export",
+          <>
+            <div className="flex flex-col sm:flex-row gap-4 mb-2">
+               <button
+                  onClick={handleExportSettings}
+                  className="flex-1 bg-indigo-500 text-white py-2 px-4 rounded-lg hover:bg-indigo-600 transition flex items-center justify-center gap-2"
+               >
+                  <FaDownload /> Export Settings
+               </button>
+               <button
+                  onClick={handleImportSettingsClick}
+                  className="flex-1 bg-gray-600 text-white py-2 px-4 rounded-lg hover:bg-gray-700 transition flex items-center justify-center gap-2"
+               >
+                  <FaUpload /> Import Settings
+               </button>
+               <input
+                  type="file"
+                  ref={settingsFileInputRef}
+                  onChange={handleSettingsFileChange}
+                  accept=".json"
+                  style={{ display: "none" }}
+               />
+            </div>
+          </>
+        )}
       </div>
-    </div>
     </div>
   );
 };

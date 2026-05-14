@@ -1,4 +1,5 @@
-import React, { ReactNode } from "react";
+import React, { ReactNode, useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { FaTimes } from "react-icons/fa";
 
 interface ModalProps {
@@ -9,9 +10,16 @@ interface ModalProps {
 }
 
 const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }) => {
-  if (!isOpen) return null;
+  const [mounted, setMounted] = useState(false);
 
-  return (
+  useEffect(() => {
+    setMounted(true);
+    return () => setMounted(false);
+  }, []);
+
+  if (!isOpen || !mounted) return null;
+
+  return createPortal(
     <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/50 p-4">
       <div className="bg-white dark:bg-slate-900 rounded-2xl w-full max-w-sm shadow-xl flex flex-col overflow-hidden max-h-[80vh]">
         <div className="p-4 border-b border-gray-200 dark:border-slate-800 flex justify-between items-center">
@@ -24,7 +32,8 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }) => {
           {children}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 
