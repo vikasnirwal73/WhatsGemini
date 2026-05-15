@@ -2,6 +2,50 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer base {
+  :root {
+    /* Main App Backgrounds (Light) */
+    --color-app-bg: 248 250 252; /* Slate 50 (#F8FAFC) */
+    --color-panel-bg: 255 255 255; /* White (#FFFFFF) */
+
+    /* Typography (Light) */
+    --color-text-main: 15 23 42; /* Slate 900 */
+    --color-text-muted: 100 116 139; /* Slate 500 */
+
+    /* Brand/Primary Colors (Light) */
+    --color-primary: 99 102 241; /* Indigo 500 (#6366F1) */
+    --color-primary-hover: 79 70 229; /* Indigo 600 (#4F46E5) */
+
+    /* Chat Bubbles (Light) */
+    --color-bubble-sent: 99 102 241; /* Indigo 500 */
+    --color-bubble-received: 241 245 249; /* Slate 100 */
+    
+    /* Borders (Light) */
+    --color-border-main: 226 232 240; /* Slate 200 */
+  }
+
+  .dark {
+    /* Main App Backgrounds (Dark) */
+    --color-app-bg: 15 23 42; /* Slate 900 (#0F172A) */
+    --color-panel-bg: 30 41 59; /* Slate 800 (#1E293B) */
+
+    /* Typography (Dark) */
+    --color-text-main: 241 245 249; /* Slate 100 */
+    --color-text-muted: 148 163 184; /* Slate 400 */
+
+    /* Brand/Primary Colors (Dark) */
+    --color-primary: 129 140 248; /* Indigo 400 (#818CF8) */
+    --color-primary-hover: 99 102 241; /* Indigo 500 */
+
+    /* Chat Bubbles (Dark) */
+    --color-bubble-sent: 79 70 229; /* Indigo 600 */
+    --color-bubble-received: 51 65 85; /* Slate 700 */
+    
+    /* Borders (Dark) */
+    --color-border-main: 30 41 59; /* Slate 800 */
+  }
+}
+
 /* Fix for mobile keyboard hiding input */
 html, body, #root {
   height: 100%;

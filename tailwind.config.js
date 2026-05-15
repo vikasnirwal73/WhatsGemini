@@ -7,32 +7,31 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        // App Theme Colors
+        // Now using CSS variables from index.css for easy extraction/tweaking
         primary: {
-          DEFAULT: '#6366F1', // Indigo 500
-          hover: '#4F46E5',   // Indigo 600
-          dark: '#818CF8',    // Indigo 400
+          DEFAULT: 'rgb(var(--color-primary) / <alpha-value>)',
+          hover: 'rgb(var(--color-primary-hover) / <alpha-value>)',
         },
         
         // Backgrounds
         app: {
-          light: '#F8FAFC', // Slate 50
-          dark: '#0F172A',  // Slate 900
+          light: 'rgb(var(--color-app-bg) / <alpha-value>)', // dynamically mapped, light/dark suffixes kept for backwards compat but not strictly needed
+          dark: 'rgb(var(--color-app-bg) / <alpha-value>)',  
         },
         panel: {
-          light: '#FFFFFF',
-          dark: '#1E293B', // Slate 800
+          light: 'rgb(var(--color-panel-bg) / <alpha-value>)',
+          dark: 'rgb(var(--color-panel-bg) / <alpha-value>)',
         },
 
         // Chat Bubbles
         bubble: {
           sent: {
-            light: '#6366F1', // Indigo 500
-            dark: '#4F46E5',  // Indigo 600
+            light: 'rgb(var(--color-bubble-sent) / <alpha-value>)',
+            dark: 'rgb(var(--color-bubble-sent) / <alpha-value>)',
           },
           received: {
-            light: '#F1F5F9', // Slate 100
-            dark: '#334155',  // Slate 700
+            light: 'rgb(var(--color-bubble-received) / <alpha-value>)',
+            dark: 'rgb(var(--color-bubble-received) / <alpha-value>)',
           },
         },
       },
