@@ -26,12 +26,28 @@ import {
   DEFAULT_SD_WEBUI_MODEL,
 } from "../utils/constants";
 
+import { useAppDispatch } from "../store/hooks";
+import { 
+  setImageModel as setGlobalImageModel, 
+  setImageGenPrompt as setGlobalImageGenPrompt,
+  setImageResolution as setGlobalImageResolution,
+  setUseSdWebui as setGlobalUseSdWebui,
+  setSdWebuiApiUrl as setGlobalSdWebuiApiUrl,
+  setSdWebuiBatchSize as setGlobalSdWebuiBatchSize,
+  setSdWebuiRefMode as setGlobalSdWebuiRefMode,
+  setSdWebuiDenoising as setGlobalSdWebuiDenoising,
+  setSdWebuiControlnetModel as setGlobalSdWebuiControlnetModel,
+  setSdWebuiModels as setGlobalSdWebuiModels,
+  setSdWebuiModel as setGlobalSdWebuiModel
+} from "../features/settingsSlice";
+
 interface ImageSettingsModalProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
 const ImageSettingsModal: React.FC<ImageSettingsModalProps> = ({ isOpen, onClose }) => {
+  const dispatch = useAppDispatch();
   const [imageModelList, setImageModelList] = useState<{value: string, label: string}[]>(() => {
     const list = models
       .filter((m: string) => /gemini-(2|3)|imagen/i.test(m))
@@ -88,14 +104,23 @@ const ImageSettingsModal: React.FC<ImageSettingsModalProps> = ({ isOpen, onClose
   useEffect(() => {
     if (isOpen) {
       localStorage.setItem(LS_IMAGE_MODEL, imageModel);
+      dispatch(setGlobalImageModel(imageModel));
       localStorage.setItem(LS_IMAGE_GEN_PROMPT, imageGenPrompt);
+      dispatch(setGlobalImageGenPrompt(imageGenPrompt));
       localStorage.setItem(LS_IMAGE_RESOLUTION, imageResolution);
+      dispatch(setGlobalImageResolution(imageResolution));
       localStorage.setItem(LS_USE_SD_WEBUI, String(useSdWebui));
+      dispatch(setGlobalUseSdWebui(useSdWebui));
       localStorage.setItem(LS_SD_WEBUI_API_URL, sdWebuiApiUrl);
+      dispatch(setGlobalSdWebuiApiUrl(sdWebuiApiUrl));
       localStorage.setItem(LS_SD_WEBUI_BATCH_SIZE, String(sdWebuiBatchSize));
+      dispatch(setGlobalSdWebuiBatchSize(sdWebuiBatchSize));
       localStorage.setItem(LS_SD_WEBUI_REF_MODE, sdWebuiRefMode);
+      dispatch(setGlobalSdWebuiRefMode(sdWebuiRefMode));
       localStorage.setItem(LS_SD_WEBUI_DENOISING, String(sdWebuiDenoising));
+      dispatch(setGlobalSdWebuiDenoising(sdWebuiDenoising));
       localStorage.setItem(LS_SD_WEBUI_CONTROLNET_MODEL, sdWebuiControlnetModel);
+      dispatch(setGlobalSdWebuiControlnetModel(sdWebuiControlnetModel));
     }
   }, [imageModel, imageGenPrompt, imageResolution, useSdWebui, sdWebuiApiUrl, sdWebuiBatchSize, sdWebuiRefMode, sdWebuiDenoising, sdWebuiControlnetModel, isOpen]);
 

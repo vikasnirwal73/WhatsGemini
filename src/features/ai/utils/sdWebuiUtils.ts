@@ -87,20 +87,36 @@ export const generateSDImage = async (
       payload.alwayson_scripts = {
         reactor: {
           args: [
-            refImageBase64,       // 0: img
-            true,                 // 1: enable
-            '0',                  // 2: source faces index
-            '0',                  // 3: target faces index
-            'inswapper_128.onnx', // 4: model path
-            'None',               // 5: restorer name (Disabled to keep max resemblance)
-            0,                    // 6: restorer visibility
-            false,                // 7: restore face (false ensures inswapper doesn't get smoothed over)
-            'None',               // 8: upscaler name
-            1.0,                  // 9: upscaler visibility
-            1.0,                  // 10: upscaler scale 
-            1.0,                  // 11: blend
-            0,                    // 12: gender filter
-            false                 // 13: save original
+             refImageBase64, // 0: img
+             true, // 1: Enable ReActor
+             '0', // 2: Comma separated face number(s) from swap-source image
+             '0', // 3: Comma separated face number(s) for target image
+             'inswapper_128.onnx', // 4: model path
+             'CodeFormer', // 5: Restore Face: None; CodeFormer; GFPGAN
+             1, // 6: Restore visibility value
+             true, // 7: Restore face -> Upscale
+             'None', // 8: Upscaler
+             1.5, // 9: Upscaler scale value
+             1, // 10: Upscaler visibility
+             false, // 11: Swap in source image
+             true, // 12: Swap in generated image
+             1, // 13: Console Log Level
+             0, // 14: Gender Detection (Source)
+             0, // 15: Gender Detection (Target)
+             false, // 16: Save the original image(s)
+             0.8, // 17: CodeFormer Weight
+             false, // 18: Source Image Hash Check
+             false, // 19: Target Image Hash Check
+             "CPU", // 20: CPU or CUDA
+             true, // 21: Face Mask Correction
+             1, // 22: Select Source
+             "elena.safetensors", // 23: Filename of the face model
+             "C:\\PATH_TO_FACES_IMAGES", // 24: Path to faces
+             null, // 25: skip it for API
+             true, // 26: Randomly select an image
+             true, // 27: Force Upscale
+             0.6, // 28: Face Detection Threshold
+             1 // 29: Maximum number of faces to detect
           ]
         }
       };
