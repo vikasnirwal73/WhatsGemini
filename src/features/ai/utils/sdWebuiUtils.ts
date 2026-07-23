@@ -1,5 +1,6 @@
 import { appendCharacterImages } from "./imageProcessing";
 import { getStoredValue } from "./settings";
+import { SDImageParams } from "../../../types";
 import {
   LS_SD_WEBUI_API_URL,
   DEFAULT_SD_WEBUI_API_URL,
@@ -19,7 +20,7 @@ import {
 
 export const generateSDImage = async (
   derivedImagePrompt: string,
-  derivedParams: any,
+  derivedParams: SDImageParams,
   characterImages?: string[],
   characterName?: string
 ): Promise<string[]> => {

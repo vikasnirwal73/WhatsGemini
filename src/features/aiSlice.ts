@@ -1,5 +1,5 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenAI, Content, Part, GenerateContentConfig, GenerateContentResponseUsageMetadata } from "@google/genai";
 import { performChatCompression } from "./ai/utils/chatHistoryUtils";
 import { AI, MODEL_PRICING, DEFAULT_MODEL_PRICING } from "../utils/constants";
 import { getInitialMessages, getAPIKey, formatSafetySettings } from "./ai/utils/settings";
@@ -7,12 +7,22 @@ import { appendCharacterImages } from "./ai/utils/imageProcessing";
 import { extractAndSaveBase64ImagesLocally } from "./ai/utils/apiUtils";
 import { generateSDImage } from "./ai/utils/sdWebuiUtils";
 import { RootState } from "../store/store";
+import { SDImageParams } from "../types";
+
+export interface GenerateAIResponseResult {
+  text: string;
+  tokenCount: number;
+  costEstimate: number;
+  imagePrompt: string;
+  imageParams: SDImageParams;
+  images?: string[];
+}
 
 // Async Thunk for generating AI response
 
 export const generateAIResponse = createAsyncThunk(
   "ai/generateResponse",
-  async ({ prompt, history = [], systemInstruction, characterImages, characterName, isImageRequest = false, existingImagePrompt, existingImageParams }: { prompt: string; history?: any[], systemInstruction?: string, characterImages?: string[], characterName?: string, isImageRequest?: boolean, existingImagePrompt?: string, existingImageParams?: any }, { getState, rejectWithValue, signal }) => {
+  async ({ prompt, history = [], systemInstruction, characterImages, characterName, isImageRequest = false, existingImagePrompt, existingImageParams }: { prompt: string; history?: Content[], systemInstruction?: string, characterImages?: string[], characterName?: string, isImageRequest?: boolean, existingImagePrompt?: string, existingImageParams?: SDImageParams }, { getState, rejectWithValue, signal }) => {
     try {
       const state = getState() as RootState;
       const settings = state.settings;
@@ -31,7 +41,7 @@ export const generateAIResponse = createAsyncThunk(
 
       // Adds a call's usage to the running totals, priced by whichever model actually
       // served that call (a turn can span the selected text model and the image model).
-      const trackUsage = (usage: { promptTokenCount?: number; candidatesTokenCount?: number; totalTokenCount?: number } | undefined, modelName: string) => {
+      const trackUsage = (usage: GenerateContentResponseUsageMetadata | undefined, modelName: string) => {
         if (!usage) return;
         const promptTokens = usage.promptTokenCount || 0;
         const candidateTokens = usage.candidatesTokenCount || 0;
@@ -41,16 +51,16 @@ export const generateAIResponse = createAsyncThunk(
       };
 
       let finalDerivedImagePrompt = "";
-      let finalDerivedImageParams: any = {};
-      
+      let finalDerivedImageParams: SDImageParams = {};
+
       let imageModelName = settings.imageModel;
       const ai = new GoogleGenAI({ apiKey });
 
       const maxTokens = settings.maxOutputTokens;
       const temperature = settings.temperature;
-      const safetySettings: any = formatSafetySettings(settings.safetySettings);
+      const safetySettings = formatSafetySettings(settings.safetySettings);
 
-      const textModelConfig: any = {
+      const textModelConfig: GenerateContentConfig = {
         maxOutputTokens: maxTokens,
         temperature: temperature,
         safetySettings: safetySettings,
@@ -61,25 +71,18 @@ export const generateAIResponse = createAsyncThunk(
       }
 
       // Filter out empty messages
-      let validHistory = history
+      let validHistory: Content[] = history
         .filter((msg) => msg?.parts?.[0]?.text && msg.role)
         .map(msg => {
            // Deep clone parts so we don't accidentally mutate react state
-           return { ...msg, parts: [...msg.parts] };
+           return { ...msg, parts: [...(msg.parts || [])] };
         });
-
-      // Remove any unsupported 'images' fields from the history before sending to SDK
-      for (let msg of validHistory) {
-         if (msg.images) {
-            delete msg.images;
-         }
-      }
 
       // If the last message in history is the same as the prompt, remove it to avoid duplication
       if (
         validHistory.length > 0 &&
         validHistory[validHistory.length - 1].role === "user" &&
-        validHistory[validHistory.length - 1].parts[0].text === prompt
+        validHistory[validHistory.length - 1].parts?.[0]?.text === prompt
       ) {
         validHistory.pop();
       }
@@ -101,7 +104,7 @@ export const generateAIResponse = createAsyncThunk(
             // Only compress if we actually have messages to compress
             if (oldMessagesForSummary.length > 2) { 
               const conversationText = oldMessagesForSummary
-                .map((m) => `${m.role === "user" ? "User" : "AI"}: ${m.parts[0].text}`)
+                .map((m) => `${m.role === "user" ? "User" : "AI"}: ${m.parts?.[0]?.text || ""}`)
                 .join("\n\n");
 
               const compressPrompt = `Provide a very concise but comprehensive summary of the following chat history. 
@@ -171,7 +174,7 @@ ${conversationText}`;
 
         let derivedImagePrompt = prompt;
         let derivedSummary = `[Generated Image requested: ${prompt}]`;
-        let derivedParams: any = {};
+        let derivedParams: SDImageParams = {};
         
         if (existingImagePrompt) {
           derivedImagePrompt = existingImagePrompt;
@@ -189,7 +192,7 @@ ${conversationText}`;
         const derivationPrompt = `(INTERNAL DIRECTIVE) User request: "${prompt}"\nThe user wants a picture/image based on the current context.${useSdWebui ? sdModelInfo : ""}\n\nYou must function as an expert prompt engineer. Prioritize this base style rule:\n${baseImagePrompt}\n\nPlease output EXACTLY ${parseSection}\n\nPROMPT:\n<write a highly detailed, clean, and optimized tag-based SD 1.5 image generation prompt based on the user request and context. Make sure the subject matches your visual description.>${sdInstruction}\n\nSUMMARY:\n<Respond IN CHARACTER to the user, maintaining your exact persona, personality, and tone. Acknowledge that you are showing/sending them the requested picture. MUST INCLUDE: At the end of your response, append [Image Context: <short visual description of the generated image>] so you can remember what you sent in future turns.>`;
 
         const derivationChat = ai.chats.create({ model: selectedModel, config: textModelConfig, history: [...historyForSdk] });
-        const derivationPromptParts: any[] = [{ text: derivationPrompt }];
+        const derivationPromptParts: Part[] = [{ text: derivationPrompt }];
         
         const derivationResult = await derivationChat.sendMessage({ message: derivationPromptParts });
         const derivationText = derivationResult.text || "";
@@ -229,7 +232,7 @@ ${conversationText}`;
              const sdImages = await generateSDImage(derivedImagePrompt, derivedParams, characterImages, characterName);
              generatedImages.push(...sdImages);
            } else {
-             const imagePromptParts: any[] = [{ text: derivedImagePrompt }];
+             const imagePromptParts: Part[] = [{ text: derivedImagePrompt }];
              if (characterImages && characterImages.length > 0) {
                await appendCharacterImages(imagePromptParts, characterImages);
              }
@@ -256,10 +259,10 @@ ${conversationText}`;
       } else {
         // Normal Text Chat
         const chat = ai.chats.create({ model: selectedModel, config: textModelConfig, history: historyForSdk });
-        const promptParts: any[] = [{ text: finalPrompt }];
+        const promptParts: Part[] = [{ text: finalPrompt }];
 
         const stream = await chat.sendMessageStream({ message: promptParts });
-        let lastUsage: { promptTokenCount?: number; candidatesTokenCount?: number; totalTokenCount?: number } | undefined;
+        let lastUsage: GenerateContentResponseUsageMetadata | undefined;
         for await (const chunk of stream) {
           if (signal.aborted) {
             console.log("AI response generation aborted by user.");
@@ -286,7 +289,7 @@ ${conversationText}`;
 
       finalResponseText = await extractAndSaveBase64ImagesLocally(finalResponseText, generatedImages);
 
-      const returnPayload: any = {
+      const returnPayload: GenerateAIResponseResult = {
         text: finalResponseText.trim(),
         tokenCount: totalTokens,
         costEstimate: costEstimate,
@@ -329,7 +332,7 @@ const initialState: AIState = {
 // Async Thunk for compressing chat history
 export const compressChatHistory = createAsyncThunk(
   "ai/compressHistory",
-  async ({ history = [], systemInstruction }: { history: any[], systemInstruction?: string }, { rejectWithValue }) => {
+  async ({ history = [], systemInstruction }: { history: Content[], systemInstruction?: string }, { rejectWithValue }) => {
     try {
       return await performChatCompression(history, systemInstruction);
     } catch (error: any) {

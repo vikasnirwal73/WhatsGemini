@@ -1,21 +1,21 @@
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenAI, Content, GenerateContentConfig } from "@google/genai";
 import { getStoredValue, getAPIKey } from "./settings";
 import { LS_AI_MODEL, DEFAULT_AI_MODEL } from "../../../utils/constants";
 
-export const performChatCompression = async (history: any[], systemInstruction?: string) => {
+export const performChatCompression = async (history: Content[], systemInstruction?: string) => {
   const apiKey = getAPIKey();
   if (!apiKey) throw new Error("API key is missing. Please log in.");
   const selectedModel = getStoredValue(LS_AI_MODEL, DEFAULT_AI_MODEL);
 
   const ai = new GoogleGenAI({ apiKey });
-  const config: any = {};
+  const config: GenerateContentConfig = {};
 
   if (systemInstruction) {
     config.systemInstruction = systemInstruction;
   }
 
   const conversationText = history
-    .map((m) => `${m.role === "user" ? "User" : "AI"}: ${m.parts[0].text}`)
+    .map((m) => `${m.role === "user" ? "User" : "AI"}: ${m.parts?.[0]?.text || ""}`)
     .join("\n\n");
 
   const prompt = `Please provide a concise but comprehensive summary of the following conversation history. 

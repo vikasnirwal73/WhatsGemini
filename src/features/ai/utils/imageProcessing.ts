@@ -1,3 +1,4 @@
+import { Part } from "@google/genai";
 import { dbService } from "../../../services/dbService";
 
 export const downscaleImageBase64 = async (base64Str: string, mimeType: string): Promise<string> => {
@@ -41,7 +42,7 @@ export const downscaleImageBase64 = async (base64Str: string, mimeType: string):
   }
 };
 
-export const appendCharacterImages = async (targetArray: any[], images: string[] | undefined) => {
+export const appendCharacterImages = async (targetArray: Part[], images: string[] | undefined) => {
   if (images && images.length > 0) {
     for (const imgRef of images) {
       if (imgRef.startsWith('local:')) {
