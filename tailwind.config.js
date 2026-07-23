@@ -12,16 +12,22 @@ module.exports = {
           DEFAULT: 'rgb(var(--color-primary) / <alpha-value>)',
           hover: 'rgb(var(--color-primary-hover) / <alpha-value>)',
         },
-        
+        secondary: {
+          DEFAULT: 'rgb(var(--color-secondary) / <alpha-value>)',
+          hover: 'rgb(var(--color-secondary-hover) / <alpha-value>)',
+        },
+        accent: 'rgb(var(--color-accent) / <alpha-value>)',
+
         // Backgrounds
         app: {
           light: 'rgb(var(--color-app-bg) / <alpha-value>)', // dynamically mapped, light/dark suffixes kept for backwards compat but not strictly needed
-          dark: 'rgb(var(--color-app-bg) / <alpha-value>)',  
+          dark: 'rgb(var(--color-app-bg) / <alpha-value>)',
         },
         panel: {
           light: 'rgb(var(--color-panel-bg) / <alpha-value>)',
           dark: 'rgb(var(--color-panel-bg) / <alpha-value>)',
         },
+        panel2: 'rgb(var(--color-panel2-bg) / <alpha-value>)',
 
         // Chat Bubbles
         bubble: {

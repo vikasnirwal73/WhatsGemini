@@ -5,44 +5,58 @@
 @layer base {
   :root {
     /* Main App Backgrounds (Light) */
-    --color-app-bg: 248 250 252; /* Slate 50 (#F8FAFC) */
+    --color-app-bg: 242 240 245; /* Paper (#F2F0F5) */
     --color-panel-bg: 255 255 255; /* White (#FFFFFF) */
+    --color-panel2-bg: 251 250 252; /* Secondary surface (#FBFAFC) */
 
     /* Typography (Light) */
-    --color-text-main: 15 23 42; /* Slate 900 */
-    --color-text-muted: 100 116 139; /* Slate 500 */
+    --color-text-main: 28 24 38; /* Ink (#1C1826) */
+    --color-text-muted: 110 106 125; /* Mist (#6E6A7D) */
 
     /* Brand/Primary Colors (Light) */
-    --color-primary: 99 102 241; /* Indigo 500 (#6366F1) */
-    --color-primary-hover: 79 70 229; /* Indigo 600 (#4F46E5) */
+    --color-primary: 18 115 95; /* Signal (#12735F) */
+    --color-primary-hover: 14 92 76; /* Signal, darkened */
+
+    /* Secondary/Accent Colors (Light) */
+    --color-secondary: 122 92 192; /* Plume (#7A5CC0) */
+    --color-secondary-hover: 104 73 168; /* Plume, darkened */
+    --color-accent: 169 112 28; /* Ember (#A9701C) */
 
     /* Chat Bubbles (Light) */
-    --color-bubble-sent: 99 102 241; /* Indigo 500 */
-    --color-bubble-received: 241 245 249; /* Slate 100 */
-    
+    --color-bubble-sent: 18 115 95; /* Signal */
+    --color-bubble-received: 251 250 252; /* Secondary surface */
+
     /* Borders (Light) */
-    --color-border-main: 226 232 240; /* Slate 200 */
+    --color-border-main: 225 222 232;
   }
 
   .dark {
     /* Main App Backgrounds (Dark) */
-    --color-app-bg: 15 23 42; /* Slate 900 (#0F172A) */
-    --color-panel-bg: 30 41 59; /* Slate 800 (#1E293B) */
+    --color-app-bg: 20 16 25; /* Paper (#141019) */
+    --color-panel-bg: 29 25 38; /* Panel (#1D1926) */
+    --color-panel2-bg: 35 32 46; /* Secondary surface (#23202E) */
 
     /* Typography (Dark) */
-    --color-text-main: 241 245 249; /* Slate 100 */
-    --color-text-muted: 148 163 184; /* Slate 400 */
+    --color-text-main: 241 238 245; /* Ink (#F1EEF5) */
+    --color-text-muted: 157 151 174; /* Mist (#9D97AE) */
 
     /* Brand/Primary Colors (Dark) */
-    --color-primary: 129 140 248; /* Indigo 400 (#818CF8) */
-    --color-primary-hover: 99 102 241; /* Indigo 500 */
+    /* Kept identical to light mode: sent-bubble/button text is hardcoded white,
+       and this jade is the darkest shade that still clears AA contrast for it. */
+    --color-primary: 18 115 95; /* Signal (#12735F) */
+    --color-primary-hover: 26 135 112; /* Signal, lightened for dark-surface hover */
+
+    /* Secondary/Accent Colors (Dark) */
+    --color-secondary: 178 156 230; /* Plume (#B29CE6) */
+    --color-secondary-hover: 196 176 238; /* Plume, lightened */
+    --color-accent: 227 167 86; /* Ember (#E3A756) */
 
     /* Chat Bubbles (Dark) */
-    --color-bubble-sent: 79 70 229; /* Indigo 600 */
-    --color-bubble-received: 51 65 85; /* Slate 700 */
-    
+    --color-bubble-sent: 18 115 95; /* Signal */
+    --color-bubble-received: 35 32 46; /* Secondary surface */
+
     /* Borders (Dark) */
-    --color-border-main: 30 41 59; /* Slate 800 */
+    --color-border-main: 50 45 63;
   }
 }
 
