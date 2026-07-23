@@ -10,7 +10,6 @@ import { fetchChats, addChat } from "./features/chatSlice";
 import { fetchCharacters } from "./features/characterSlice";
 import { LS_FONT_SIZE } from "./utils/constants";
 
-// import Header from "./components/Header";
 import Sidebar from "./components/Sidebar";
 
 const ChatPage = lazy(() => import("./pages/ChatPage"));
