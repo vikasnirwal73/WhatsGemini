@@ -78,10 +78,12 @@ const ImageSettingsModal: React.FC<ImageSettingsModalProps> = ({ isOpen, onClose
       const mappedModels = data.map((m: any) => ({title: m.title, model_name: m.model_name}));
       setSdWebuiModels(mappedModels);
       localStorage.setItem(LS_SD_WEBUI_MODELS, JSON.stringify(mappedModels));
+      dispatch(setGlobalSdWebuiModels(mappedModels));
       
       if (!sdWebuiModel || !mappedModels.find((m: any) => m.title === sdWebuiModel)) {
          setSdWebuiModel(mappedModels[0].title);
          localStorage.setItem(LS_SD_WEBUI_MODEL, mappedModels[0].title);
+         dispatch(setGlobalSdWebuiModel(mappedModels[0].title));
       }
     } catch (error) {
       console.error("Error fetching SD models:", error);
@@ -121,8 +123,10 @@ const ImageSettingsModal: React.FC<ImageSettingsModalProps> = ({ isOpen, onClose
       dispatch(setGlobalSdWebuiDenoising(sdWebuiDenoising));
       localStorage.setItem(LS_SD_WEBUI_CONTROLNET_MODEL, sdWebuiControlnetModel);
       dispatch(setGlobalSdWebuiControlnetModel(sdWebuiControlnetModel));
+      localStorage.setItem(LS_SD_WEBUI_MODEL, sdWebuiModel);
+      dispatch(setGlobalSdWebuiModel(sdWebuiModel));
     }
-  }, [imageModel, imageGenPrompt, imageResolution, useSdWebui, sdWebuiApiUrl, sdWebuiBatchSize, sdWebuiRefMode, sdWebuiDenoising, sdWebuiControlnetModel, isOpen]);
+  }, [imageModel, imageGenPrompt, imageResolution, useSdWebui, sdWebuiApiUrl, sdWebuiBatchSize, sdWebuiRefMode, sdWebuiDenoising, sdWebuiControlnetModel, sdWebuiModel, isOpen]);
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Image Generation Settings">
@@ -186,6 +190,7 @@ const ImageSettingsModal: React.FC<ImageSettingsModalProps> = ({ isOpen, onClose
                   onChange={(e) => {
                     setSdWebuiModel(e.target.value);
                     localStorage.setItem(LS_SD_WEBUI_MODEL, e.target.value);
+                    dispatch(setGlobalSdWebuiModel(e.target.value));
                   }}
                   className="w-full p-2 pr-8 bg-gray-100 dark:bg-slate-800 text-black dark:text-white rounded-lg border border-transparent dark:border-slate-700 focus:border-indigo-500 outline-none transition-all appearance-none cursor-pointer"
                 >

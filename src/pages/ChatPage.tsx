@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useMemo, useRef, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { fetchChatById, fetchChats, addMessage, updateMessages } from "../features/chatSlice";
-import { fetchCharacterById } from "../features/characterSlice";
+import { fetchCharacterById, updateCharacter } from "../features/characterSlice";
 import { generateAIResponse, compressChatHistory } from "../features/aiSlice";
 import ChatWindow from "../components/ChatWindow";
 import MessageInput from "../components/MessageInput";
@@ -99,10 +99,10 @@ const ChatPage = () => {
 
   const getSystemInstruction = useCallback(() => {
     const charId = currentChat?.characterId;
-    if (!charId) return { text: undefined, images: undefined };
+    if (!charId) return { text: undefined, images: undefined, characterName: undefined };
     
     const characterInfo = characters.find(c => c.id === charId);
-    if (!characterInfo) return { text: undefined, images: undefined };
+    if (!characterInfo) return { text: undefined, images: undefined, characterName: undefined };
 
     let roleplayPrompt = `Role play as, Character Name: ${characterInfo.name}.\nCharacter description: ${characterInfo.description}.\nExample dialogue: ${characterInfo.prompt}`;
             
@@ -126,7 +126,7 @@ const ChatPage = () => {
       console.error("Error parsing user profile for context:", e);
     }
     
-    return { text: roleplayPrompt, images: characterInfo.appearanceImages };
+    return { text: roleplayPrompt, images: characterInfo.appearanceImages, characterName: characterInfo.name };
   }, [currentChat, characters]);
 
   useEffect(() => {
@@ -149,20 +149,29 @@ const ChatPage = () => {
       const updatedMessages = resultAction.payload as Message[] || [];
 
       const chatHistory = createChatHistory(updatedMessages);
-      const { text: systemInstruction, images: characterImages } = getSystemInstruction();
-      aiPromiseRef.current = dispatch(generateAIResponse({ prompt: text, history: chatHistory, systemInstruction, characterImages, isImageRequest }));
+      const { text: systemInstruction, images: characterImages, characterName } = getSystemInstruction();
+      aiPromiseRef.current = dispatch(generateAIResponse({ prompt: text, history: chatHistory, systemInstruction, characterImages, characterName, isImageRequest }));
       const aiResponse = await aiPromiseRef.current;
       aiPromiseRef.current = null;
 
       if (aiResponse.payload) {
+        const payloadObj = aiResponse.payload as any;
+        const generatedImages = payloadObj?.images || undefined;
         await dispatch(addMessage({ 
           chatId: chatIdNum, 
           role: AI, 
-          text: typeof (aiResponse.payload as any)?.text === 'string' ? (aiResponse.payload as any).text : (aiResponse.payload as string),
-          images: (aiResponse.payload as any)?.images || undefined,
-          imagePrompt: (aiResponse.payload as any)?.imagePrompt,
-          imageParams: (aiResponse.payload as any)?.imageParams
+          text: typeof payloadObj?.text === 'string' ? payloadObj.text : (payloadObj as string),
+          images: generatedImages,
+          imagePrompt: payloadObj?.imagePrompt,
+          imageParams: payloadObj?.imageParams
         }));
+
+        if (generatedImages && generatedImages.length > 0 && currentChat?.characterId) {
+          const charToUpdate = characters.find(c => c.id === currentChat.characterId);
+          if (charToUpdate) {
+            dispatch(updateCharacter({ ...charToUpdate, gallery: [...(charToUpdate.gallery || []), ...generatedImages] }));
+          }
+        }
       }
 
       dispatch(fetchChats());
@@ -191,18 +200,27 @@ const ChatPage = () => {
 
         // Generate new AI response
         const chatHistory = createChatHistory(updatedMessages);
-        const { text: systemInstruction, images: characterImages } = getSystemInstruction();
-        aiPromiseRef.current = dispatch(generateAIResponse({ prompt: newText, history: chatHistory, systemInstruction, characterImages, isImageRequest }));
+        const { text: systemInstruction, images: characterImages, characterName } = getSystemInstruction();
+        aiPromiseRef.current = dispatch(generateAIResponse({ prompt: newText, history: chatHistory, systemInstruction, characterImages, characterName, isImageRequest }));
         const aiResponse = await aiPromiseRef.current;
         aiPromiseRef.current = null;
 
         if (aiResponse.payload) {
+          const payloadObj = aiResponse.payload as any;
+          const generatedImages = payloadObj?.images || undefined;
           await dispatch(addMessage({ 
             chatId: chatIdNum, 
             role: AI, 
-            text: typeof (aiResponse.payload as any)?.text === 'string' ? (aiResponse.payload as any).text : (aiResponse.payload as string),
-            images: (aiResponse.payload as any)?.images || undefined
+            text: typeof payloadObj?.text === 'string' ? payloadObj.text : (payloadObj as string),
+            images: generatedImages
           }));
+
+          if (generatedImages && generatedImages.length > 0 && currentChat?.characterId) {
+            const charToUpdate = characters.find(c => c.id === currentChat.characterId);
+            if (charToUpdate) {
+              dispatch(updateCharacter({ ...charToUpdate, gallery: [...(charToUpdate.gallery || []), ...generatedImages] }));
+            }
+          }
         }
       } else {
         // If it's NOT the last user message, just update locally in the store
@@ -240,20 +258,29 @@ const ChatPage = () => {
       const lastUserMessage = lastUsrMsg.txt || "";
       const isImageRequest = lastUsrMsg.isImageRequest || false;
       const chatHistory = createChatHistory(updatedMessages);
-      const { text: systemInstruction, images: characterImages } = getSystemInstruction();
-      aiPromiseRef.current = dispatch(generateAIResponse({ prompt: lastUserMessage, history: chatHistory, systemInstruction, characterImages, isImageRequest, existingImagePrompt, existingImageParams }));
+      const { text: systemInstruction, images: characterImages, characterName } = getSystemInstruction();
+      aiPromiseRef.current = dispatch(generateAIResponse({ prompt: lastUserMessage, history: chatHistory, systemInstruction, characterImages, characterName, isImageRequest, existingImagePrompt, existingImageParams }));
       const aiResponse = await aiPromiseRef.current;
       aiPromiseRef.current = null;
 
       if (aiResponse.payload) {
+        const payloadObj = aiResponse.payload as any;
+        const generatedImages = payloadObj?.images || undefined;
         await dispatch(addMessage({ 
           chatId: chatIdNum, 
           role: AI, 
-          text: typeof (aiResponse.payload as any)?.text === 'string' ? (aiResponse.payload as any).text : (aiResponse.payload as string),
-          images: (aiResponse.payload as any)?.images || undefined,
-          imagePrompt: (aiResponse.payload as any)?.imagePrompt,
-          imageParams: (aiResponse.payload as any)?.imageParams
+          text: typeof payloadObj?.text === 'string' ? payloadObj.text : (payloadObj as string),
+          images: generatedImages,
+          imagePrompt: payloadObj?.imagePrompt,
+          imageParams: payloadObj?.imageParams
         }));
+
+        if (generatedImages && generatedImages.length > 0 && currentChat?.characterId) {
+          const charToUpdate = characters.find(c => c.id === currentChat.characterId);
+          if (charToUpdate) {
+            dispatch(updateCharacter({ ...charToUpdate, gallery: [...(charToUpdate.gallery || []), ...generatedImages] }));
+          }
+        }
       }
 
       dispatch(fetchChats());

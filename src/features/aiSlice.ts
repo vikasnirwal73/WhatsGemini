@@ -48,7 +48,7 @@ import { RootState } from "../store/store";
 
 export const generateAIResponse = createAsyncThunk(
   "ai/generateResponse",
-  async ({ prompt, history = [], systemInstruction, characterImages, isImageRequest = false, existingImagePrompt, existingImageParams }: { prompt: string; history?: any[], systemInstruction?: string, characterImages?: string[], isImageRequest?: boolean, existingImagePrompt?: string, existingImageParams?: any }, { getState, rejectWithValue, signal }) => {
+  async ({ prompt, history = [], systemInstruction, characterImages, characterName, isImageRequest = false, existingImagePrompt, existingImageParams }: { prompt: string; history?: any[], systemInstruction?: string, characterImages?: string[], characterName?: string, isImageRequest?: boolean, existingImagePrompt?: string, existingImageParams?: any }, { getState, rejectWithValue, signal }) => {
     try {
       const state = getState() as RootState;
       const settings = state.settings;
@@ -251,7 +251,7 @@ ${conversationText}`;
         // Step 2: Use Image Model to actually generate the image
         try {
            if (useSdWebui) {
-             const sdImages = await generateSDImage(derivedImagePrompt, derivedParams, characterImages);
+             const sdImages = await generateSDImage(derivedImagePrompt, derivedParams, characterImages, characterName);
              generatedImages.push(...sdImages);
            } else {
              const imagePromptParts: any[] = [{ text: derivedImagePrompt }];

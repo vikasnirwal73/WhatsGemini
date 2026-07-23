@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { fetchCharacters, addCharacter, deleteCharacter, updateCharacter } from "../features/characterSlice";
 import { useNavigate } from "react-router-dom";
-import { FaArrowLeft, FaTrash, FaEdit, FaTimes, FaDownload, FaUpload, FaCopy } from "react-icons/fa";
+import { FaArrowLeft, FaTrash, FaEdit, FaTimes, FaDownload, FaUpload, FaCopy, FaImages } from "react-icons/fa";
 import { useAppDispatch, useAppSelector } from "../store/hooks";
 import { Character } from "../types";
 import { useModal } from "../contexts/ModalContext";
@@ -94,7 +94,7 @@ const CharacterPage = () => {
       return;
     }
 
-    dispatch(updateCharacter({ id: editCharacter.id, name, description, prompt, relationship, appearance, appearanceImages, avatar }));
+    dispatch(updateCharacter({ id: editCharacter.id, name, description, prompt, relationship, appearance, appearanceImages, avatar, gallery: editCharacter.gallery }));
     setEditCharacter(null);
     setName("");
     setDescription("");
@@ -369,6 +369,13 @@ const CharacterPage = () => {
                   <p className="text-sm text-gray-500 dark:text-slate-400 line-clamp-2">{truncateText(char.description)}</p>
                 </div>
                 <div className="flex gap-2 justify-end mt-2 pt-4 border-t border-gray-100 dark:border-slate-800">
+                  <button
+                    onClick={() => navigate(`/characters/${char.id}/gallery`)}
+                    className="p-2 text-green-500 hover:bg-green-50 dark:hover:bg-green-900/30 rounded-lg transition"
+                    title="View Gallery"
+                  >
+                    <FaImages size={14} />
+                  </button>
                   <button
                     onClick={() => handleExportCharacter(char)}
                     className="p-2 text-gray-500 hover:bg-gray-200 dark:hover:bg-slate-700 rounded-lg transition"

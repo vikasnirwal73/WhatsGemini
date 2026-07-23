@@ -27,6 +27,7 @@ export interface Character {
   appearance?: string;
   appearanceImages?: string[];
   avatar?: string;
+  gallery?: string[];
 }
 
 export interface UserProfile {

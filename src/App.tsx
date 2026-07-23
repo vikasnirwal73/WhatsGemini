@@ -16,6 +16,7 @@ import Sidebar from "./components/Sidebar";
 const ChatPage = lazy(() => import("./pages/ChatPage"));
 const Login = lazy(() => import("./pages/Login"));
 const CharacterPage = lazy(() => import("./pages/CharacterPage"));
+const CharacterGalleryPage = lazy(() => import("./pages/CharacterGalleryPage"));
 const SettingsPage = lazy(() => import("./pages/SettingsPage"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
@@ -92,6 +93,7 @@ const AppContent = () => {
               <Routes>
                 <Route path="/chat/:chatId" element={<ChatPage />} />
                 <Route path="/characters" element={<CharacterPage />} />
+                <Route path="/characters/:characterId/gallery" element={<CharacterGalleryPage />} />
                 <Route path="/settings" element={<SettingsPage />} />
                 <Route
                   path="/"

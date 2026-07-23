@@ -20,7 +20,8 @@ import {
 export const generateSDImage = async (
   derivedImagePrompt: string,
   derivedParams: any,
-  characterImages?: string[]
+  characterImages?: string[],
+  characterName?: string
 ): Promise<string[]> => {
   const generatedImages: string[] = [];
 
@@ -45,6 +46,8 @@ export const generateSDImage = async (
       refImageBase64 = tempParts[0].inlineData.data;
     }
   }
+
+  const reactorFaceModel = characterName ? `${characterName.split(' ')[0].toLowerCase()}` : "elena";
 
   let endpoint = '/sdapi/v1/txt2img';
   const payload: any = {
@@ -110,8 +113,8 @@ export const generateSDImage = async (
              "CPU", // 20: CPU or CUDA
              true, // 21: Face Mask Correction
              1, // 22: Select Source
-             "elena.safetensors", // 23: Filename of the face model
-             "C:\\PATH_TO_FACES_IMAGES", // 24: Path to faces
+             `${reactorFaceModel}.safetensors`, // 23: Filename of the face model
+             `C:\\PATH_TO_FACES_IMAGES`, // 24: Path to faces
              null, // 25: skip it for API
              true, // 26: Randomly select an image
              true, // 27: Force Upscale
