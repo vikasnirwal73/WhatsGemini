@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { FaChevronDown } from "react-icons/fa";
 import Modal from "./Modal";
+import ToggleSwitch from "./ToggleSwitch";
+import { TextInput, TextArea, Select, FieldLabel, Slider } from "./ui/FormControls";
 import {
   LS_IMAGE_MODEL,
   DEFAULT_IMAGE_MODEL,
@@ -27,8 +28,8 @@ import {
 } from "../utils/constants";
 
 import { useAppDispatch } from "../store/hooks";
-import { 
-  setImageModel as setGlobalImageModel, 
+import {
+  setImageModel as setGlobalImageModel,
   setImageGenPrompt as setGlobalImageGenPrompt,
   setImageResolution as setGlobalImageResolution,
   setUseSdWebui as setGlobalUseSdWebui,
@@ -76,7 +77,7 @@ const ImageSettingsModal: React.FC<ImageSettingsModalProps> = ({ isOpen, onClose
       setSdWebuiModels(mappedModels);
       localStorage.setItem(LS_SD_WEBUI_MODELS, JSON.stringify(mappedModels));
       dispatch(setGlobalSdWebuiModels(mappedModels));
-      
+
       if (!sdWebuiModel || !mappedModels.find((m: any) => m.title === sdWebuiModel)) {
          setSdWebuiModel(mappedModels[0].title);
          localStorage.setItem(LS_SD_WEBUI_MODEL, mappedModels[0].title);
@@ -85,7 +86,7 @@ const ImageSettingsModal: React.FC<ImageSettingsModalProps> = ({ isOpen, onClose
     } catch (error) {
       console.error("Error fetching SD models:", error);
     }
-  }, [sdWebuiApiUrl, sdWebuiModel]);
+  }, [sdWebuiApiUrl, sdWebuiModel, dispatch]);
 
   useEffect(() => {
     const stored = localStorage.getItem(LS_IMAGE_MODEL);
@@ -123,197 +124,126 @@ const ImageSettingsModal: React.FC<ImageSettingsModalProps> = ({ isOpen, onClose
       localStorage.setItem(LS_SD_WEBUI_MODEL, sdWebuiModel);
       dispatch(setGlobalSdWebuiModel(sdWebuiModel));
     }
-  }, [imageModel, imageGenPrompt, imageResolution, useSdWebui, sdWebuiApiUrl, sdWebuiBatchSize, sdWebuiRefMode, sdWebuiDenoising, sdWebuiControlnetModel, sdWebuiModel, isOpen]);
+  }, [imageModel, imageGenPrompt, imageResolution, useSdWebui, sdWebuiApiUrl, sdWebuiBatchSize, sdWebuiRefMode, sdWebuiDenoising, sdWebuiControlnetModel, sdWebuiModel, isOpen, dispatch]);
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Image Generation Settings">
       <div className="flex flex-col gap-4 text-left p-1">
-        <label className="flex items-center space-x-3 cursor-pointer">
-          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-            Use Local/Remote SD WebUI Forge
-          </span>
-          <div className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${useSdWebui ? "bg-indigo-500" : "bg-gray-300 dark:bg-slate-700"}`}>
-            <input
-              type="checkbox"
-              className="sr-only"
-              checked={useSdWebui}
-              onChange={(e) => setUseSdWebui(e.target.checked)}
-            />
-            <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${useSdWebui ? "translate-x-6" : "translate-x-1"}`} />
-          </div>
-        </label>
+        <ToggleSwitch
+          checked={useSdWebui}
+          onChange={setUseSdWebui}
+          label="Use Local/Remote SD WebUI Forge"
+        />
 
         {useSdWebui ? (
           <>
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                SD WebUI Forge API URL
-              </label>
-              <input
+              <FieldLabel>SD WebUI Forge API URL</FieldLabel>
+              <TextInput
                 type="text"
                 value={sdWebuiApiUrl}
                 onChange={(e) => setSdWebuiApiUrl(e.target.value)}
                 placeholder="http://127.0.0.1:7860"
-                className="w-full p-2 bg-gray-100 dark:bg-slate-800 text-black dark:text-white rounded-lg border border-transparent dark:border-slate-700 focus:border-indigo-500 outline-none transition-all"
               />
             </div>
-            
+
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Batch Size (Number of Images)
-              </label>
-              <input
+              <FieldLabel>Batch Size (Number of Images)</FieldLabel>
+              <TextInput
                 type="number"
                 min="1"
                 max="8"
                 value={sdWebuiBatchSize}
                 onChange={(e) => setSdWebuiBatchSize(parseInt(e.target.value, 10))}
-                className="w-full p-2 bg-gray-100 dark:bg-slate-800 text-black dark:text-white rounded-lg border border-transparent dark:border-slate-700 focus:border-indigo-500 outline-none transition-all"
               />
             </div>
 
             <div>
-              <div className="flex justify-between items-center mb-1">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  SD Model
-                </label>
-                <button type="button" onClick={fetchSdModels} className="text-xs text-indigo-500 hover:text-indigo-400">
+              <div className="flex justify-between items-center mb-1.5">
+                <label className="block text-sm font-medium text-ink">SD Model</label>
+                <button type="button" onClick={fetchSdModels} className="text-xs text-primary hover:text-primary-hover">
                   Refresh Models
                 </button>
               </div>
-              <div className="relative">
-                <select
-                  value={sdWebuiModel}
-                  onChange={(e) => {
-                    setSdWebuiModel(e.target.value);
-                    localStorage.setItem(LS_SD_WEBUI_MODEL, e.target.value);
-                    dispatch(setGlobalSdWebuiModel(e.target.value));
-                  }}
-                  className="w-full p-2 pr-8 bg-gray-100 dark:bg-slate-800 text-black dark:text-white rounded-lg border border-transparent dark:border-slate-700 focus:border-indigo-500 outline-none transition-all appearance-none cursor-pointer"
-                >
-                  <option value="">Default (From SD WebUI)</option>
-                  {sdWebuiModels.map((m) => (
-                    <option key={m.title} value={m.title}>
-                      {m.model_name}
-                    </option>
-                  ))}
-                </select>
-                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
-                  <FaChevronDown size={10} className="text-gray-500 dark:text-gray-400" />
-                </div>
-              </div>
+              <Select
+                value={sdWebuiModel}
+                onChange={(e) => {
+                  setSdWebuiModel(e.target.value);
+                  localStorage.setItem(LS_SD_WEBUI_MODEL, e.target.value);
+                  dispatch(setGlobalSdWebuiModel(e.target.value));
+                }}
+              >
+                <option value="">Default (From SD WebUI)</option>
+                {sdWebuiModels.map((m) => (
+                  <option key={m.title} value={m.title}>
+                    {m.model_name}
+                  </option>
+                ))}
+              </Select>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Reference Image Mode
-              </label>
-              <div className="relative">
-                <select
-                  value={sdWebuiRefMode}
-                  onChange={(e) => setSdWebuiRefMode(e.target.value)}
-                  className="w-full p-2 pr-8 bg-gray-100 dark:bg-slate-800 text-black dark:text-white rounded-lg border border-transparent dark:border-slate-700 focus:border-indigo-500 outline-none transition-all appearance-none cursor-pointer"
-                >
-                  <option value="none">None (Text to Image only)</option>
-                  <option value="img2img">img2img API</option>
-                  <option value="controlnet">ControlNet (Alwayson Scripts)</option>
-                  <option value="reactor">Face Swap (ReActor Extension)</option>
-                </select>
-                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
-                  <FaChevronDown size={10} className="text-gray-500 dark:text-gray-400" />
-                </div>
-              </div>
+              <FieldLabel>Reference Image Mode</FieldLabel>
+              <Select value={sdWebuiRefMode} onChange={(e) => setSdWebuiRefMode(e.target.value)}>
+                <option value="none">None (Text to Image only)</option>
+                <option value="img2img">img2img API</option>
+                <option value="controlnet">ControlNet (Alwayson Scripts)</option>
+                <option value="reactor">Face Swap (ReActor Extension)</option>
+              </Select>
             </div>
 
             {sdWebuiRefMode === "img2img" && (
               <div>
-                <div className="flex justify-between text-sm text-gray-500 dark:text-slate-400 mb-2">
-                  <span>Denoising Strength: {sdWebuiDenoising}</span>
+                <div className="flex justify-between text-sm text-ink-muted mb-2">
+                  <span>Denoising Strength</span>
+                  <span className="font-mono text-xs">{sdWebuiDenoising}</span>
                 </div>
-                <input
-                  type="range"
-                  min="0"
-                  max="1"
-                  step="0.05"
-                  value={sdWebuiDenoising}
-                  onChange={(e) => setSdWebuiDenoising(Number(e.target.value))}
-                  className="w-full h-2 rounded-lg appearance-none cursor-pointer accent-indigo-500"
-                  style={{ 
-                    background: `linear-gradient(to right, #6366f1, #8b5cf6) 0% 0% / ${(sdWebuiDenoising / 1) * 100}% 100% no-repeat, #e2e8f0` 
-                  }}
-                />
+                <Slider value={sdWebuiDenoising} min={0} max={1} step={0.05} onChange={setSdWebuiDenoising} />
               </div>
             )}
 
             {sdWebuiRefMode === "controlnet" && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  ControlNet Model Name
-                </label>
-                <input
+                <FieldLabel>ControlNet Model Name</FieldLabel>
+                <TextInput
                   type="text"
                   value={sdWebuiControlnetModel}
                   onChange={(e) => setSdWebuiControlnetModel(e.target.value)}
                   placeholder="e.g. ip-adapter_sd15"
-                  className="w-full p-2 bg-gray-100 dark:bg-slate-800 text-black dark:text-white rounded-lg border border-transparent dark:border-slate-700 focus:border-indigo-500 outline-none transition-all"
                 />
               </div>
             )}
           </>
         ) : (
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Image Generation Model
-            </label>
-            <div className="relative">
-              <select
-                value={imageModel}
-                onChange={(e) => setImageModel(e.target.value)}
-                className="w-full p-2 pr-8 bg-gray-100 dark:bg-slate-800 text-black dark:text-white rounded-lg border border-transparent dark:border-slate-700 focus:border-indigo-500 outline-none transition-all appearance-none cursor-pointer"
-              >
-                {imageModelList.map((model) => (
-                  <option key={model.value} value={model.value}>
-                    {model.label}
-                  </option>
-                ))}
-              </select>
-              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
-                <FaChevronDown size={10} className="text-gray-500 dark:text-gray-400" />
-              </div>
-            </div>
+            <FieldLabel>Image Generation Model</FieldLabel>
+            <Select value={imageModel} onChange={(e) => setImageModel(e.target.value)}>
+              {imageModelList.map((model) => (
+                <option key={model.value} value={model.value}>
+                  {model.label}
+                </option>
+              ))}
+            </Select>
           </div>
         )}
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-            Base Prompt
-          </label>
-          <textarea
+          <FieldLabel>Base Prompt</FieldLabel>
+          <TextArea
             value={imageGenPrompt}
             onChange={(e) => setImageGenPrompt(e.target.value)}
             placeholder="e.g. Create a high quality, detailed image..."
-            className="w-full p-2 bg-gray-100 dark:bg-slate-800 text-black dark:text-white rounded-lg border border-transparent dark:border-slate-700 focus:border-indigo-500 outline-none transition-all resize-y min-h-[60px]"
+            className="min-h-[60px]"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-            Processing Resolution
-          </label>
-          <div className="relative">
-            <select
-              value={imageResolution}
-              onChange={(e) => setImageResolution(e.target.value)}
-              className="w-full p-2 pr-8 bg-gray-100 dark:bg-slate-800 text-black dark:text-white rounded-lg border border-transparent dark:border-slate-700 focus:border-indigo-500 outline-none transition-all appearance-none cursor-pointer"
-            >
-              {IMAGE_RESOLUTIONS.map((res) => (
-                <option key={res} value={res}>{res}</option>
-              ))}
-            </select>
-            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
-              <FaChevronDown size={10} className="text-gray-500 dark:text-gray-400" />
-            </div>
-          </div>
+          <FieldLabel>Processing Resolution</FieldLabel>
+          <Select value={imageResolution} onChange={(e) => setImageResolution(e.target.value)}>
+            {IMAGE_RESOLUTIONS.map((res) => (
+              <option key={res} value={res}>{res}</option>
+            ))}
+          </Select>
         </div>
       </div>
     </Modal>
