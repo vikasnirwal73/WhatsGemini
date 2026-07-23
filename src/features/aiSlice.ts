@@ -1,44 +1,8 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import { GoogleGenAI } from "@google/genai";
-import { dbService } from "../services/dbService";
 import { performChatCompression } from "./ai/utils/chatHistoryUtils";
-import {
-  AI,
-  DEFAULT_AI_MODEL,
-  DEFAULT_OUTPUT_TOKENS,
-  DEFAULT_SAFETY_SETTINGS,
-  DEFAULT_TEMPRATURE,
-  DEFAULT_COMPRESS_THRESHOLD,
-  LS_COMPRESS_THRESHOLD,
-  LS_AI_MODEL,
-  LS_MAX_CHAT_LENGTH,
-  LS_MAX_OUTPUT_TOKENS,
-  LS_SAFETY_SETTINGS,
-  LS_TEMPRATURE,
-  // LS_IMAGE_RESOLUTION,
-  // DEFAULT_IMAGE_RESOLUTION,
-  LS_IMAGE_MODEL,
-  DEFAULT_IMAGE_MODEL,
-  LS_IMAGE_GEN_PROMPT,
-  DEFAULT_IMAGE_GEN_PROMPT,
-  LS_USE_SD_WEBUI,
-  LS_SD_WEBUI_API_URL,
-  DEFAULT_SD_WEBUI_API_URL,
-  LS_SD_WEBUI_REF_MODE,
-  DEFAULT_SD_WEBUI_REF_MODE,
-  LS_SD_WEBUI_DENOISING,
-  DEFAULT_SD_WEBUI_DENOISING,
-  LS_SD_WEBUI_CONTROLNET_MODEL,
-  DEFAULT_SD_WEBUI_CONTROLNET_MODEL,
-  LS_SD_WEBUI_MODEL,
-  DEFAULT_SD_WEBUI_MODEL,
-  LS_SD_WEBUI_BATCH_SIZE,
-  DEFAULT_SD_WEBUI_BATCH_SIZE,
-  LS_IMAGE_RESOLUTION,
-  DEFAULT_IMAGE_RESOLUTION
-} from "../utils/constants";
-import { AISafetySettings } from "../types";
-import { getStoredValue, getInitialMessages, getAPIKey, formatSafetySettings } from "./ai/utils/settings";
+import { AI, MODEL_PRICING, DEFAULT_MODEL_PRICING } from "../utils/constants";
+import { getInitialMessages, getAPIKey, formatSafetySettings } from "./ai/utils/settings";
 import { appendCharacterImages } from "./ai/utils/imageProcessing";
 import { extractAndSaveBase64ImagesLocally } from "./ai/utils/apiUtils";
 import { generateSDImage } from "./ai/utils/sdWebuiUtils";
@@ -63,8 +27,19 @@ export const generateAIResponse = createAsyncThunk(
       let generatedImages: string[] = [];
       let response = "";
       let totalTokens = 0;
-      let costPerMillion = 0.075;
-      
+      let costEstimate = 0;
+
+      // Adds a call's usage to the running totals, priced by whichever model actually
+      // served that call (a turn can span the selected text model and the image model).
+      const trackUsage = (usage: { promptTokenCount?: number; candidatesTokenCount?: number; totalTokenCount?: number } | undefined, modelName: string) => {
+        if (!usage) return;
+        const promptTokens = usage.promptTokenCount || 0;
+        const candidateTokens = usage.candidatesTokenCount || 0;
+        totalTokens += usage.totalTokenCount || (promptTokens + candidateTokens);
+        const pricing = MODEL_PRICING[modelName] || DEFAULT_MODEL_PRICING;
+        costEstimate += (promptTokens / 1_000_000) * pricing.input + (candidateTokens / 1_000_000) * pricing.output;
+      };
+
       let finalDerivedImagePrompt = "";
       let finalDerivedImageParams: any = {};
       
@@ -146,8 +121,8 @@ ${conversationText}`;
                 const summaryText = sumResult.text?.trim() || "";
                 
                 if (summaryText) {
-                  totalTokens += sumResult.usageMetadata?.totalTokenCount || 0;
-                  
+                  trackUsage(sumResult.usageMetadata, selectedModel);
+
                   // Construct a summary message
                   const summaryMsg = { 
                     role: "user", 
@@ -218,7 +193,7 @@ ${conversationText}`;
         
         const derivationResult = await derivationChat.sendMessage({ message: derivationPromptParts });
         const derivationText = derivationResult.text || "";
-        totalTokens += derivationResult.usageMetadata?.totalTokenCount || 0;
+        trackUsage(derivationResult.usageMetadata, selectedModel);
         
         // Parse the segments
         const promptMatch = useSdWebui ? derivationText.match(/PROMPT:\s*([\s\S]*?)PARAMS:/i) : derivationText.match(/PROMPT:\s*([\s\S]*?)SUMMARY:/i);
@@ -264,7 +239,7 @@ ${conversationText}`;
                contents: imagePromptParts,
                config: { safetySettings }
              });
-             totalTokens += imageRes.usageMetadata?.totalTokenCount || 0;
+             trackUsage(imageRes.usageMetadata, imageModelName);
              const parts = imageRes.candidates?.[0]?.content?.parts || [];
              for (const part of parts) {
                  if (part.inlineData) {
@@ -284,6 +259,7 @@ ${conversationText}`;
         const promptParts: any[] = [{ text: finalPrompt }];
 
         const stream = await chat.sendMessageStream({ message: promptParts });
+        let lastUsage: { promptTokenCount?: number; candidatesTokenCount?: number; totalTokenCount?: number } | undefined;
         for await (const chunk of stream) {
           if (signal.aborted) {
             console.log("AI response generation aborted by user.");
@@ -296,19 +272,15 @@ ${conversationText}`;
             }
             // The Gemini streaming API attaches the cumulative usage total to
             // each chunk once available, so the last value seen is the total for this turn.
-            if (chunk.usageMetadata?.totalTokenCount) {
-              totalTokens = chunk.usageMetadata.totalTokenCount;
+            if (chunk.usageMetadata) {
+              lastUsage = chunk.usageMetadata;
             }
           } catch (e) {
             console.warn("Could not parse text chunk:", e);
           }
         }
+        trackUsage(lastUsage, selectedModel);
       }
-
-      if (selectedModel.includes("pro")) {
-        costPerMillion = 1.25; 
-      }
-      const costEstimate = (totalTokens / 1_000_000) * costPerMillion;
 
       let finalResponseText = response;
 

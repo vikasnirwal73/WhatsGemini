@@ -9,7 +9,6 @@ import {
   LS_IMAGE_RESOLUTION,
   DEFAULT_IMAGE_RESOLUTION,
   IMAGE_RESOLUTIONS,
-  models,
   LS_USE_SD_WEBUI,
   LS_SD_WEBUI_API_URL,
   DEFAULT_SD_WEBUI_API_URL,
@@ -24,6 +23,7 @@ import {
   LS_SD_WEBUI_MODELS,
   LS_SD_WEBUI_MODEL,
   DEFAULT_SD_WEBUI_MODEL,
+  imageModels,
 } from "../utils/constants";
 
 import { useAppDispatch } from "../store/hooks";
@@ -49,10 +49,7 @@ interface ImageSettingsModalProps {
 const ImageSettingsModal: React.FC<ImageSettingsModalProps> = ({ isOpen, onClose }) => {
   const dispatch = useAppDispatch();
   const [imageModelList, setImageModelList] = useState<{value: string, label: string}[]>(() => {
-    const list = models
-      .filter((m: string) => /gemini-(2|3)|imagen/i.test(m))
-      .map((m: string) => ({ value: m, label: m }));
-    return list;
+    return imageModels.map((m: string) => ({ value: m, label: m }));
   });
 
   const [imageModel, setImageModel] = useState(() => localStorage.getItem(LS_IMAGE_MODEL) || DEFAULT_IMAGE_MODEL);

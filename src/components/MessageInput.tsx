@@ -43,7 +43,7 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSend, disabled = false, o
     <div className="flex flex-col gap-2">
       {tokenCount > 0 && (
         <div className="flex justify-center text-xs text-gray-500 dark:text-gray-400 font-mono">
-          <span>~ {tokenCount.toLocaleString()} tokens context ({costEstimate > 0.0001 ? `$${costEstimate.toFixed(4)}` : '< $0.0001'} est.)</span>
+          <span>~ {tokenCount.toLocaleString()} tokens last turn ({costEstimate > 0.0001 ? `$${costEstimate.toFixed(4)}` : '< $0.0001'} est.)</span>
         </div>
       )}
       <div className="flex items-center gap-3 bg-slate-900/60 dark:bg-slate-800/60 backdrop-blur-md border border-gray-300 dark:border-slate-600/50 rounded-full p-2 px-4 shadow-xl">

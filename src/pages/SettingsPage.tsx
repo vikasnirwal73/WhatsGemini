@@ -52,6 +52,7 @@ import {
   LS_SD_WEBUI_MODEL,
   // DEFAULT_SD_WEBUI_MODEL,
   models,
+  imageModels,
   LS_COMPRESS_THRESHOLD,
   // DEFAULT_COMPRESS_THRESHOLD,
 } from "../utils/constants";
@@ -73,9 +74,7 @@ const SettingsPage = () => {
   });
   
   const [imageModelList, setImageModelList] = useState<{value: string, label: string}[]>(() => {
-    const list = models
-      .filter((m: string) => /gemini-(2|3)|imagen/i.test(m))
-      .map((m: string) => ({ value: m, label: m }));
+    const list = imageModels.map((m: string) => ({ value: m, label: m }));
     const stored = localStorage.getItem(LS_IMAGE_MODEL);
     if (stored && !list.find(m => m.value === stored)) {
       list.push({ value: stored, label: stored });
@@ -107,7 +106,10 @@ const SettingsPage = () => {
 
         if (validModels.length > 0) {
           setModelList(validModels);
-          const validImageModels = validModels.filter((m: {value: string}) => /gemini-(2|3)|imagen/i.test(m.value));
+          // Every current model ID starts with "gemini-2" or "gemini-3", so that alone
+          // no longer distinguishes image-capable models from text-only ones - match
+          // against the known image-model allowlist instead.
+          const validImageModels = validModels.filter((m: {value: string}) => imageModels.includes(m.value));
           if (validImageModels.length > 0) {
             setImageModelList(validImageModels);
           }

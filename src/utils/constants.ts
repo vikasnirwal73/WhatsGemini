@@ -7,7 +7,7 @@ export const CHARACTER = "character";
 export const DEFAULT_TEMPRATURE = 0.7;
 export const DEFAULT_OUTPUT_TOKENS = 1000;
 export const DEFAULT_CHAT_LENGTH = 0;
-export const DEFAULT_AI_MODEL = "gemini-1.5-flash";
+export const DEFAULT_AI_MODEL = "gemini-2.5-flash";
 export const DEFAULT_COMPRESS_THRESHOLD = 0; // 0 means do not compress automatically
 export const harmThresholds = [
     { label: "None", value: "BLOCK_NONE" },
@@ -21,17 +21,49 @@ export const DEFAULT_SAFETY_SETTINGS = {
     sexual: "BLOCK_NONE",
     dangerous: "BLOCK_NONE",
 };
+// Text-generation models. All of the previous 1.x/2.0 lineup has been shut down by
+// Google as of mid-2026 — keep this list to models that are actually live, ordered
+// with the recommended default first (models[0] is the fallback if nothing is stored).
 export const models = [
-  "gemini-1.5-pro", 
-  "gemini-1.5-flash", 
-  "gemini-1.5-flash-8b",
-  "gemini-1.0-pro",
-  "gemini-2.0-flash",
-  "gemini-2.0-flash-lite",
-  "gemini-2.0-pro-exp-02-05",
-  "gemini-2.0-flash-exp-image-generation",
-  "gemini-2.5-pro-exp-03-25"
+  "gemini-2.5-flash",
+  "gemini-2.5-flash-lite",
+  "gemini-2.5-pro",
+  "gemini-3.5-flash-lite",
+  "gemini-3.5-flash",
+  "gemini-3.6-flash",
+  "gemini-3.1-flash-lite",
+  "gemini-3.1-pro-preview",
 ];
+// Image-output-capable models, offered separately in the image-generation model
+// picker. Kept distinct from `models` because most text models above can't emit images.
+export const imageModels = [
+  "gemini-2.5-flash-image",
+  "gemini-3.1-flash-lite-image",
+  "gemini-3.1-flash-image",
+  "gemini-3-pro-image",
+];
+// Rough USD-per-1M-token rates (standard tier) used only for the in-app cost estimate
+// shown next to the token counter — not billing-accurate. Simplifications: pro-tier
+// models with >200k-token pricing tiers use their <=200k rate; image models blend
+// text + image output into a single rate dominated by the image-token cost, since the
+// SDK's usageMetadata doesn't split text vs. image tokens out separately.
+export const MODEL_PRICING: Record<string, { input: number; output: number }> = {
+  "gemini-2.5-flash": { input: 0.30, output: 2.50 },
+  "gemini-2.5-flash-lite": { input: 0.10, output: 0.40 },
+  "gemini-2.5-pro": { input: 1.25, output: 10.00 },
+  "gemini-3.5-flash-lite": { input: 0.30, output: 2.50 },
+  "gemini-3.5-flash": { input: 1.50, output: 9.00 },
+  "gemini-3.6-flash": { input: 1.50, output: 7.50 },
+  "gemini-3.1-flash-lite": { input: 0.25, output: 1.50 },
+  "gemini-3.1-pro-preview": { input: 2.00, output: 12.00 },
+  "gemini-2.5-flash-image": { input: 0.30, output: 30.00 },
+  "gemini-3.1-flash-lite-image": { input: 0.25, output: 30.00 },
+  "gemini-3.1-flash-image": { input: 0.50, output: 60.00 },
+  "gemini-3-pro-image": { input: 2.00, output: 120.00 },
+};
+// Fallback rate for a custom/unrecognized model string (e.g. hand-entered or from an
+// imported settings file) so the estimate stays in a sane ballpark instead of reading $0.
+export const DEFAULT_MODEL_PRICING = MODEL_PRICING["gemini-2.5-flash-lite"];
 export const ROLE = "role";
 export const MESSAGE = "message";
 export const LIGHT = "light";
@@ -41,7 +73,7 @@ export const DARK = "dark";
 export const LS_AI_MODEL = "ai_model";
 export const LS_COMPRESS_THRESHOLD = "compress_threshold";
 export const LS_IMAGE_MODEL = "image_model";
-export const DEFAULT_IMAGE_MODEL = "gemini-2.0-flash-exp";
+export const DEFAULT_IMAGE_MODEL = "gemini-2.5-flash-image";
 export const LS_IMAGE_GEN_PROMPT = "image_gen_prompt";
 export const DEFAULT_IMAGE_GEN_PROMPT = "Create a high quality, detailed image.";
 export const LS_MAX_OUTPUT_TOKENS = "max_output_tokens";
