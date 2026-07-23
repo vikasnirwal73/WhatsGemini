@@ -18,12 +18,22 @@ module.exports = {
         },
         accent: 'rgb(var(--color-accent) / <alpha-value>)',
 
+        // Text
+        ink: {
+          DEFAULT: 'rgb(var(--color-text-main) / <alpha-value>)',
+          muted: 'rgb(var(--color-text-muted) / <alpha-value>)',
+        },
+        // Borders
+        line: 'rgb(var(--color-border-main) / <alpha-value>)',
+
         // Backgrounds
         app: {
+          DEFAULT: 'rgb(var(--color-app-bg) / <alpha-value>)',
           light: 'rgb(var(--color-app-bg) / <alpha-value>)', // dynamically mapped, light/dark suffixes kept for backwards compat but not strictly needed
           dark: 'rgb(var(--color-app-bg) / <alpha-value>)',
         },
         panel: {
+          DEFAULT: 'rgb(var(--color-panel-bg) / <alpha-value>)',
           light: 'rgb(var(--color-panel-bg) / <alpha-value>)',
           dark: 'rgb(var(--color-panel-bg) / <alpha-value>)',
         },
