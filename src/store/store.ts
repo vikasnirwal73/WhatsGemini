@@ -65,9 +65,17 @@ store.subscribe(() => {
 });
 
 // Debug Logging (Only in Development)
+// Chats/characters can carry embedded base64 image data, so log their sizes
+// instead of full contents - dumping that on every action floods devtools
+// and can noticeably slow the page down during active image generation.
 if (process.env.NODE_ENV === "development") {
   store.subscribe(() => {
-    console.debug("Updated Redux State:", store.getState());
+    const state = store.getState();
+    console.debug("Updated Redux State:", {
+      ...state,
+      chat: { ...state.chat, chats: `${state.chat.chats.length} chat(s)` },
+      character: { ...state.character, characters: `${state.character.characters.length} character(s)` },
+    });
   });
 }
 
