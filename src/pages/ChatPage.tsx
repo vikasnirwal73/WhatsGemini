@@ -339,7 +339,7 @@ const ChatPage = () => {
   };
   
   return (
-    <div className="flex flex-col w-full h-screen bg-app-light dark:bg-app-dark relative">
+    <div className="flex flex-col w-full h-screen bg-app relative">
       {/* Chat Header */}
       <ChatHeader onInfoClick={handleInfoClick} onCompressClick={handleCompress} onExportClick={handleExport} isCompressing={aiCompressing} canCompress={messages.length > 4} />
 
@@ -360,12 +360,14 @@ const ChatPage = () => {
 };
 
 const ChatHeader = ({ onInfoClick, onCompressClick, onExportClick, isCompressing, canCompress }: { onInfoClick: () => void, onCompressClick: () => void, onExportClick: () => void, isCompressing: boolean, canCompress: boolean }) => (
-  <div className="flex items-center justify-between px-8 py-5 bg-transparent text-gray-900 dark:text-slate-100 z-10">
+  // pl-16 clears the fixed mobile sidebar-toggle button (top-3 left-4, ~52px wide)
+  // which would otherwise sit directly on top of the title - md:pl-8 once it's hidden.
+  <div className="flex items-center justify-between pl-16 pr-4 py-5 md:px-8 bg-transparent text-ink z-10">
     <h2 className="text-2xl font-medium tracking-wide">Chat</h2>
     <div className="flex items-center gap-3">
       <button
         onClick={onExportClick}
-        className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-slate-800 transition text-gray-500 dark:text-slate-400 dark:hover:text-slate-200"
+        className="p-2 rounded-full hover:bg-panel2 transition text-ink-muted hover:text-ink"
         title="Export Chat"
       >
         <FaDownload size={18} />
@@ -374,7 +376,7 @@ const ChatHeader = ({ onInfoClick, onCompressClick, onExportClick, isCompressing
         <button
           onClick={onCompressClick}
           disabled={isCompressing}
-          className={`p-2 rounded-full transition text-gray-500 dark:text-slate-400 ${isCompressing ? 'animate-pulse opacity-50 cursor-not-allowed' : 'hover:bg-gray-200 dark:hover:bg-slate-800 dark:hover:text-slate-200'}`}
+          className={`p-2 rounded-full transition text-ink-muted ${isCompressing ? 'animate-pulse opacity-50 cursor-not-allowed' : 'hover:bg-panel2 hover:text-ink'}`}
           title="Summarize and compress older messages to save tokens."
         >
           <FaCompressArrowsAlt size={18} />
@@ -382,7 +384,7 @@ const ChatHeader = ({ onInfoClick, onCompressClick, onExportClick, isCompressing
       )}
       <button
         onClick={onInfoClick}
-        className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-slate-800 transition text-gray-500 dark:text-slate-400 dark:hover:text-slate-200"
+        className="p-2 rounded-full hover:bg-panel2 transition text-ink-muted hover:text-ink"
         title="Gemini Context"
       >
         <FaCog size={22} />

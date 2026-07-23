@@ -463,7 +463,9 @@ const SettingsPage = () => {
       <div className="w-full max-w-[32rem] bg-transparent">
 
         {/* Header */}
-        <div className="flex items-center justify-between mb-6 pb-4 border-b border-line">
+        {/* pl-11 clears the fixed mobile sidebar-toggle button, which otherwise sits
+            directly on top of and intercepts taps meant for the Back button below. */}
+        <div className="flex items-center justify-between mb-6 pb-4 border-b border-line pl-11 md:pl-0">
           <div className="flex items-center gap-3">
             <button
               onClick={goBackOrHome}
