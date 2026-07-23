@@ -1,11 +1,12 @@
 import React, { useRef, useEffect, useCallback, useMemo, useState } from "react";
 import { FaCheck, FaTimes, FaArrowDown } from "react-icons/fa";
+import { motion } from "framer-motion";
 import { YOU, LS_INITIAL_MESSAGES } from "../utils/constants";
 import { Message } from "../types";
-import { cn } from "../utils/cn";
 import { DisplayImage } from "./DisplayImage";
 import ToggleSwitch from "./ToggleSwitch";
 import ChatMessage from "./chat/ChatMessage";
+import { DialogRoot, DialogContent, DialogTitle, DialogClose } from "./ui/Dialog";
 
 interface ChatWindowProps {
   messages: Message[];
@@ -16,9 +17,21 @@ interface ChatWindowProps {
   characterName?: string;
 }
 
+const TypingIndicator = () => (
+  <div className="flex items-center gap-1 px-1 py-2">
+    {[0, 1, 2].map((i) => (
+      <motion.span
+        key={i}
+        className="w-1.5 h-1.5 rounded-full bg-ink-muted"
+        animate={{ y: [0, -4, 0], opacity: [0.5, 1, 0.5] }}
+        transition={{ duration: 1, repeat: Infinity, delay: i * 0.15, ease: "easeInOut" }}
+      />
+    ))}
+  </div>
+);
+
 const ChatWindow: React.FC<ChatWindowProps> = ({ messages = [], onRegenerate, onEdit, onSend, aiLoading, characterName }) => {
   const chatEndRef = useRef<HTMLDivElement>(null);
-  const [typingDots, setTypingDots] = useState(".");
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [editText, setEditText] = useState("");
   const [editIsImageRequest, setEditIsImageRequest] = useState(false);
@@ -32,10 +45,10 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ messages = [], onRegenerate, on
       setIsScrolledUp(scrollHeight - scrollTop - clientHeight > 100);
     }
   }, []);
-  
+
   const startIndex = useMemo(() => {
     let index = 0;
-    
+
     const charPromptIndex = messages.findIndex(
       (m) =>
         m.role === YOU &&
@@ -45,7 +58,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ messages = [], onRegenerate, on
     if (charPromptIndex !== -1) {
       index = Math.max(index, charPromptIndex + 2);
     }
-    
+
     // Hide the [SYSTEM DIRECTIVE] summary message added during compression
     const sysDirIndex = messages.findIndex(
       (m) =>
@@ -62,7 +75,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ messages = [], onRegenerate, on
 
   const filteredMessages = useMemo(() => {
     let sliced = messages.slice(startIndex) || [];
-    
+
     // Hide explicitly flagged system setup messages
     sliced = sliced.filter(m => !m.isSystem);
 
@@ -84,7 +97,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ messages = [], onRegenerate, on
     } catch (err) {
       console.warn("Failed to parse initial messages for filtering", err);
     }
-    
+
     return sliced;
   }, [messages, startIndex]);
 
@@ -101,20 +114,11 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ messages = [], onRegenerate, on
       // Jump instantly if loading a new chat (length jumps significantly or goes from 0 to N)
       const diff = Math.abs(messages.length - prevMessagesLengthRef.current);
       const isInstant = prevMessagesLengthRef.current === 0 || diff > 1;
-      
+
       chatEndRef.current?.scrollIntoView({ behavior: isInstant ? "auto" : "smooth" });
     }
     prevMessagesLengthRef.current = messages.length;
   }, [messages, aiLoading, isScrolledUp]);
-
-  useEffect(() => {
-    if (aiLoading) {
-      const interval = setInterval(() => {
-        setTypingDots((prev) => (prev.length < 3 ? prev + "." : "."));
-      }, 500);
-      return () => clearInterval(interval);
-    }
-  }, [aiLoading]);
 
   const handleRegenerate = useCallback(
     (msg: Message) => {
@@ -166,7 +170,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ messages = [], onRegenerate, on
   const charInitials = getInitials(characterName);
 
   return (
-    <div 
+    <div
       className="flex-1 p-4 overflow-auto bg-transparent relative z-1 h-full w-full max-w-4xl mx-auto pb-32"
       ref={scrollContainerRef}
       onScroll={handleScroll}
@@ -176,24 +180,8 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ messages = [], onRegenerate, on
           <div className="w-20 h-20 rounded-full bg-gemini-logo flex items-center justify-center shadow-2xl mb-8">
             <span className="text-white font-bold text-4xl">{charInitials}</span>
           </div>
-          <h2 className="text-2xl md:text-3xl font-medium text-slate-900 dark:text-slate-100 mb-10">New Conversation</h2>
-          
-          {/* <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full max-w-2xl">
-            {[
-              "Draft a blog post about AI ethics",
-              "Explain complex code simply",
-              "Generate image ideas for branding",
-              "Debug a Python script"
-            ].map((prompt) => (
-              <button
-                key={prompt}
-                onClick={() => onSend && onSend(prompt)}
-                className="bg-panel-light dark:bg-panel-dark hover:bg-gray-100 dark:hover:bg-slate-700 border border-gray-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 py-4 px-6 rounded-xl text-left transition shadow-sm font-medium"
-              >
-                {prompt}
-              </button>
-            ))}
-          </div> */}
+          <h2 className="text-2xl md:text-3xl font-medium text-ink mb-2">New Conversation</h2>
+          <p className="text-sm text-ink-muted">Send a message to get started.</p>
         </div>
       ) : (
         filteredMessages.map((msg, i) => (
@@ -209,11 +197,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ messages = [], onRegenerate, on
           />
         ))
       )}
-      {aiLoading && (
-        <div className="flex justify-start">
-          <div className="text-sm text-gray dark:text-white italic">typing{typingDots}</div>
-        </div>
-      )}
+      {aiLoading && <TypingIndicator />}
       <div ref={chatEndRef} />
       {isScrolledUp && (
         <button
@@ -230,93 +214,90 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ messages = [], onRegenerate, on
       )}
 
       {/* Full Screen Edit Modal */}
-      {editingIndex !== null && (
-        <div className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 md:p-8 animate-in fade-in duration-200">
-          <div className="bg-white dark:bg-slate-900 rounded-2xl w-full max-w-4xl shadow-2xl flex flex-col h-[80vh] md:h-[70vh] border border-gray-200 dark:border-slate-700">
-            <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-slate-800">
-              <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Edit Message</h3>
-              <button 
-                onClick={cancelEdit}
-                className="text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white transition p-2 rounded-full hover:bg-gray-100 dark:hover:bg-slate-800"
-              >
+      <DialogRoot open={editingIndex !== null} onOpenChange={(open) => !open && cancelEdit()}>
+        <DialogContent size="lg" className="h-[80vh] md:h-[70vh]">
+          <div className="flex items-center justify-between p-4 border-b border-line flex-shrink-0">
+            <DialogTitle asChild>
+              <h3 className="text-lg font-semibold text-ink">Edit Message</h3>
+            </DialogTitle>
+            <DialogClose asChild>
+              <button className="text-ink-muted hover:text-ink transition p-2 -m-2 rounded-full hover:bg-app">
                 <FaTimes size={18} />
               </button>
-            </div>
-            
-            <div className="flex-1 p-4 md:p-6 overflow-hidden flex flex-col">
-              <textarea
-                ref={(el) => { if (el) el.focus() }}
-                value={editText}
-                onChange={(e) => setEditText(e.target.value)}
-                className="flex-1 w-full p-4 rounded-xl border border-gray-300 dark:border-slate-700 bg-gray-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary focus:border-transparent outline-none resize-none text-base disabled:opacity-50"
-                placeholder="Type your message here..."
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey) {
-                    e.preventDefault();
-                    saveEdit();
-                  }
-                  if (e.key === "Escape") {
-                    cancelEdit();
-                  }
-                }}
-              />
-              <div className="mt-2 text-xs text-gray-500 dark:text-slate-400 flex justify-between">
-                <span>Markdown is supported.</span>
-                <span><kbd className="bg-gray-200 dark:bg-slate-700 px-1.5 py-0.5 rounded">Enter</kbd> to save, <kbd className="bg-gray-200 dark:bg-slate-700 px-1.5 py-0.5 rounded">Shift+Enter</kbd> for new line, <kbd className="bg-gray-200 dark:bg-slate-700 px-1.5 py-0.5 rounded">Esc</kbd> to cancel</span>
-              </div>
-            </div>
+            </DialogClose>
+          </div>
 
-            <div className="p-4 border-t border-gray-200 dark:border-slate-800 flex justify-between gap-3 bg-gray-50 dark:bg-slate-900/50 rounded-b-2xl items-center">
-              <ToggleSwitch
-                checked={editIsImageRequest}
-                onChange={setEditIsImageRequest}
-                title="Request image generation"
-                label="Generate Image"
-              />
-
-              <div className="flex gap-3">
-                <button 
-                  onClick={cancelEdit}
-                  className="px-5 py-2.5 rounded-xl font-medium text-slate-700 dark:text-slate-300 hover:bg-gray-200 dark:hover:bg-slate-800 transition"
-                >
-                  Cancel
-                </button>
-                <button 
-                  onClick={saveEdit}
-                  disabled={!editText.trim()}
-                  className="px-5 py-2.5 rounded-xl font-medium bg-primary text-white hover:bg-primary-hover transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-sm"
-                >
-                  <FaCheck size={14} />
-                  Save Changes
-                </button>
-              </div>
+          <div className="flex-1 p-4 md:p-6 overflow-hidden flex flex-col">
+            <textarea
+              ref={(el) => { if (el) el.focus() }}
+              value={editText}
+              onChange={(e) => setEditText(e.target.value)}
+              className="flex-1 w-full p-4 rounded-xl border border-line bg-app text-ink focus:ring-2 focus:ring-primary focus:border-transparent outline-none resize-none text-base disabled:opacity-50"
+              placeholder="Type your message here..."
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  saveEdit();
+                }
+              }}
+            />
+            <div className="mt-2 text-xs text-ink-muted flex flex-col sm:flex-row sm:justify-between gap-1">
+              <span>Markdown is supported.</span>
+              <span className="hidden sm:inline"><kbd className="bg-panel2 px-1.5 py-0.5 rounded">Enter</kbd> to save, <kbd className="bg-panel2 px-1.5 py-0.5 rounded">Shift+Enter</kbd> for new line, <kbd className="bg-panel2 px-1.5 py-0.5 rounded">Esc</kbd> to cancel</span>
             </div>
           </div>
-        </div>
-      )}
+
+          <div className="p-4 border-t border-line flex flex-col sm:flex-row justify-between gap-3 bg-app items-stretch sm:items-center flex-shrink-0">
+            <ToggleSwitch
+              checked={editIsImageRequest}
+              onChange={setEditIsImageRequest}
+              title="Request image generation"
+              label="Generate Image"
+            />
+
+            <div className="flex gap-3">
+              <button
+                onClick={cancelEdit}
+                className="flex-1 sm:flex-none px-5 py-2.5 rounded-xl font-medium text-ink-muted hover:bg-panel2 transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={saveEdit}
+                disabled={!editText.trim()}
+                className="flex-1 sm:flex-none px-5 py-2.5 rounded-xl font-medium bg-primary text-white hover:bg-primary-hover transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-sm"
+              >
+                <FaCheck size={14} />
+                Save Changes
+              </button>
+            </div>
+          </div>
+        </DialogContent>
+      </DialogRoot>
 
       {/* Fullscreen Image Modal */}
-      {fullscreenImage && (
-        <div 
-          className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/90 p-4 cursor-zoom-out backdrop-blur-sm animate-[fadeIn_0.2s_ease-out]"
-          onClick={() => setFullscreenImage(null)}
-        >
-          <button 
-            className="absolute top-4 right-4 p-3 text-white/70 hover:text-white bg-black/50 hover:bg-black/80 rounded-full transition z-50"
-            onClick={(e) => { e.stopPropagation(); setFullscreenImage(null); }}
-            title="Close"
-          >
-            <FaTimes size={20} />
-          </button>
-          <div className="relative max-w-full max-h-full" onClick={(e) => e.stopPropagation()}>
-            <DisplayImage 
-              srcContext={fullscreenImage} 
-              alt="Fullscreen" 
-              className="max-w-[95vw] max-h-[90vh] object-contain rounded-lg shadow-2xl scale-100" 
+      <DialogRoot open={fullscreenImage !== null} onOpenChange={(open) => !open && setFullscreenImage(null)}>
+        <DialogContent size="full" className="!bg-transparent !border-none !shadow-none flex items-center justify-center">
+          <DialogTitle asChild>
+            <span className="sr-only">Fullscreen image</span>
+          </DialogTitle>
+          <DialogClose asChild>
+            <button
+              className="absolute top-4 right-4 p-3 text-white/70 hover:text-white bg-black/50 hover:bg-black/80 rounded-full transition z-10"
+              title="Close"
+            >
+              <FaTimes size={20} />
+            </button>
+          </DialogClose>
+          {fullscreenImage && (
+            <DisplayImage
+              srcContext={fullscreenImage}
+              alt="Fullscreen"
+              className="max-w-[95vw] max-h-[90vh] object-contain rounded-lg shadow-2xl"
             />
-          </div>
-        </div>
-      )}
+          )}
+        </DialogContent>
+      </DialogRoot>
     </div>
   );
 };

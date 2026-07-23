@@ -42,24 +42,24 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSend, disabled = false, o
   return (
     <div className="flex flex-col gap-2">
       {tokenCount > 0 && (
-        <div className="flex justify-center text-xs text-gray-500 dark:text-gray-400 font-mono">
+        <div className="flex justify-center text-xs text-ink-muted font-mono">
           <span>~ {tokenCount.toLocaleString()} tokens last turn ({costEstimate > 0.0001 ? `$${costEstimate.toFixed(4)}` : '< $0.0001'} est.)</span>
         </div>
       )}
-      <div className="flex items-center gap-3 bg-slate-900/60 dark:bg-slate-800/60 backdrop-blur-md border border-gray-300 dark:border-slate-600/50 rounded-full p-2 px-4 shadow-xl">
+      <div className="flex items-center gap-2 bg-panel2/95 backdrop-blur-md border border-line rounded-full p-1.5 pl-3 shadow-xl">
         <div className="flex items-center gap-1">
           <ToggleSwitch
             checked={isImageRequest}
             onChange={setIsImageRequest}
             disabled={disabled}
             title="Request image generation"
-            className="ml-1"
-            label={<FaImage size={18} title="Image Generation" className="text-gray-500 dark:text-gray-400 mr-2" />}
+            label={<FaImage size={16} title="Image Generation" className="text-ink-muted mr-1" />}
           />
-          <button 
+          <button
              onClick={() => setIsSettingsModalOpen(true)}
-             className="p-2 text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white transition"
+             className="p-2.5 text-ink-muted hover:text-ink transition rounded-full hover:bg-app"
              title="Image Generation Settings"
+             aria-label="Image Generation Settings"
           >
              <FaCog size={14} />
           </button>
@@ -70,7 +70,7 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSend, disabled = false, o
         value={text}
         onChange={(e) => setText(e.target.value)}
         placeholder={disabled ? "Waiting for response..." : "Type a message..."}
-        className="flex-1 px-2 py-3 bg-transparent text-gray-900 dark:text-slate-100 placeholder-gray-500 dark:placeholder-slate-400 outline-none transition-colors disabled:opacity-50"
+        className="flex-1 px-2 py-3 bg-transparent text-ink placeholder-ink-muted outline-none transition-colors disabled:opacity-50"
         style={{ fontSize: 'var(--chat-font-size, 16px)' }}
         disabled={disabled}
         onFocus={handleFocus}
@@ -87,7 +87,7 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSend, disabled = false, o
       {disabled && onStop ? (
         <button
           onClick={onStop}
-          className="p-3 rounded-full bg-red-500/80 hover:bg-red-500 text-white transition shadow-md transform hover:scale-105"
+          className="w-11 h-11 flex-shrink-0 rounded-full bg-red-500 hover:bg-red-600 text-white transition shadow-md transform hover:scale-105 flex items-center justify-center"
           title="Stop Generating"
           aria-label="Stop Generating"
         >
@@ -97,21 +97,20 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSend, disabled = false, o
         <button
           onClick={handleSend}
           className={cn(
-            "p-3 rounded-full transition shadow-md relative overflow-hidden group",
+            "w-11 h-11 flex-shrink-0 rounded-full transition shadow-md flex items-center justify-center",
             canSend
-              ? "text-slate-800 dark:text-white"
-              : "text-gray-400 cursor-not-allowed"
+              ? "bg-primary hover:bg-primary-hover text-white transform hover:scale-105"
+              : "bg-app text-ink-muted cursor-not-allowed"
           )}
           disabled={!canSend}
           title="Send Message"
           aria-label="Send Message"
         >
-          {canSend && <div className="absolute inset-0 bg-sparkle-gradient opacity-20 group-hover:opacity-40 transition" />}
-          <FaPaperPlane size={16} className={cn("relative z-10", canSend ? "ml-0.5 text-indigo-500 dark:text-indigo-400" : "")} />
+          <FaPaperPlane size={16} className={canSend ? "ml-0.5" : ""} />
         </button>
       )}
       </div>
-      
+
       <ImageSettingsModal
         isOpen={isSettingsModalOpen}
         onClose={() => setIsSettingsModalOpen(false)}
