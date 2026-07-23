@@ -289,18 +289,20 @@ ${conversationText}`;
             console.log("AI response generation aborted by user.");
             break;
           }
-          
+
           try {
             if (chunk.text) {
                response += chunk.text;
+            }
+            // The Gemini streaming API attaches the cumulative usage total to
+            // each chunk once available, so the last value seen is the total for this turn.
+            if (chunk.usageMetadata?.totalTokenCount) {
+              totalTokens = chunk.usageMetadata.totalTokenCount;
             }
           } catch (e) {
             console.warn("Could not parse text chunk:", e);
           }
         }
-
-        // Just using stream isn't going to have totalTokens easily accessible from stream response without calling stream.response in v1
-        totalTokens += 0; // Usage metadata requires response promise in old SDK, not necessarily in stream. Let's just default to 0 to keep it simple.
       }
 
       if (selectedModel.includes("pro")) {
