@@ -1,8 +1,9 @@
 import React, { useEffect, useState, useCallback } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { fetchChats, deleteChat, addChat, importChat } from "../features/chatSlice";
 import { fetchCharacters } from "../features/characterSlice";
 import { Link, useNavigate } from "react-router-dom";
-import { FaBars, FaTrash, FaUser, FaFileImport, FaEdit, FaPlus, FaCog, FaSignOutAlt, FaLightbulb, FaUserPlus, FaMoon, FaSun } from "react-icons/fa";
+import { FaBars, FaTrash, FaFileImport, FaEdit, FaPlus, FaCog, FaSignOutAlt, FaUserPlus, FaMoon, FaSun } from "react-icons/fa";
 import { useAppDispatch, useAppSelector } from "../store/hooks";
 import { AuthContext } from "../contexts/AuthContext";
 import { ThemeContext } from "../contexts/ThemeContext";
@@ -11,6 +12,22 @@ import Modal from "./Modal";
 import { DARK } from "../utils/constants";
 import { Chat, Character } from "../types";
 import { cn } from "../utils/cn";
+
+const getInitials = (name?: string) => {
+  if (!name || !name.trim()) return "?";
+  const parts = name.trim().split(" ").filter(Boolean);
+  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+  return parts[0].substring(0, 2).toUpperCase();
+};
+
+const CharacterAvatar = ({ name, size = 32 }: { name?: string; size?: number }) => (
+  <div
+    className="rounded-full bg-gemini-logo flex items-center justify-center flex-shrink-0 text-white font-semibold shadow-sm"
+    style={{ width: size, height: size, fontSize: size * 0.4 }}
+  >
+    {getInitials(name)}
+  </div>
+);
 
 const Sidebar = () => {
   const dispatch = useAppDispatch();
@@ -78,7 +95,7 @@ const Sidebar = () => {
       }
     };
     reader.readAsText(file);
-    event.target.value = ''; 
+    event.target.value = '';
   };
 
   return (
@@ -96,7 +113,7 @@ const Sidebar = () => {
       {/* Sidebar */}
       <aside
         className={cn(
-          "fixed z-50 top-0 left-0 w-[300px] h-full bg-app-light dark:bg-app-dark shadow-md border-r border-gray-200 dark:border-gray-800 flex flex-col transition-transform transform md:relative md:translate-x-0",
+          "fixed z-50 top-0 left-0 w-[300px] h-full bg-app shadow-md border-r border-line flex flex-col transition-transform transform md:relative md:translate-x-0",
           isOpen ? "translate-x-0" : "-translate-x-full"
         )}
         aria-label="Sidebar"
@@ -108,12 +125,12 @@ const Sidebar = () => {
               <div className="w-8 h-8 rounded-full bg-gemini-logo flex items-center justify-center shadow-lg">
                 <span className="text-white font-bold text-lg">G</span>
               </div>
-              <span className="text-xl font-bold tracking-tight text-gray-900 dark:text-white">
+              <span className="text-xl font-bold tracking-tight text-ink">
                 whatsgemini
               </span>
             </Link>
-            <button 
-              className="p-2 text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition"
+            <button
+              className="p-2 text-ink-muted hover:text-ink transition rounded-full hover:bg-panel2"
               title="Compose"
               onClick={() => setIsNewChatModalOpen(true)}
             >
@@ -126,7 +143,7 @@ const Sidebar = () => {
             onClick={() => {
                setIsNewChatModalOpen(true);
             }}
-            className="w-full flex items-center justify-center gap-2 bg-gray-200 dark:bg-slate-800 text-gray-800 dark:text-gray-200 py-3 px-4 rounded-full hover:bg-gray-300 dark:hover:bg-slate-700 transition shadow-sm font-medium"
+            className="w-full flex items-center justify-center gap-2 bg-panel2 text-ink py-3 px-4 rounded-full hover:bg-line/60 transition shadow-sm font-medium"
           >
             <FaPlus size={12} />
             <span>New Chat</span>
@@ -134,21 +151,21 @@ const Sidebar = () => {
         </div>
 
         <div className="px-3 flex-1 flex flex-col overflow-y-auto">
-          <ChatList chats={chats} onDeleteChat={handleDeleteChat} setIsOpen={setIsOpen} />
+          <ChatList chats={chats} characters={characters} onDeleteChat={handleDeleteChat} setIsOpen={setIsOpen} />
         </div>
-        
-        <div className="p-4 border-t border-gray-200 dark:border-gray-800 flex flex-col gap-2">
+
+        <div className="p-4 border-t border-line flex flex-col gap-2">
             <Link
                 to="/characters"
                 onClick={() => setIsOpen(false)}
-                className="w-full flex items-center gap-3 text-gray-700 dark:text-gray-300 py-2 px-4 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800 transition"
+                className="w-full flex items-center gap-3 text-ink py-2 px-4 rounded-lg hover:bg-panel2 transition"
             >
                 <FaUserPlus size={16} />
                 <span className="font-medium text-sm">Characters</span>
             </Link>
             <button
                 onClick={handleImportClick}
-                className="w-full flex items-center gap-3 text-gray-700 dark:text-gray-300 py-2 px-4 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800 transition"
+                className="w-full flex items-center gap-3 text-ink py-2 px-4 rounded-lg hover:bg-panel2 transition"
             >
                 <FaFileImport size={16} />
                 <span className="font-medium text-sm">Import Chat</span>
@@ -163,23 +180,23 @@ const Sidebar = () => {
             <Link
                 to="/settings"
                 onClick={() => setIsOpen(false)}
-                className="w-full flex items-center gap-3 text-gray-700 dark:text-gray-300 py-2 px-4 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800 transition"
+                className="w-full flex items-center gap-3 text-ink py-2 px-4 rounded-lg hover:bg-panel2 transition"
             >
                 <FaCog size={16} />
                 <span className="font-medium text-sm">Settings</span>
             </Link>
-            
+
             <div className="flex items-center gap-2 mt-2">
               <button
                   onClick={toggleTheme}
-                  className="flex-1 flex items-center justify-center gap-2 text-gray-700 dark:text-gray-300 py-2 px-4 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800 transition bg-gray-50 dark:bg-slate-800/50"
+                  className="flex-1 flex items-center justify-center gap-2 text-ink py-2 px-4 rounded-lg hover:bg-panel2 transition bg-panel2/60"
                   title="Toggle Theme"
               >
                   {isDarkMode ? <FaSun size={14} /> : <FaMoon size={14} />}
               </button>
               <button
                   onClick={logout}
-                  className="flex-1 flex items-center justify-center gap-2 text-gray-700 dark:text-gray-300 py-2 px-4 rounded-lg hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/30 dark:hover:text-red-400 transition bg-gray-50 dark:bg-slate-800/50"
+                  className="flex-1 flex items-center justify-center gap-2 text-ink py-2 px-4 rounded-lg hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/30 dark:hover:text-red-400 transition bg-panel2/60"
                   title="Logout"
               >
                   <FaSignOutAlt size={14} />
@@ -189,16 +206,27 @@ const Sidebar = () => {
       </aside>
 
       {/* Mobile Overlay */}
-      {isOpen && <div className="fixed inset-0 bg-black opacity-50 z-40 md:hidden" onClick={() => setIsOpen(false)}></div>}
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            className="fixed inset-0 bg-black z-40 md:hidden"
+            onClick={() => setIsOpen(false)}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 0.5 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+          />
+        )}
+      </AnimatePresence>
 
       {/* New Chat Modal */}
-      <Modal 
-        isOpen={isNewChatModalOpen} 
-        onClose={() => setIsNewChatModalOpen(false)} 
+      <Modal
+        isOpen={isNewChatModalOpen}
+        onClose={() => setIsNewChatModalOpen(false)}
         title="Select a Character"
       >
         {characters.length === 0 ? (
-          <p className="text-gray-500 dark:text-gray-400 text-center py-4">No characters available.</p>
+          <p className="text-ink-muted text-center py-4">No characters available.</p>
         ) : (
           characters.map((char: Character) => (
             <button
@@ -207,15 +235,13 @@ const Sidebar = () => {
                 setIsNewChatModalOpen(false);
                 handleCharacterClick(char.id, char.name);
               }}
-              className="flex items-center gap-3 p-3 rounded-xl hover:bg-gray-100 dark:hover:bg-slate-800 text-left transition"
+              className="flex items-center gap-3 p-3 rounded-xl hover:bg-panel2 text-left transition"
             >
-              <div className="w-10 h-10 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400 flex-shrink-0">
-                <FaUser />
-              </div>
+              <CharacterAvatar name={char.name} size={40} />
               <div>
-                <h3 className="font-medium text-gray-900 dark:text-white">{char.name}</h3>
+                <h3 className="font-medium text-ink">{char.name}</h3>
                 {char.description && (
-                  <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-1">{char.description}</p>
+                  <p className="text-xs text-ink-muted line-clamp-1">{char.description}</p>
                 )}
               </div>
             </button>
@@ -226,34 +252,29 @@ const Sidebar = () => {
   );
 };
 
-const ChatList = ({ chats, onDeleteChat, setIsOpen }: { chats: Chat[], onDeleteChat: (id: number) => void, setIsOpen: (val: boolean) => void }) => {
+const ChatList = ({ chats, characters, onDeleteChat, setIsOpen }: { chats: Chat[], characters: Character[], onDeleteChat: (id: number) => void, setIsOpen: (val: boolean) => void }) => {
   return (
     <div className="flex-1 flex flex-col gap-1">
-      {chats.map((chat, i) => {
-        // Just alternating icons for mockup feel
-        const isProject = i % 2 === 0;
-        const Icon = isProject ? FaLightbulb : FaUser;
-        const iconColor = isProject ? 'bg-indigo-500' : 'bg-slate-500';
+      {chats.map((chat) => {
+        const character = characters.find((c) => c.id === chat.characterId);
 
         return (
           <Link to={`/chat/${chat.id}`}
             key={chat.id}
-            className="flex items-center gap-3 p-3 rounded-xl cursor-pointer group hover:bg-gray-200 dark:hover:bg-slate-800 transition"
+            className="flex items-center gap-3 p-3 rounded-xl cursor-pointer group hover:bg-panel2 transition"
           >
-            <div className={`w-8 h-8 rounded-full ${iconColor} flex items-center justify-center flex-shrink-0 text-white shadow-sm`}>
-              <Icon size={14} />
-            </div>
+            <CharacterAvatar name={character?.name || chat.title} size={32} />
             <div className="flex-1 flex flex-col overflow-hidden" onClick={() => { setIsOpen(false) }}>
               <div className="flex justify-between items-center w-full">
-                <span className="text-gray-900 dark:text-slate-200 font-medium text-sm truncate">{chat.title}</span>
-                <span className="text-xs text-gray-500 dark:text-slate-500 ml-2 flex-shrink-0">
-                  {i < 10 ? `0${i+5}:59` : `1${i-10}:23`}
-                </span>
+                <span className="text-ink font-medium text-sm truncate">{chat.title}</span>
               </div>
+              {character?.description && (
+                <span className="text-xs text-ink-muted truncate">{character.description}</span>
+              )}
             </div>
             <button
-              onClick={() => onDeleteChat(chat.id)}
-              className="p-1.5 text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition absolute right-4 bg-slate-800 rounded shadow-md"
+              onClick={(e) => { e.preventDefault(); onDeleteChat(chat.id); }}
+              className="p-1.5 text-ink-muted/60 hover:text-red-500 hover:bg-red-500/10 transition rounded-lg flex-shrink-0"
               title="Delete Chat"
               aria-label={`Delete chat with ${chat.title}`}
             >
