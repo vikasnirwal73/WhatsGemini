@@ -1,5 +1,20 @@
 import { dbService } from "../../../services/dbService";
 
+// Strips base64 image data that leaked into message text instead of being
+// extracted into the images array - covers legacy DB rows saved before
+// extractAndSaveBase64ImagesLocally existed, and acts as a safety net for
+// any future extraction miss before the leak reaches the model as context.
+export const stripLeakedBase64 = (text: string): string => {
+  const hasLeakedBase64 = text.length > 500 && (text.includes("data:image") || /[A-Za-z0-9+/=]{1000,}/.test(text));
+  if (!hasLeakedBase64) return text;
+
+  return text
+    .replace(/!\[.*?\]\(\s*(data:image\/[a-zA-Z0-9+.-]+;base64,[A-Za-z0-9+/=\s]+)\s*\)/g, '')
+    .replace(/<img[^>]+src=["'](data:image\/[a-zA-Z0-9+.-]+;base64,[A-Za-z0-9+/=\s]+)["'][^>]*>/gi, '')
+    .replace(/data:image\/[a-zA-Z0-9+.-]+;base64,[A-Za-z0-9+/=\s]+/g, '')
+    .replace(/[A-Za-z0-9+/=]{1000,}/g, '');
+};
+
 export const extractAndSaveBase64ImagesLocally = async (
   responseText: string,
   generatedImages: string[]

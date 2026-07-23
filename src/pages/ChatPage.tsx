@@ -9,6 +9,7 @@ import { FaCog, FaCompressArrowsAlt, FaDownload } from "react-icons/fa";
 import { AI, MODEL, USER, YOU, LS_USER_PROFILE } from "../utils/constants";
 import { useAppDispatch, useAppSelector } from "../store/hooks";
 import { Message, UserProfile } from "../types";
+import { stripLeakedBase64 } from "../features/ai/utils/apiUtils";
 
 const ChatPage = () => {
   const { chatId } = useParams();
@@ -53,16 +54,10 @@ const ChatPage = () => {
     if (currentChat) {
       let needsDbUpdate = false;
       const cleanedMessages = currentChat.content.map(msg => {
-         let text = msg.txt || "";
-         if (text.length > 500 && (text.includes("data:image") || /[A-Za-z0-9+/=]{1000,}/.test(text))) {
+         const original = msg.txt || "";
+         const text = stripLeakedBase64(original);
+         if (text !== original) {
             needsDbUpdate = true;
-            text = text.replace(/!\[.*?\]\(\s*(data:image\/[a-zA-Z0-9+.-]+;base64,[A-Za-z0-9+/=\s]+)\s*\)/g, '');
-            text = text.replace(/<img[^>]+src=["'](data:image\/[a-zA-Z0-9+.-]+;base64,[A-Za-z0-9+/=\s]+)["'][^>]*>/gi, '');
-            text = text.replace(/data:image\/[a-zA-Z0-9+.-]+;base64,[A-Za-z0-9+/=\s]+/g, '');
-            text = text.replace(/[A-Za-z0-9+/=]{1000,}/g, '');
-            
-            // If the message had an image leaked as base64, but images array isn't populated properly, 
-            // the AI already dropped it during the sync stream.
          }
          return { ...msg, txt: text };
       });
@@ -78,18 +73,10 @@ const ChatPage = () => {
 
   const createChatHistory = useCallback((msgs: Message[]) =>
     msgs.map((msg) => {
-      let text = msg.txt || "";
-      
       // Clean old base64 leaks from database so they aren't passed into the context
-      const hadBase64 = text.length > 500 && (text.includes("data:image") || /[A-Za-z0-9+/=]{1000,}/.test(text));
-      if (hadBase64) {
-        text = text.replace(/!\[.*?\]\(\s*(data:image\/[a-zA-Z0-9+.-]+;base64,[A-Za-z0-9+/=\s]+)\s*\)/g, '');
-        text = text.replace(/<img[^>]+src=["'](data:image\/[a-zA-Z0-9+.-]+;base64,[A-Za-z0-9+/=\s]+)["'][^>]*>/gi, '');
-        text = text.replace(/data:image\/[a-zA-Z0-9+.-]+;base64,[A-Za-z0-9+/=\s]+/g, '');
-        text = text.replace(/[A-Za-z0-9+/=]{1000,}/g, '');
-      }
+      const text = stripLeakedBase64(msg.txt || "");
 
-      // Instead of writing a literal system note that the AI might mimic, 
+      // Instead of writing a literal system note that the AI might mimic,
       // rely on the space fallback if the text is completely stripped.
       return {
         role: msg.role === YOU ? USER : MODEL,
