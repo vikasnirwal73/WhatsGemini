@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { FaPlus, FaTrash } from "react-icons/fa";
 import { AI, LS_INITIAL_MESSAGES, YOU } from "../utils/constants";
+import { Select, TextArea } from "./ui/FormControls";
 
 interface InitialMessage {
   role: string;
@@ -75,32 +76,30 @@ const InitialMessages: React.FC<InitialMessagesProps> = ({ onSave }) => {
 
   return (
     <div>
-      <label className="block font-semibold text-black dark:text-white mb-5">
+      <label className="block font-semibold text-ink mb-5">
         {initialMessages.length === 0 ? "Add a predefined system message" : "Predefined System Messages"}
       </label>
       {initialMessages.map((msg, idx) => (
         <div
           key={idx}
-          className="mb-5 shadow-sm rounded-2xl bg-panel-light dark:bg-panel-dark border border-gray-200 dark:border-gray-800 flex flex-col gap-2 relative"
+          className="mb-5 p-3 shadow-sm rounded-2xl bg-panel border border-line flex flex-col gap-2 relative"
         >
-          <select
+          <Select
             value={msg.role}
             onChange={(e) => handleChange(e.target.value, idx, "role")}
-            className="w-full p-3 bg-app-light dark:bg-app-dark text-black dark:text-white rounded-xl border border-transparent focus:border-primary outline-none transition-all"
           >
             <option value={YOU}>You</option>
             <option value={AI}>Model</option>
-          </select>
-          <textarea
+          </Select>
+          <TextArea
             value={msg.message}
             onChange={(e) => handleChange(e.target.value, idx, "message")}
             placeholder="Enter a message that will be sent as the first message in any new chat..."
-            className="w-full p-3 bg-app-light dark:bg-slate-900/50 text-black dark:text-white rounded-xl border border-transparent dark:border-slate-700 focus:border-indigo-500 outline-none transition-all resize-y min-h-[80px]"
           />
           {initialMessages.length > 1 && (
             <button
               onClick={() => handleDeleteMessage(idx)}
-              className="absolute -top-4 right-2 flex items-center justify-center bg-red-500 text-white hover:bg-red-600 w-8 h-8 rounded-full shadow-md transition-opacity hover:opacity-100 opacity-80 border-2 border-white dark:border-gray-800"
+              className="absolute -top-4 right-2 flex items-center justify-center bg-red-500 text-white hover:bg-red-600 w-8 h-8 rounded-full shadow-md transition hover:opacity-100 opacity-90 border-2 border-panel"
             >
               <FaTrash size={14} />
             </button>

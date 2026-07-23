@@ -63,6 +63,7 @@ import {
 } from "../utils/constants";
 import { AISafetySettings } from "../types";
 import { dbService } from "../services/dbService";
+import { TextInput, Select, FieldLabel } from "../components/ui/FormControls";
 
 const SettingsPage = () => {
   const navigate = useNavigate();
@@ -440,16 +441,16 @@ const SettingsPage = () => {
   const renderAccordion = (id: string, title: string, children: React.ReactNode) => {
     const isOpen = openSection === id;
     return (
-      <div className="bg-panel-light dark:bg-panel-dark rounded-2xl mb-4 shadow-sm border border-gray-100 dark:border-slate-700/50 overflow-hidden transition-all duration-200">
-        <button 
-          className="w-full flex justify-between items-center p-5 text-lg font-medium text-gray-900 dark:text-white"
+      <div className="bg-panel rounded-2xl mb-4 shadow-sm border border-line overflow-hidden transition-all duration-200">
+        <button
+          className="w-full flex justify-between items-center p-5 text-lg font-medium text-ink"
           onClick={() => toggleSection(id)}
         >
           <span>{title}</span>
           {isOpen ? <FaChevronUp size={14} /> : <FaChevronDown size={14} />}
         </button>
         {isOpen && (
-          <div className="px-5 pb-5 border-t border-gray-100 dark:border-slate-700/50 pt-4">
+          <div className="px-5 pb-5 border-t border-line pt-4">
             {children}
           </div>
         )}
@@ -458,24 +459,24 @@ const SettingsPage = () => {
   };
 
   return (
-    <div className="w-full h-screen flex justify-center bg-app-light dark:bg-app-dark overflow-auto p-4 md:p-4">
+    <div className="w-full h-screen flex justify-center bg-app overflow-auto p-4 md:p-4">
       <div className="w-full max-w-[32rem] bg-transparent">
-        
+
         {/* Header */}
-        <div className="flex items-center justify-between mb-6 pb-4 border-b border-gray-200 dark:border-slate-800">
+        <div className="flex items-center justify-between mb-6 pb-4 border-b border-line">
           <div className="flex items-center gap-3">
             <button
               onClick={goBackOrHome}
-              className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-slate-800 transition text-gray-500 dark:text-slate-400"
+              className="p-2 rounded-full hover:bg-panel2 transition text-ink-muted"
               title="Back"
             >
               <FaArrowLeft size={16} />
             </button>
-            <h2 className="text-xl font-medium tracking-wide text-gray-900 dark:text-slate-100">
+            <h2 className="text-xl font-medium tracking-wide text-ink">
               Gemini Context
             </h2>
           </div>
-          <FaInfoCircle className="text-gray-400 dark:text-slate-500" size={18} />
+          <FaInfoCircle className="text-ink-muted" size={18} />
         </div>
 
         {/* Toast Notifications */}
@@ -535,39 +536,30 @@ const SettingsPage = () => {
 
         {renderAccordion("chat", "Chat Interface Settings",
           <>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Max Chat Length (0 for unlimited)
-            </label>
-            <input
+            <FieldLabel>Max Chat Length (0 for unlimited)</FieldLabel>
+            <TextInput
               type="number"
               value={maxChatLength}
               onChange={(e) => dispatch(setMaxChatLength(Number(e.target.value)))}
-              className="w-full p-3 bg-app-light dark:bg-slate-900/50 text-black dark:text-white rounded-xl border border-transparent dark:border-slate-700 focus:border-indigo-500 outline-none transition-all mb-6"
+              className="mb-6"
               min="1"
             />
-            
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Chat Font Size
-            </label>
-            <div className="relative mb-6">
-              <select
-                value={fontSize}
-                onChange={(e) => dispatch(setFontSize(e.target.value))}
-                className="w-full p-3 pr-10 bg-app-light dark:bg-slate-900/50 text-black dark:text-white rounded-xl border border-transparent dark:border-slate-700 focus:border-indigo-500 outline-none transition-all appearance-none cursor-pointer"
-              >
-                <option value="14px">Small</option>
-                <option value="16px">Medium (Default)</option>
-                <option value="18px">Large</option>
-                <option value="20px">Extra Large</option>
-              </select>
-              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-4">
-                <FaChevronDown size={12} className="text-gray-500 dark:text-gray-400" />
-              </div>
-            </div>
 
-            <div className="border-t border-gray-200 dark:border-gray-800 pt-4">
-              <InitialMessages 
-                key={initialMessagesKey} 
+            <FieldLabel>Chat Font Size</FieldLabel>
+            <Select
+              value={fontSize}
+              onChange={(e) => dispatch(setFontSize(e.target.value))}
+              className="mb-6"
+            >
+              <option value="14px">Small</option>
+              <option value="16px">Medium (Default)</option>
+              <option value="18px">Large</option>
+              <option value="20px">Extra Large</option>
+            </Select>
+
+            <div className="border-t border-line pt-4">
+              <InitialMessages
+                key={initialMessagesKey}
                 onSave={handleInitialMessagesSave}
               />
             </div>
@@ -578,25 +570,17 @@ const SettingsPage = () => {
           <>
             {safetyCategories.map((category) => (
               <div key={category} className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 capitalize mb-1">
-                  Block {category.replace("_", " ")}
-                </label>
-                <div className="relative mb-2">
-                  <select
-                    value={safetySettings[category]}
-                    onChange={(e) => handleSafetyChange(category, e.target.value)}
-                    className="w-full p-3 pr-10 bg-app-light dark:bg-slate-900/50 text-black dark:text-white rounded-xl border border-transparent dark:border-slate-700 focus:border-indigo-500 outline-none transition-all appearance-none cursor-pointer"
-                  >
-                    {harmThresholds.map(({ label, value }: {label: string, value: string}) => (
-                      <option key={value} value={value}>
-                        {label}
-                      </option>
-                    ))}
-                  </select>
-                  <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-4">
-                    <FaChevronDown size={12} className="text-gray-500 dark:text-gray-400" />
-                  </div>
-                </div>
+                <FieldLabel className="capitalize">Block {category.replace("_", " ")}</FieldLabel>
+                <Select
+                  value={safetySettings[category]}
+                  onChange={(e) => handleSafetyChange(category, e.target.value)}
+                >
+                  {harmThresholds.map(({ label, value }: {label: string, value: string}) => (
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
+                  ))}
+                </Select>
               </div>
             ))}
           </>
@@ -604,8 +588,8 @@ const SettingsPage = () => {
 
         {renderAccordion("data", "Data & Import/Export",
           <>
-            <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Full Backup</p>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+            <p className="text-sm font-medium text-ink mb-1">Full Backup</p>
+            <p className="text-xs text-ink-muted mb-3">
               All chats, characters, and settings in one file - everything lives only in this browser, so it's worth keeping a copy. Restoring always adds to your existing library, never overwrites it. Locally-saved image files (if you've picked a save folder) aren't included.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 mb-6">
@@ -617,7 +601,7 @@ const SettingsPage = () => {
                </button>
                <button
                   onClick={handleImportBackupClick}
-                  className="flex-1 bg-gray-600 text-white py-2 px-4 rounded-lg hover:bg-gray-700 transition flex items-center justify-center gap-2"
+                  className="flex-1 bg-panel2 text-ink py-2 px-4 rounded-lg hover:bg-line transition flex items-center justify-center gap-2"
                >
                   <FaUpload /> Restore Backup
                </button>
@@ -630,20 +614,20 @@ const SettingsPage = () => {
                />
             </div>
 
-            <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Settings Only</p>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+            <p className="text-sm font-medium text-ink mb-1">Settings Only</p>
+            <p className="text-xs text-ink-muted mb-3">
               Just your model/generation preferences - no chats or characters.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 mb-2">
                <button
                   onClick={handleExportSettings}
-                  className="flex-1 bg-indigo-500 text-white py-2 px-4 rounded-lg hover:bg-indigo-600 transition flex items-center justify-center gap-2"
+                  className="flex-1 bg-secondary text-white py-2 px-4 rounded-lg hover:bg-secondary-hover transition flex items-center justify-center gap-2"
                >
                   <FaDownload /> Export Settings
                </button>
                <button
                   onClick={handleImportSettingsClick}
-                  className="flex-1 bg-gray-600 text-white py-2 px-4 rounded-lg hover:bg-gray-700 transition flex items-center justify-center gap-2"
+                  className="flex-1 bg-panel2 text-ink py-2 px-4 rounded-lg hover:bg-line transition flex items-center justify-center gap-2"
                >
                   <FaUpload /> Import Settings
                </button>
