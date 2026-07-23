@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { useDispatch, useSelector } from "react-redux";
+import { useSelector } from "react-redux";
 import { RootState } from "../store/store";
+import { useAppDispatch } from "../store/hooks";
 import {
   setUserProfile, setSelectedModel, setImageModel, setImageGenPrompt,
   setUseSdWebui, setSdWebuiApiUrl, setSdWebuiBatchSize, setSdWebuiRefMode,
@@ -9,13 +10,17 @@ import {
   setSdWebuiModel, setMaxOutputTokens, setCompressThreshold, setMaxChatLength,
   setTemperature, setSafetySettings, setFontSize, setImageResolution
 } from "../features/settingsSlice";
-import { FaArrowLeft, FaDownload, FaUpload, FaInfoCircle, FaChevronDown, FaChevronUp } from "react-icons/fa";
+import { FaArrowLeft, FaDownload, FaUpload, FaInfoCircle, FaChevronDown, FaChevronUp, FaFileArchive } from "react-icons/fa";
 import InitialMessages from "../components/InitialMessages";
 import { ToastContainer, ToastData } from "../components/Toast";
 import UserProfileSettings from "../components/settings/UserProfileSettings";
 import TextModelSettings from "../components/settings/TextModelSettings";
 import ImageGenerationSettings from "../components/settings/ImageGenerationSettings";
 import { getApiKey } from "../utils/apiKeyManager";
+import { useModal } from "../contexts/ModalContext";
+import { fetchChats } from "../features/chatSlice";
+import { fetchCharacters } from "../features/characterSlice";
+import { getFullBackupData, restoreChatsAndCharacters, BACKUP_FILE_TYPE } from "../services/backupService";
 import {
   // DEFAULT_CHAT_LENGTH,
   // DEFAULT_OUTPUT_TOKENS,
@@ -61,6 +66,7 @@ import { dbService } from "../services/dbService";
 
 const SettingsPage = () => {
   const navigate = useNavigate();
+  const { showConfirm } = useModal();
   const [initialMessagesKey, setInitialMessagesKey] = useState(0);
   const [toasts, setToasts] = useState<ToastData[]>([]);
 
@@ -154,7 +160,7 @@ const SettingsPage = () => {
     }
   };
 
-  const dispatch = useDispatch();
+  const dispatch = useAppDispatch();
   const settings = useSelector((state: RootState) => state.settings);
 
   const {
@@ -270,36 +276,80 @@ const SettingsPage = () => {
 
   const settingsFileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleExportSettings = () => {
-    const settings = {
-      [LS_AI_MODEL]: selectedModel,
-      [LS_MAX_OUTPUT_TOKENS]: maxOutputTokens,
-      [LS_COMPRESS_THRESHOLD]: compressThreshold,
-      [LS_TEMPRATURE]: temperature,
-      [LS_SAFETY_SETTINGS]: safetySettings,
-      [LS_MAX_CHAT_LENGTH]: maxChatLength,
-      [LS_FONT_SIZE]: fontSize,
-      [LS_IMAGE_RESOLUTION]: imageResolution,
-      [LS_USER_PROFILE]: userProfile,
-      [LS_INITIAL_MESSAGES]: JSON.parse(localStorage.getItem(LS_INITIAL_MESSAGES) || "[]"),
-    };
-    
-    const jsonString = JSON.stringify(settings, null, 2);
+  // Shared shape for both the settings-only export and the settings portion of a full backup.
+  const buildSettingsExport = useCallback(() => ({
+    [LS_AI_MODEL]: selectedModel,
+    [LS_MAX_OUTPUT_TOKENS]: maxOutputTokens,
+    [LS_COMPRESS_THRESHOLD]: compressThreshold,
+    [LS_TEMPRATURE]: temperature,
+    [LS_SAFETY_SETTINGS]: safetySettings,
+    [LS_MAX_CHAT_LENGTH]: maxChatLength,
+    [LS_FONT_SIZE]: fontSize,
+    [LS_IMAGE_RESOLUTION]: imageResolution,
+    [LS_USER_PROFILE]: userProfile,
+    [LS_INITIAL_MESSAGES]: JSON.parse(localStorage.getItem(LS_INITIAL_MESSAGES) || "[]"),
+  }), [selectedModel, maxOutputTokens, compressThreshold, temperature, safetySettings, maxChatLength, fontSize, imageResolution, userProfile]);
+
+  const downloadJson = (data: unknown, filename: string) => {
+    const jsonString = JSON.stringify(data, null, 2);
     const blob = new Blob([jsonString], { type: "application/json" });
     const url = URL.createObjectURL(blob);
-    
+
     const link = document.createElement("a");
     link.href = url;
-    link.download = `whatsgemini_settings.json`;
+    link.download = filename;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
   };
 
+  const handleExportSettings = () => {
+    downloadJson(buildSettingsExport(), "whatsgemini_settings.json");
+  };
+
   const handleImportSettingsClick = () => {
     settingsFileInputRef.current?.click();
   };
+
+  // Applies a previously-exported settings object (from either a settings-only
+  // export or the settings portion of a full backup) to the current app state.
+  const applyImportedSettings = useCallback((settings: any) => {
+    if (settings[LS_AI_MODEL]) {
+        const model = settings[LS_AI_MODEL];
+        if (models.includes(model)) {
+            dispatch(setSelectedModel(model));
+        } else {
+            // If it's a custom model from old settings, just keep it, or fallback
+            dispatch(setSelectedModel(model));
+            setModelList(prev => {
+              if (!prev.find(m => m.value === model)) {
+                 return [...prev, { value: model, label: model }];
+              }
+              return prev;
+            });
+        }
+    }
+    if (settings[LS_MAX_OUTPUT_TOKENS]) dispatch(setMaxOutputTokens(settings[LS_MAX_OUTPUT_TOKENS]));
+    if (settings[LS_COMPRESS_THRESHOLD]) dispatch(setCompressThreshold(settings[LS_COMPRESS_THRESHOLD]));
+    if (settings[LS_TEMPRATURE]) dispatch(setTemperature(settings[LS_TEMPRATURE]));
+    if (settings[LS_SAFETY_SETTINGS]) dispatch(setSafetySettings(settings[LS_SAFETY_SETTINGS]));
+    if (settings[LS_MAX_CHAT_LENGTH]) dispatch(setMaxChatLength(settings[LS_MAX_CHAT_LENGTH]));
+    if (settings[LS_FONT_SIZE]) {
+        dispatch(setFontSize(settings[LS_FONT_SIZE]));
+        document.documentElement.style.setProperty('--chat-font-size', settings[LS_FONT_SIZE]);
+    }
+    if (settings[LS_IMAGE_RESOLUTION]) {
+        dispatch(setImageResolution(settings[LS_IMAGE_RESOLUTION]));
+    }
+    if (settings[LS_USER_PROFILE]) {
+        dispatch(setUserProfile(settings[LS_USER_PROFILE]));
+    }
+    if (settings[LS_INITIAL_MESSAGES]) {
+        localStorage.setItem(LS_INITIAL_MESSAGES, JSON.stringify(settings[LS_INITIAL_MESSAGES]));
+        setInitialMessagesKey(prev => prev + 1);
+    }
+  }, [dispatch]);
 
   const handleSettingsFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -309,42 +359,7 @@ const SettingsPage = () => {
     reader.onload = (e) => {
       try {
         const settings = JSON.parse(e.target?.result as string);
-        
-        if (settings[LS_AI_MODEL]) {
-            const model = settings[LS_AI_MODEL];
-            if (models.includes(model)) {
-                dispatch(setSelectedModel(model));
-            } else {
-                // If it's a custom model from old settings, just keep it, or fallback
-                dispatch(setSelectedModel(model));
-                setModelList(prev => {
-                  if (!prev.find(m => m.value === model)) {
-                     return [...prev, { value: model, label: model }];
-                  }
-                  return prev;
-                });
-            }
-        }
-        if (settings[LS_MAX_OUTPUT_TOKENS]) dispatch(setMaxOutputTokens(settings[LS_MAX_OUTPUT_TOKENS]));
-        if (settings[LS_COMPRESS_THRESHOLD]) dispatch(setCompressThreshold(settings[LS_COMPRESS_THRESHOLD]));
-        if (settings[LS_TEMPRATURE]) dispatch(setTemperature(settings[LS_TEMPRATURE]));
-        if (settings[LS_SAFETY_SETTINGS]) dispatch(setSafetySettings(settings[LS_SAFETY_SETTINGS]));
-        if (settings[LS_MAX_CHAT_LENGTH]) dispatch(setMaxChatLength(settings[LS_MAX_CHAT_LENGTH]));
-        if (settings[LS_FONT_SIZE]) {
-            dispatch(setFontSize(settings[LS_FONT_SIZE]));
-            document.documentElement.style.setProperty('--chat-font-size', settings[LS_FONT_SIZE]);
-        }
-        if (settings[LS_IMAGE_RESOLUTION]) {
-            dispatch(setImageResolution(settings[LS_IMAGE_RESOLUTION]));
-        }
-        if (settings[LS_USER_PROFILE]) {
-            dispatch(setUserProfile(settings[LS_USER_PROFILE]));
-        }
-        if (settings[LS_INITIAL_MESSAGES]) {
-            localStorage.setItem(LS_INITIAL_MESSAGES, JSON.stringify(settings[LS_INITIAL_MESSAGES]));
-            setInitialMessagesKey(prev => prev + 1);
-        }
-
+        applyImportedSettings(settings);
         addToast("Settings imported successfully!", "success");
       } catch (err) {
         console.error("Import error:", err);
@@ -352,7 +367,60 @@ const SettingsPage = () => {
       }
     };
     reader.readAsText(file);
-    event.target.value = ''; 
+    event.target.value = '';
+  };
+
+  const backupFileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleExportFullBackup = async () => {
+    try {
+      const backupData = await getFullBackupData();
+      const dateStr = new Date().toISOString().slice(0, 10);
+      downloadJson({ ...backupData, settings: buildSettingsExport() }, `whatsgemini_backup_${dateStr}.json`);
+      addToast(`Backed up ${backupData.chats.length} chat(s) and ${backupData.characters.length} character(s).`, "success");
+    } catch (err) {
+      console.error("Backup export error:", err);
+      addToast("Failed to create backup.", "error");
+    }
+  };
+
+  const handleImportBackupClick = () => {
+    backupFileInputRef.current?.click();
+  };
+
+  const handleBackupFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      try {
+        const data = JSON.parse(e.target?.result as string);
+        if (data.type !== BACKUP_FILE_TYPE || !Array.isArray(data.chats) || !Array.isArray(data.characters)) {
+          addToast("That doesn't look like a WhatsGemini backup file.", "error");
+          return;
+        }
+
+        const confirmed = await showConfirm(
+          "Restore Backup",
+          `This will add ${data.chats.length} chat(s) and ${data.characters.length} character(s) to your existing library (nothing will be overwritten or removed). Continue?`
+        );
+        if (!confirmed) return;
+
+        const { chatsRestored, charactersRestored } = await restoreChatsAndCharacters(data.chats, data.characters);
+        if (data.settings) applyImportedSettings(data.settings);
+
+        dispatch(fetchChats());
+        dispatch(fetchCharacters());
+
+        addToast(`Restored ${chatsRestored} chat(s) and ${charactersRestored} character(s).`, "success");
+      } catch (err) {
+        console.error("Backup import error:", err);
+        addToast("Failed to restore backup. Invalid file.", "error");
+      }
+    };
+    reader.readAsText(file);
+    event.target.value = '';
   };
 
   const safetyCategories: (keyof AISafetySettings)[] = useMemo(
@@ -536,6 +604,36 @@ const SettingsPage = () => {
 
         {renderAccordion("data", "Data & Import/Export",
           <>
+            <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Full Backup</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+              All chats, characters, and settings in one file - everything lives only in this browser, so it's worth keeping a copy. Restoring always adds to your existing library, never overwrites it. Locally-saved image files (if you've picked a save folder) aren't included.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4 mb-6">
+               <button
+                  onClick={handleExportFullBackup}
+                  className="flex-1 bg-primary text-white py-2 px-4 rounded-lg hover:bg-primary-hover transition flex items-center justify-center gap-2"
+               >
+                  <FaFileArchive /> Export Full Backup
+               </button>
+               <button
+                  onClick={handleImportBackupClick}
+                  className="flex-1 bg-gray-600 text-white py-2 px-4 rounded-lg hover:bg-gray-700 transition flex items-center justify-center gap-2"
+               >
+                  <FaUpload /> Restore Backup
+               </button>
+               <input
+                  type="file"
+                  ref={backupFileInputRef}
+                  onChange={handleBackupFileChange}
+                  accept=".json"
+                  style={{ display: "none" }}
+               />
+            </div>
+
+            <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Settings Only</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+              Just your model/generation preferences - no chats or characters.
+            </p>
             <div className="flex flex-col sm:flex-row gap-4 mb-2">
                <button
                   onClick={handleExportSettings}
