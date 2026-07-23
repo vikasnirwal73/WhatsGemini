@@ -12,22 +12,7 @@ import Modal from "./Modal";
 import { DARK } from "../utils/constants";
 import { Chat, Character } from "../types";
 import { cn } from "../utils/cn";
-
-const getInitials = (name?: string) => {
-  if (!name || !name.trim()) return "?";
-  const parts = name.trim().split(" ").filter(Boolean);
-  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
-  return parts[0].substring(0, 2).toUpperCase();
-};
-
-const CharacterAvatar = ({ name, size = 32 }: { name?: string; size?: number }) => (
-  <div
-    className="rounded-full bg-gemini-logo flex items-center justify-center flex-shrink-0 text-white font-semibold shadow-sm"
-    style={{ width: size, height: size, fontSize: size * 0.4 }}
-  >
-    {getInitials(name)}
-  </div>
-);
+import { CharacterAvatar } from "./ui/CharacterAvatar";
 
 const Sidebar = () => {
   const dispatch = useAppDispatch();

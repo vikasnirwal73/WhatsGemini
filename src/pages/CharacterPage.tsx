@@ -7,6 +7,8 @@ import { Character } from "../types";
 import { useModal } from "../contexts/ModalContext";
 import { dbService } from "../services/dbService";
 import { DisplayImage } from "../components/DisplayImage";
+import { TextInput, TextArea } from "../components/ui/FormControls";
+import { CharacterAvatar } from "../components/ui/CharacterAvatar";
 
 const CharacterPage = () => {
   const dispatch = useAppDispatch();
@@ -224,59 +226,59 @@ const CharacterPage = () => {
   };
 
   return (
-    <div className="w-full h-screen flex justify-center bg-app-light dark:bg-app-dark overflow-auto p-4 md:p-8">
+    <div className="w-full h-screen flex justify-center bg-app overflow-auto p-4 md:p-8">
       <div className="w-full max-w-2xl bg-transparent">
-        
+
         {/* Header */}
-        <div className="flex items-center justify-between mb-6 pb-4 border-b border-gray-200 dark:border-slate-800">
+        <div className="flex items-center justify-between mb-6 pb-4 border-b border-line">
           <div className="flex items-center gap-3">
             <button
               onClick={goBackOrHome}
-              className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-slate-800 transition text-gray-500 dark:text-slate-400"
+              className="p-2 rounded-full hover:bg-panel2 transition text-ink-muted"
               title="Back"
             >
               <FaArrowLeft size={16} />
             </button>
-            <h2 className="text-xl font-medium tracking-wide text-gray-900 dark:text-slate-100">
+            <h2 className="text-xl font-medium tracking-wide text-ink">
               {editCharacter ? "Edit Character" : "Create a Character"}
             </h2>
           </div>
         </div>
 
       {/* Character Form */}
-      <div className="bg-panel-light dark:bg-panel-dark rounded-2xl p-5 mb-8 shadow-sm border border-gray-100 dark:border-slate-700/50">
-        <input
+      <div className="bg-panel rounded-2xl p-5 mb-8 shadow-sm border border-line">
+        <TextInput
           type="text"
           placeholder="Character Name"
           value={name}
           onChange={(e) => setName(e.target.value)}
-          className="w-full p-3 bg-app-light dark:bg-slate-900/50 text-black dark:text-white rounded-xl border border-transparent dark:border-slate-700 focus:border-indigo-500 outline-none mb-4 transition-all"
+          className="mb-4"
         />
-        <textarea
+        <TextArea
           placeholder="Description (Optional)"
           value={description}
           onChange={(e) => setDescription(e.target.value)}
-          className="w-full p-3 bg-app-light dark:bg-slate-900/50 text-black dark:text-white rounded-xl border border-transparent dark:border-slate-700 focus:border-indigo-500 outline-none mb-4 transition-all resize-none min-h-[80px]"
+          className="mb-4 resize-none"
         />
-        <input
+        <TextInput
           type="text"
           placeholder="Relationship with User (e.g. Best Friend, Enemy) (Optional)"
           value={relationship}
           onChange={(e) => setRelationship(e.target.value)}
-          className="w-full p-3 bg-app-light dark:bg-slate-900/50 text-black dark:text-white rounded-xl border border-transparent dark:border-slate-700 focus:border-indigo-500 outline-none mb-4 transition-all"
+          className="mb-4"
         />
-        <textarea
+        <TextArea
           placeholder="Character Appearance/Looks (e.g. Blonde hair, wears a red jacket) (Optional)"
           value={appearance}
           onChange={(e) => setAppearance(e.target.value)}
-          className="w-full p-3 bg-app-light dark:bg-slate-900/50 text-black dark:text-white rounded-xl border border-transparent dark:border-slate-700 focus:border-indigo-500 outline-none mb-4 transition-all resize-none min-h-[80px]"
+          className="mb-4 resize-none"
         />
-        
+
         <div className="mb-4">
-          <label className="block text-sm text-gray-700 dark:text-gray-300 font-medium mb-2">Character Reference Images</label>
+          <label className="block text-sm text-ink font-medium mb-2">Character Reference Images</label>
           <div className="flex flex-wrap gap-2 mb-2">
             {appearanceImages.map((src, idx) => (
-              <div key={idx} className="relative w-20 h-20 rounded-lg overflow-hidden border border-gray-300 dark:border-slate-600 bg-slate-800">
+              <div key={idx} className="relative w-20 h-20 rounded-lg overflow-hidden border border-line bg-panel2">
                 <DisplayImage srcContext={src} alt="Appearance Reference" className="w-full h-full object-cover" />
                 <button
                   onClick={() => removeAppearanceImage(idx)}
@@ -288,13 +290,13 @@ const CharacterPage = () => {
             ))}
             <button
               onClick={() => imageInputRef.current?.click()}
-              className="w-20 h-20 flex flex-col justify-center items-center rounded-lg border-2 border-dashed border-gray-300 dark:border-slate-600 text-gray-500 hover:text-indigo-500 hover:border-indigo-500 transition-colors"
+              className="w-20 h-20 flex flex-col justify-center items-center rounded-lg border-2 border-dashed border-line text-ink-muted hover:text-primary hover:border-primary transition-colors"
             >
               <FaUpload size={16} />
               <span className="text-[10px] mt-1 text-center font-medium">Add Image</span>
             </button>
           </div>
-          <p className="text-xs text-gray-500">Provided to image-capable models to keep generated appearance consistent.</p>
+          <p className="text-xs text-ink-muted">Provided to image-capable models to keep generated appearance consistent.</p>
           <input
             type="file"
             ref={imageInputRef}
@@ -305,16 +307,16 @@ const CharacterPage = () => {
           />
         </div>
 
-        <textarea
+        <TextArea
           placeholder="Character Prompt (Personality, Style, etc.)"
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
-          className="w-full p-3 bg-app-light dark:bg-slate-900/50 text-black dark:text-white rounded-xl border border-transparent dark:border-slate-700 focus:border-indigo-500 outline-none mb-4 transition-all resize-none min-h-[120px]"
+          className="mb-4 resize-none min-h-[120px]"
         />
         <div className="flex gap-3">
           <button
             onClick={editCharacter ? handleSaveEdit : handleCreateCharacter}
-            className="flex-1 bg-indigo-500 text-white px-4 py-3 rounded-xl hover:bg-indigo-600 transition font-medium"
+            className="flex-1 bg-primary text-white px-4 py-3 rounded-xl hover:bg-primary-hover transition font-medium"
             disabled={loading}
           >
             {loading ? "Saving..." : editCharacter ? "Save Changes" : "Create Character"}
@@ -322,7 +324,7 @@ const CharacterPage = () => {
           {!editCharacter && (
             <button
               onClick={handleImportClick}
-              className="bg-slate-700 text-white px-4 py-3 rounded-xl hover:bg-slate-600 transition flex items-center justify-center gap-2 font-medium"
+              className="bg-panel2 text-ink px-4 py-3 rounded-xl hover:bg-line transition flex items-center justify-center gap-2 font-medium"
               title="Import Character from JSON"
             >
               <FaUpload size={14} />
@@ -332,7 +334,7 @@ const CharacterPage = () => {
           {editCharacter && (
             <button
               onClick={() => handerSetEditCharacter()}
-              className="bg-slate-700 text-white px-4 py-3 rounded-xl hover:bg-slate-600 transition"
+              className="bg-panel2 text-ink px-4 py-3 rounded-xl hover:bg-line transition"
             >
               <FaTimes size={16} />
             </button>
@@ -348,58 +350,61 @@ const CharacterPage = () => {
       </div>
 
       {/* Saved Characters */}
-      <h3 className="text-xl font-medium mb-4 text-gray-900 dark:text-slate-100">
+      <h3 className="text-xl font-medium mb-4 text-ink">
         Saved Characters
       </h3>
       <div className="w-full pb-20">
         {loading ? (
-          <p className="text-gray-500 dark:text-slate-500">Loading...</p>
+          <p className="text-ink-muted">Loading...</p>
         ) : characters.length === 0 ? (
-          <p className="text-gray-500 dark:text-slate-500">No characters created yet.</p>
+          <p className="text-ink-muted">No characters created yet.</p>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {characters.map((char) => (
               <div
                 key={char.id}
-                className="p-5 border border-gray-100 dark:border-slate-700/50 rounded-2xl flex flex-col justify-between bg-panel-light dark:bg-panel-dark shadow-sm gap-4"
+                className="p-5 border border-line rounded-2xl flex flex-col justify-between bg-panel shadow-sm gap-4"
               >
-                <div>
-                  <h4 className="font-medium text-lg text-gray-900 dark:text-white mb-1">{char.name}</h4>
-                  {char.relationship && <p className="text-xs font-semibold text-indigo-500 mb-1">Relationship: {char.relationship}</p>}
-                  <p className="text-sm text-gray-500 dark:text-slate-400 line-clamp-2">{truncateText(char.description)}</p>
+                <div className="flex items-start gap-3">
+                  <CharacterAvatar name={char.name} size={40} />
+                  <div className="min-w-0">
+                    <h4 className="font-medium text-lg text-ink mb-1 truncate">{char.name}</h4>
+                    {char.relationship && <p className="text-xs font-semibold text-secondary mb-1">Relationship: {char.relationship}</p>}
+                    <p className="text-sm text-ink-muted line-clamp-2">{truncateText(char.description)}</p>
+                  </div>
                 </div>
-                <div className="flex gap-2 justify-end mt-2 pt-4 border-t border-gray-100 dark:border-slate-800">
+                <div className="flex gap-2 justify-end mt-2 pt-4 border-t border-line">
                   <button
                     onClick={() => navigate(`/characters/${char.id}/gallery`)}
-                    className="p-2 text-green-500 hover:bg-green-50 dark:hover:bg-green-900/30 rounded-lg transition"
+                    className="p-2 text-ink-muted hover:text-primary hover:bg-panel2 rounded-lg transition"
                     title="View Gallery"
                   >
                     <FaImages size={14} />
                   </button>
                   <button
                     onClick={() => handleExportCharacter(char)}
-                    className="p-2 text-gray-500 hover:bg-gray-200 dark:hover:bg-slate-700 rounded-lg transition"
+                    className="p-2 text-ink-muted hover:text-ink hover:bg-panel2 rounded-lg transition"
                     title="Export Character"
                   >
                     <FaDownload size={14} />
                   </button>
                   <button
                     onClick={() => handleDuplicateCharacter(char)}
-                    className="p-2 text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg transition"
+                    className="p-2 text-ink-muted hover:text-secondary hover:bg-panel2 rounded-lg transition"
                     title="Duplicate Character"
                   >
                     <FaCopy size={14} />
                   </button>
                   <button
                     onClick={() => handleEditCharacter(char)}
-                    className="p-2 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition"
+                    className="p-2 text-ink-muted hover:text-primary hover:bg-panel2 rounded-lg transition"
                     title="Edit Character"
                   >
                     <FaEdit size={14} />
                   </button>
                   <button
                     onClick={() => handleDeleteCharacter(char.id)}
-                    className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition"
+                    className="p-2 text-ink-muted hover:text-red-500 hover:bg-red-500/10 rounded-lg transition"
                     title="Delete Character"
                   >
                     <FaTrash size={14} />
