@@ -1,11 +1,11 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
-import { GoogleGenAI, Content, Part, GenerateContentConfig, GenerateContentResponseUsageMetadata } from "@google/genai";
-import { performChatCompression } from "./ai/utils/chatHistoryUtils";
+import { GoogleGenAI, Content, GenerateContentConfig, GenerateContentResponseUsageMetadata } from "@google/genai";
+import { performChatCompression, buildValidHistory, autoCompressHistory, truncateHistory, trimTrailingUserMessages } from "./ai/utils/chatHistoryUtils";
 import { AI, MODEL_PRICING, DEFAULT_MODEL_PRICING } from "../utils/constants";
-import { getInitialMessages, getAPIKey, formatSafetySettings } from "./ai/utils/settings";
-import { appendCharacterImages } from "./ai/utils/imageProcessing";
+import { getAPIKey, formatSafetySettings } from "./ai/utils/settings";
 import { extractAndSaveBase64ImagesLocally } from "./ai/utils/apiUtils";
-import { generateSDImage } from "./ai/utils/sdWebuiUtils";
+import { deriveImagePrompt, generateImage } from "./ai/utils/imageGeneration";
+import { streamTextResponse } from "./ai/utils/textResponse";
 import { RootState } from "../store/store";
 import { SDImageParams } from "../types";
 
@@ -26,16 +26,24 @@ export const generateAIResponse = createAsyncThunk(
     try {
       const state = getState() as RootState;
       const settings = state.settings;
-      
+
       const apiKey = getAPIKey();
       if (!apiKey) throw new Error("API key is missing. Please log in.");
-      
-      const maxHistoryLength = settings.maxChatLength;
-      let selectedModel = settings.selectedModel;
-      
-      let finalPrompt = prompt;
-      let generatedImages: string[] = [];
-      let response = "";
+
+      const selectedModel = settings.selectedModel;
+      const imageModelName = settings.imageModel;
+      const ai = new GoogleGenAI({ apiKey });
+
+      const safetySettings = formatSafetySettings(settings.safetySettings);
+      const textModelConfig: GenerateContentConfig = {
+        maxOutputTokens: settings.maxOutputTokens,
+        temperature: settings.temperature,
+        safetySettings: safetySettings,
+      };
+      if (systemInstruction) {
+        textModelConfig.systemInstruction = systemInstruction.trim().replace(/\s+/g, ' ');
+      }
+
       let totalTokens = 0;
       let costEstimate = 0;
 
@@ -50,244 +58,52 @@ export const generateAIResponse = createAsyncThunk(
         costEstimate += (promptTokens / 1_000_000) * pricing.input + (candidateTokens / 1_000_000) * pricing.output;
       };
 
+      // Prepare the context: dedupe, auto-compress if it's grown too long, hard-cap
+      // length, and make sure it ends on a model turn.
+      let validHistory = buildValidHistory(history, prompt);
+
+      const compressed = await autoCompressHistory(ai, validHistory, settings.compressThreshold, selectedModel);
+      validHistory = compressed.history;
+      trackUsage(compressed.usage, selectedModel);
+
+      validHistory = truncateHistory(validHistory, settings.maxChatLength);
+      validHistory = trimTrailingUserMessages(validHistory);
+
+      const historyForSdk = [...validHistory];
+
+      let response = "";
+      let generatedImages: string[] = [];
       let finalDerivedImagePrompt = "";
       let finalDerivedImageParams: SDImageParams = {};
 
-      let imageModelName = settings.imageModel;
-      const ai = new GoogleGenAI({ apiKey });
-
-      const maxTokens = settings.maxOutputTokens;
-      const temperature = settings.temperature;
-      const safetySettings = formatSafetySettings(settings.safetySettings);
-
-      const textModelConfig: GenerateContentConfig = {
-        maxOutputTokens: maxTokens,
-        temperature: temperature,
-        safetySettings: safetySettings,
-      };
-
-      if (systemInstruction) {
-        textModelConfig.systemInstruction = systemInstruction.trim().replace(/\s+/g, ' ');
-      }
-
-      // Filter out empty messages
-      let validHistory: Content[] = history
-        .filter((msg) => msg?.parts?.[0]?.text && msg.role)
-        .map(msg => {
-           // Deep clone parts so we don't accidentally mutate react state
-           return { ...msg, parts: [...(msg.parts || [])] };
-        });
-
-      // If the last message in history is the same as the prompt, remove it to avoid duplication
-      if (
-        validHistory.length > 0 &&
-        validHistory[validHistory.length - 1].role === "user" &&
-        validHistory[validHistory.length - 1].parts?.[0]?.text === prompt
-      ) {
-        validHistory.pop();
-      }
-      
-      const compressThreshold = settings.compressThreshold;
-      
-      if (compressThreshold > 0 && validHistory.length > compressThreshold) {
-        const messagesToCompress = validHistory.length - Math.floor(compressThreshold / 2);
-        
-        if (messagesToCompress > 0) {
-          const initialMessages = getInitialMessages();
-          const initialLen = initialMessages.length || 0;
-          const startIndex = initialLen > 0 ? initialLen : 0;
-          
-          if (startIndex < validHistory.length) {
-            // Compress the older messages (excluding initial messages)
-            const oldMessagesForSummary = validHistory.slice(startIndex, startIndex + messagesToCompress);
-            
-            // Only compress if we actually have messages to compress
-            if (oldMessagesForSummary.length > 2) { 
-              const conversationText = oldMessagesForSummary
-                .map((m) => `${m.role === "user" ? "User" : "AI"}: ${m.parts?.[0]?.text || ""}`)
-                .join("\n\n");
-
-              const compressPrompt = `Provide a very concise but comprehensive summary of the following chat history. 
-Retain key facts, user preferences, important context, and the emotional tone.
-Do NOT act as a conversational partner. Just reply with the summary block.
-
-Conversation:
-${conversationText}`;
-              
-              try {
-                // Background summary call using the currently selected model
-                const sumResult = await ai.models.generateContent({
-                  model: selectedModel,
-                  contents: compressPrompt
-                });
-                
-                const summaryText = sumResult.text?.trim() || "";
-                
-                if (summaryText) {
-                  trackUsage(sumResult.usageMetadata, selectedModel);
-
-                  // Construct a summary message
-                  const summaryMsg = { 
-                    role: "user", 
-                    parts: [{ text: `[SYSTEM: Older chat history has been compressed into this summary to save memory. Summary: ${summaryText}]` }] 
-                  };
-                  
-                  // Keep initial messages, insert summary, keep recent messages
-                  const newValidHistory = [
-                    ...validHistory.slice(0, startIndex),
-                    summaryMsg,
-                    ...validHistory.slice(startIndex + messagesToCompress)
-                  ];
-                  validHistory = newValidHistory;
-                }
-              } catch (e) {
-                 console.warn("Auto-compression failed, falling back to truncation.", e);
-                 // Fallback to truncation if summarization fails
-                 validHistory.splice(startIndex, messagesToCompress);
-              }
-            }
-          }
-        }
-      }
-
-      if (maxHistoryLength > 0 && validHistory.length > maxHistoryLength) {
-        const initialMessages = getInitialMessages();
-        const initialMessagesLength = initialMessages.length || 0;
-        const maxLength = validHistory.length - maxHistoryLength;
-        if (maxLength > 0) {
-           const startIndex = initialMessagesLength > 0 ? initialMessagesLength : 1;
-           if (startIndex < validHistory.length) {
-              validHistory.splice(startIndex, maxLength);
-           }
-        }
-      }
-
-      while (validHistory.length > 0 && validHistory[validHistory.length - 1].role === "user") {
-        validHistory.pop();
-      }
-
-      const historyForSdk = [...validHistory];
-      
       if (isImageRequest) {
-        // Step 1: Use Text Model to derive image prompt & chat summary
         const useSdWebui = settings.useSdWebui;
 
-        let derivedImagePrompt = prompt;
-        let derivedSummary = `[Generated Image requested: ${prompt}]`;
-        let derivedParams: SDImageParams = {};
-        
-        if (existingImagePrompt) {
-          derivedImagePrompt = existingImagePrompt;
-          if (existingImageParams) derivedParams = existingImageParams;
-          derivedSummary = "Here is the regenerated image you requested.\n[Image Context: Retrying generation of the previous scene]";
-        } else {
-        const baseImagePrompt = settings.imageGenPrompt;
-        const sdModel = settings.sdWebuiModel;
-        const sdModelInfo = sdModel ? ` The currently active model checkpoint is "${sdModel}". Tailor your prompt and parameters (especially "sampler_name" and "steps") for this specific model.` : " We are using a Stable Diffusion 1.5 model. Use tag-based prompting (e.g., masterpiece, best quality, highly detailed, comma-separated keywords) tailored for SD 1.5.";
+        const derivation = await deriveImagePrompt(
+          ai, selectedModel, textModelConfig, historyForSdk, prompt,
+          settings.imageGenPrompt, settings.sdWebuiModel, useSdWebui,
+          existingImagePrompt, existingImageParams
+        );
+        trackUsage(derivation.usage, selectedModel);
 
-        const sdInstruction = useSdWebui ? 
-          `\n\nPARAMS:\n<A strictly valid JSON object containing optimal generation parameters tailored to the requested image style and model checkpoint. Allowed keys: "cfg_scale" (1.0-15.0), "steps" (15-40), "sampler_name", "width", "height". Determine the optimal width and height (e.g., portrait/selfie 512x768, landscape 768x512, square 512x512) based on the image subject. If a specific model checkpoint is active or a specific artistic style requires it, ALWAYS include the ideal "sampler_name" (e.g., "DPM++ 2M Karras", "Euler a"). Leave the JSON empty {} if no specific tweaking is needed.>` : "";
-        const parseSection = useSdWebui ? `three sections formatted exactly like this:\n\nPROMPT:\n<...>${sdInstruction}\n\nSUMMARY:` : `two sections formatted exactly like this:\n\nPROMPT:\n<...>\n\nSUMMARY:`;
+        finalDerivedImagePrompt = derivation.derivedImagePrompt;
+        finalDerivedImageParams = derivation.derivedParams;
+        response = derivation.derivedSummary;
 
-        const derivationPrompt = `(INTERNAL DIRECTIVE) User request: "${prompt}"\nThe user wants a picture/image based on the current context.${useSdWebui ? sdModelInfo : ""}\n\nYou must function as an expert prompt engineer. Prioritize this base style rule:\n${baseImagePrompt}\n\nPlease output EXACTLY ${parseSection}\n\nPROMPT:\n<write a highly detailed, clean, and optimized tag-based SD 1.5 image generation prompt based on the user request and context. Make sure the subject matches your visual description.>${sdInstruction}\n\nSUMMARY:\n<Respond IN CHARACTER to the user, maintaining your exact persona, personality, and tone. Acknowledge that you are showing/sending them the requested picture. MUST INCLUDE: At the end of your response, append [Image Context: <short visual description of the generated image>] so you can remember what you sent in future turns.>`;
-
-        const derivationChat = ai.chats.create({ model: selectedModel, config: textModelConfig, history: [...historyForSdk] });
-        const derivationPromptParts: Part[] = [{ text: derivationPrompt }];
-        
-        const derivationResult = await derivationChat.sendMessage({ message: derivationPromptParts });
-        const derivationText = derivationResult.text || "";
-        trackUsage(derivationResult.usageMetadata, selectedModel);
-        
-        // Parse the segments
-        const promptMatch = useSdWebui ? derivationText.match(/PROMPT:\s*([\s\S]*?)PARAMS:/i) : derivationText.match(/PROMPT:\s*([\s\S]*?)SUMMARY:/i);
-        const paramsMatch = useSdWebui ? derivationText.match(/PARAMS:\s*([\s\S]*?)SUMMARY:/i) : null;
-        const summaryMatch = derivationText.match(/SUMMARY:\s*([\s\S]*)/i);
-        
-        if (promptMatch && promptMatch[1]) {
-           derivedImagePrompt = promptMatch[1].trim();
-        }
-        if (paramsMatch && paramsMatch[1]) {
-           try {
-             // Remove any markdown code block formatting if present
-             const jsonStr = paramsMatch[1].trim().replace(/^```json\s*/i, '').replace(/```\s*$/i, '');
-             derivedParams = JSON.parse(jsonStr);
-           } catch(e) {
-             console.warn("Failed to parse SD PARAMS json:", e);
-           }
-        }
-        if (summaryMatch && summaryMatch[1]) {
-           derivedSummary = summaryMatch[1].trim();
-        } else {
-           derivedSummary = derivationText;
-        }
-        } // close `if (existingImagePrompt) { ... } else { ... }` block
-        
-        finalDerivedImagePrompt = derivedImagePrompt;
-        finalDerivedImageParams = derivedParams;
-        response = derivedSummary;
-        
-        // Step 2: Use Image Model to actually generate the image
-        try {
-           if (useSdWebui) {
-             const sdImages = await generateSDImage(derivedImagePrompt, derivedParams, characterImages, characterName);
-             generatedImages.push(...sdImages);
-           } else {
-             const imagePromptParts: Part[] = [{ text: derivedImagePrompt }];
-             if (characterImages && characterImages.length > 0) {
-               await appendCharacterImages(imagePromptParts, characterImages);
-             }
-
-             const imageRes = await ai.models.generateContent({
-               model: imageModelName,
-               contents: imagePromptParts,
-               config: { safetySettings }
-             });
-             trackUsage(imageRes.usageMetadata, imageModelName);
-             const parts = imageRes.candidates?.[0]?.content?.parts || [];
-             for (const part of parts) {
-                 if (part.inlineData) {
-                    const mimeType = part.inlineData.mimeType;
-                    const base64d = part.inlineData.data;
-                    generatedImages.push(`data:${mimeType};base64,${base64d}`);
-                 }
-             }
-           }
-        } catch (err) {
-           console.error("Image generation failed:", err);
-           response += "\n\n[Warning: Image generation failed due to API error.]";
-        }
+        const imageResult = await generateImage(
+          ai, useSdWebui, imageModelName, derivation.derivedImagePrompt, derivation.derivedParams,
+          characterImages, characterName, safetySettings
+        );
+        trackUsage(imageResult.usage, imageModelName);
+        generatedImages = imageResult.images;
+        if (imageResult.warning) response += imageResult.warning;
       } else {
-        // Normal Text Chat
-        const chat = ai.chats.create({ model: selectedModel, config: textModelConfig, history: historyForSdk });
-        const promptParts: Part[] = [{ text: finalPrompt }];
-
-        const stream = await chat.sendMessageStream({ message: promptParts });
-        let lastUsage: GenerateContentResponseUsageMetadata | undefined;
-        for await (const chunk of stream) {
-          if (signal.aborted) {
-            console.log("AI response generation aborted by user.");
-            break;
-          }
-
-          try {
-            if (chunk.text) {
-               response += chunk.text;
-            }
-            // The Gemini streaming API attaches the cumulative usage total to
-            // each chunk once available, so the last value seen is the total for this turn.
-            if (chunk.usageMetadata) {
-              lastUsage = chunk.usageMetadata;
-            }
-          } catch (e) {
-            console.warn("Could not parse text chunk:", e);
-          }
-        }
-        trackUsage(lastUsage, selectedModel);
+        const streamed = await streamTextResponse(ai, selectedModel, textModelConfig, historyForSdk, prompt, signal);
+        trackUsage(streamed.usage, selectedModel);
+        response = streamed.text;
       }
 
-      let finalResponseText = response;
-
-      finalResponseText = await extractAndSaveBase64ImagesLocally(finalResponseText, generatedImages);
+      const finalResponseText = await extractAndSaveBase64ImagesLocally(response, generatedImages);
 
       const returnPayload: GenerateAIResponseResult = {
         text: finalResponseText.trim(),
@@ -296,7 +112,7 @@ ${conversationText}`;
         imagePrompt: finalDerivedImagePrompt,
         imageParams: finalDerivedImageParams
       };
-      
+
       if (generatedImages.length > 0) {
         returnPayload.images = generatedImages;
       }
