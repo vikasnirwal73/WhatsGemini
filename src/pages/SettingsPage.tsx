@@ -20,7 +20,7 @@ import { getApiKey } from "../utils/apiKeyManager";
 import { useModal } from "../contexts/ModalContext";
 import { fetchChats } from "../features/chatSlice";
 import { fetchCharacters } from "../features/characterSlice";
-import { getFullBackupData, restoreChatsAndCharacters, BACKUP_FILE_TYPE } from "../services/backupService";
+import { getFullBackupZip, parseBackupFile, applyParsedBackup } from "../services/backupService";
 import {
   // DEFAULT_CHAT_LENGTH,
   // DEFAULT_OUTPUT_TOKENS,
@@ -305,6 +305,17 @@ const SettingsPage = () => {
     URL.revokeObjectURL(url);
   };
 
+  const downloadBlob = (blob: Blob, filename: string) => {
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   const handleExportSettings = () => {
     downloadJson(buildSettingsExport(), "whatsgemini_settings.json");
   };
@@ -375,10 +386,14 @@ const SettingsPage = () => {
 
   const handleExportFullBackup = async () => {
     try {
-      const backupData = await getFullBackupData();
+      const { blob, chats, characters, imagesIncluded, imagesSkipped } = await getFullBackupZip(buildSettingsExport());
       const dateStr = new Date().toISOString().slice(0, 10);
-      downloadJson({ ...backupData, settings: buildSettingsExport() }, `whatsgemini_backup_${dateStr}.json`);
-      addToast(`Backed up ${backupData.chats.length} chat(s) and ${backupData.characters.length} character(s).`, "success");
+      downloadBlob(blob, `whatsgemini_backup_${dateStr}.zip`);
+
+      let message = `Backed up ${chats.length} chat(s) and ${characters.length} character(s)`;
+      message += imagesIncluded > 0 ? `, including ${imagesIncluded} image(s).` : ".";
+      if (imagesSkipped > 0) message += ` ${imagesSkipped} local image(s) couldn't be read and were skipped.`;
+      addToast(message, "success");
     } catch (err) {
       console.error("Backup export error:", err);
       addToast("Failed to create backup.", "error");
@@ -389,39 +404,35 @@ const SettingsPage = () => {
     backupFileInputRef.current?.click();
   };
 
-  const handleBackupFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleBackupFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
+    event.target.value = '';
     if (!file) return;
 
-    const reader = new FileReader();
-    reader.onload = async (e) => {
-      try {
-        const data = JSON.parse(e.target?.result as string);
-        if (data.type !== BACKUP_FILE_TYPE || !Array.isArray(data.chats) || !Array.isArray(data.characters)) {
-          addToast("That doesn't look like a WhatsGemini backup file.", "error");
-          return;
-        }
+    try {
+      const parsed = await parseBackupFile(file);
+      const { data, imageFilenames } = parsed;
 
-        const confirmed = await showConfirm(
-          "Restore Backup",
-          `This will add ${data.chats.length} chat(s) and ${data.characters.length} character(s) to your existing library (nothing will be overwritten or removed). Continue?`
-        );
-        if (!confirmed) return;
+      let confirmMessage = `This will add ${data.chats.length} chat(s) and ${data.characters.length} character(s) to your existing library (nothing will be overwritten or removed).`;
+      if (imageFilenames.length > 0) confirmMessage += ` It also includes ${imageFilenames.length} local image(s).`;
+      confirmMessage += " Continue?";
 
-        const { chatsRestored, charactersRestored } = await restoreChatsAndCharacters(data.chats, data.characters);
-        if (data.settings) applyImportedSettings(data.settings);
+      const confirmed = await showConfirm("Restore Backup", confirmMessage);
+      if (!confirmed) return;
 
-        dispatch(fetchChats());
-        dispatch(fetchCharacters());
+      const { chatsRestored, charactersRestored, imagesRestored } = await applyParsedBackup(parsed);
+      if (data.settings) applyImportedSettings(data.settings);
 
-        addToast(`Restored ${chatsRestored} chat(s) and ${charactersRestored} character(s).`, "success");
-      } catch (err) {
-        console.error("Backup import error:", err);
-        addToast("Failed to restore backup. Invalid file.", "error");
-      }
-    };
-    reader.readAsText(file);
-    event.target.value = '';
+      dispatch(fetchChats());
+      dispatch(fetchCharacters());
+
+      let message = `Restored ${chatsRestored} chat(s) and ${charactersRestored} character(s)`;
+      message += imagesRestored > 0 ? `, including ${imagesRestored} image(s).` : ".";
+      addToast(message, "success");
+    } catch (err) {
+      console.error("Backup import error:", err);
+      addToast("Failed to restore backup. Invalid file.", "error");
+    }
   };
 
   const safetyCategories: (keyof AISafetySettings)[] = useMemo(
@@ -592,7 +603,7 @@ const SettingsPage = () => {
           <>
             <p className="text-sm font-medium text-ink mb-1">Full Backup</p>
             <p className="text-xs text-ink-muted mb-3">
-              All chats, characters, and settings in one file - everything lives only in this browser, so it's worth keeping a copy. Restoring always adds to your existing library, never overwrites it. Locally-saved image files (if you've picked a save folder) aren't included.
+              All chats, characters, settings, and locally-saved images (if you've picked a save folder) in one zip - everything lives only in this browser, so it's worth keeping a copy. Restoring always adds to your existing library, never overwrites it.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 mb-6">
                <button
@@ -611,7 +622,7 @@ const SettingsPage = () => {
                   type="file"
                   ref={backupFileInputRef}
                   onChange={handleBackupFileChange}
-                  accept=".json"
+                  accept=".zip,.json"
                   style={{ display: "none" }}
                />
             </div>
