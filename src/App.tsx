@@ -13,6 +13,7 @@ import { LS_FONT_SIZE } from "./utils/constants";
 
 import Sidebar from "./components/Sidebar";
 import Header from "./components/Header";
+import ServiceWorkerUpdater from "./components/ServiceWorkerUpdater";
 
 const ChatPage = lazy(() => import("./pages/ChatPage"));
 const Login = lazy(() => import("./pages/Login"));
@@ -130,6 +131,7 @@ const AppContent = () => {
 
 const App = () => (
   <Provider store={store}>
+    <ServiceWorkerUpdater />
     <AuthProvider>
       <ThemeProvider>
         <ModalProvider>
