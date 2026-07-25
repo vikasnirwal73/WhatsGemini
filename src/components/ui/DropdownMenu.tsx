@@ -49,19 +49,27 @@ interface DropdownMenuItemProps {
   onClick: () => void;
   disabled?: boolean;
   danger?: boolean;
+  active?: boolean;
 }
 
-export const DropdownMenuItem = ({ icon: Icon, label, onClick, disabled, danger }: DropdownMenuItemProps) => (
+export const DropdownMenuItem = ({ icon: Icon, label, onClick, disabled, danger, active }: DropdownMenuItemProps) => (
   <RadixDropdownMenu.Item
     onSelect={onClick}
     disabled={disabled}
     className={cn(
       "flex items-center gap-3 mx-1.5 px-3 py-2 text-sm rounded-lg outline-none select-none",
       disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer data-[highlighted]:bg-app",
-      danger ? "text-red-500" : "text-ink"
+      danger ? "text-red-500" : active ? "text-primary" : "text-ink"
     )}
   >
     <Icon size={14} />
     <span>{label}</span>
   </RadixDropdownMenu.Item>
+);
+
+// Divider between logical groups of items (e.g. page actions vs. app nav vs.
+// session) inside a dropdown - mirrors the vertical dividers used between the
+// same groups in Header's desktop icon row.
+export const DropdownMenuSeparator = () => (
+  <RadixDropdownMenu.Separator className="h-px bg-line my-1.5 mx-1.5" />
 );

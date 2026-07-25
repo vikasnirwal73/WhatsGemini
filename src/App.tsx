@@ -14,6 +14,7 @@ import { LS_FONT_SIZE } from "./utils/constants";
 import Sidebar from "./components/Sidebar";
 import Header from "./components/Header";
 import ServiceWorkerUpdater from "./components/ServiceWorkerUpdater";
+import { TooltipProvider } from "./components/ui/Tooltip";
 
 const ChatPage = lazy(() => import("./pages/ChatPage"));
 const Login = lazy(() => import("./pages/Login"));
@@ -140,18 +141,20 @@ const App = () => (
     <ServiceWorkerUpdater />
     <AuthProvider>
       <ThemeProvider>
-        <ModalProvider>
-          <SidebarProvider>
-            <HashRouter>
-              <Suspense fallback={<PageLoader />}>
-                <Routes>
-                  <Route path="/login" element={<Login />} />
-                  <Route path="*" element={<AppContent />} />
-                </Routes>
-              </Suspense>
-            </HashRouter>
-          </SidebarProvider>
-        </ModalProvider>
+        <TooltipProvider delayDuration={300}>
+          <ModalProvider>
+            <SidebarProvider>
+              <HashRouter>
+                <Suspense fallback={<PageLoader />}>
+                  <Routes>
+                    <Route path="/login" element={<Login />} />
+                    <Route path="*" element={<AppContent />} />
+                  </Routes>
+                </Suspense>
+              </HashRouter>
+            </SidebarProvider>
+          </ModalProvider>
+        </TooltipProvider>
       </ThemeProvider>
     </AuthProvider>
   </Provider>

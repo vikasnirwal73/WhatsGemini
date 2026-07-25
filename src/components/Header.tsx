@@ -1,24 +1,42 @@
 import React, { useContext } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { FaBars, FaArrowLeft, FaSun, FaMoon, FaUserFriends, FaCog, FaSignOutAlt } from "react-icons/fa";
+import { FaBars, FaArrowLeft, FaSun, FaMoon, FaUserFriends, FaCog, FaSignOutAlt, FaEllipsisV } from "react-icons/fa";
 import { useSidebar } from "../contexts/SidebarContext";
 import { ThemeContext } from "../contexts/ThemeContext";
 import { AuthContext } from "../contexts/AuthContext";
 import { DARK } from "../utils/constants";
 import { cn } from "../utils/cn";
+import { Tooltip } from "./ui/Tooltip";
+import { DropdownMenu, DropdownMenuItem, DropdownMenuSeparator } from "./ui/DropdownMenu";
+
+// A single header icon action, described once and rendered two ways: as a
+// tooltipped icon button in the desktop row, and as a labeled row in the
+// mobile "more" menu - so page-specific actions (e.g. ChatPage's Export/
+// Compress/Follow-up) don't need to hand-build both layouts themselves.
+export interface HeaderAction {
+  icon: React.ComponentType<{ size?: number }>;
+  label: string;
+  onClick: () => void;
+  disabled?: boolean;
+  active?: boolean;
+  danger?: boolean;
+}
 
 interface HeaderProps {
   title: React.ReactNode;
   subtitle?: React.ReactNode;
   avatar?: React.ReactNode;
   onBack?: () => void;
-  actions?: React.ReactNode;
+  // Page-specific action groups (e.g. Chat's Export/Compress/Follow-up),
+  // rendered before the built-in App/Session groups, each separated by a divider.
+  actionGroups?: HeaderAction[][];
 }
 
 export const iconBtnClass = "flex items-center justify-center w-9 h-9 rounded-[10px] border border-line bg-panel2 text-ink-muted hover:bg-hover hover:text-ink transition flex-shrink-0";
 const iconBtnActiveClass = "flex items-center justify-center w-9 h-9 rounded-[10px] border border-primary bg-panel2 text-primary hover:bg-hover transition flex-shrink-0";
+const iconBtnDangerClass = "flex items-center justify-center w-9 h-9 rounded-[10px] border border-line bg-panel2 text-ink-muted hover:bg-red-500/10 hover:text-red-500 hover:border-red-500/50 transition flex-shrink-0";
 
-const Header: React.FC<HeaderProps> = ({ title, subtitle, avatar, onBack, actions }) => {
+const Header: React.FC<HeaderProps> = ({ title, subtitle, avatar, onBack, actionGroups = [] }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { open } = useSidebar();
@@ -27,6 +45,19 @@ const Header: React.FC<HeaderProps> = ({ title, subtitle, avatar, onBack, action
   const isDark = theme === DARK;
   const isCharacters = location.pathname.startsWith("/characters");
   const isSettings = location.pathname.startsWith("/settings");
+
+  // Built-in groups, always appended after any page-specific ones: app-level
+  // navigation, then the destructive session action on its own.
+  const appGroup: HeaderAction[] = [
+    { icon: isDark ? FaSun : FaMoon, label: "Toggle theme", onClick: toggleTheme },
+    { icon: FaUserFriends, label: "Characters", onClick: () => navigate("/characters"), active: isCharacters },
+    { icon: FaCog, label: "Settings", onClick: () => navigate("/settings"), active: isSettings },
+  ];
+  const sessionGroup: HeaderAction[] = [
+    { icon: FaSignOutAlt, label: "Log out", onClick: logout, danger: true },
+  ];
+
+  const groups = [...actionGroups, appGroup, sessionGroup].filter((g) => g.length > 0);
 
   return (
     <header className="h-[60px] flex-shrink-0 border-b border-line bg-panel flex items-center gap-2.5 px-3 md:px-4 z-20">
@@ -55,26 +86,57 @@ const Header: React.FC<HeaderProps> = ({ title, subtitle, avatar, onBack, action
 
       <div className="flex-1" />
 
-      {actions && <div className="flex items-center gap-1">{actions}</div>}
+      {/* Desktop: full row of tooltipped icon buttons, grouped with dividers */}
+      <div className="hidden md:flex items-center gap-1">
+        {groups.map((group, gi) => (
+          <React.Fragment key={gi}>
+            {gi > 0 && <div className="w-px h-6 bg-line mx-1 flex-shrink-0" />}
+            {group.map((action, ai) => (
+              <Tooltip key={ai} label={action.label}>
+                <button
+                  onClick={action.onClick}
+                  disabled={action.disabled}
+                  aria-label={action.label}
+                  className={cn(
+                    action.danger ? iconBtnDangerClass : action.active ? iconBtnActiveClass : iconBtnClass,
+                    action.disabled && "opacity-50 cursor-not-allowed"
+                  )}
+                >
+                  <action.icon size={15} />
+                </button>
+              </Tooltip>
+            ))}
+          </React.Fragment>
+        ))}
+      </div>
 
-      <button onClick={toggleTheme} title="Toggle theme" aria-label="Toggle theme" className={iconBtnClass}>
-        {isDark ? <FaSun size={15} /> : <FaMoon size={15} />}
-      </button>
-      <button onClick={() => navigate("/characters")} title="Characters" aria-label="Characters" className={isCharacters ? iconBtnActiveClass : iconBtnClass}>
-        <FaUserFriends size={16} />
-      </button>
-      <button onClick={() => navigate("/settings")} title="Settings" aria-label="Settings" className={isSettings ? iconBtnActiveClass : iconBtnClass}>
-        <FaCog size={16} />
-      </button>
-      <div className="w-px h-6 bg-line mx-0.5 hidden sm:block flex-shrink-0" />
-      <button
-        onClick={logout}
-        title="Log out"
-        aria-label="Log out"
-        className="hidden sm:flex items-center gap-2 h-9 px-3 rounded-[10px] border border-line text-ink-muted hover:text-red-500 hover:border-red-500/50 transition text-[12.5px] font-medium flex-shrink-0"
-      >
-        <FaSignOutAlt size={13} /> Logout
-      </button>
+      {/* Mobile: everything above collapses into one menu so buttons stop crowding the header */}
+      <div className="md:hidden">
+        <DropdownMenu
+          trigger={
+            <button aria-label="More options" className={iconBtnClass}>
+              <FaEllipsisV size={15} />
+            </button>
+          }
+        >
+          {groups.map((group, gi) => (
+            <React.Fragment key={gi}>
+              {gi > 0 && <DropdownMenuSeparator />}
+              {group.map((action, ai) => (
+                <DropdownMenuItem
+                  key={ai}
+                  icon={action.icon}
+                  label={action.label}
+                  onClick={action.onClick}
+                  disabled={action.disabled}
+                  active={action.active}
+                  danger={action.danger}
+                />
+              ))}
+            </React.Fragment>
+          ))}
+        </DropdownMenu>
+      </div>
     </header>
   );
 };

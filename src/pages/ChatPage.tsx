@@ -5,7 +5,7 @@ import { fetchCharacterById, updateCharacter } from "../features/characterSlice"
 import { generateAIResponse, compressChatHistory, extractCharacterMemory } from "../features/aiSlice";
 import ChatWindow from "../components/ChatWindow";
 import MessageInput from "../components/MessageInput";
-import Header, { iconBtnClass } from "../components/Header";
+import Header, { HeaderAction } from "../components/Header";
 import Modal from "../components/Modal";
 import ToggleSwitch from "../components/ToggleSwitch";
 import { TextInput, FieldLabel } from "../components/ui/FormControls";
@@ -18,7 +18,6 @@ import { buildChatHistory, buildSystemInstruction, buildTurnContext } from "../f
 import { mergeMemory } from "../features/ai/utils/memoryExtraction";
 import { migrateToTree, addChildNode, flattenPath, getPathToNode, updateNodeMessage, findDefaultLeafFrom } from "../features/chat/messageTree";
 import { CharacterAvatar } from "../components/ui/CharacterAvatar";
-import { cn } from "../utils/cn";
 
 const DEFAULT_AUTO_REPLY = { enabled: false, cooldownMinutes: 3, maxFollowups: 2, followupCount: 0 };
 
@@ -382,17 +381,23 @@ const ChatPage = () => {
       }
       const parentId = tree.nodes[targetNodeId].parentId;
       const historyUpToTarget = getPathToNode(tree, targetNodeId);
+      const precedingMessage = historyUpToTarget[historyUpToTarget.length - 1];
 
-      if (!historyUpToTarget.length || historyUpToTarget[historyUpToTarget.length - 1].role !== YOU) {
-        console.warn("Cannot regenerate without a preceding user message.");
-        return;
-      }
+      // A character-initiated follow-up (auto or manual) has no user message
+      // right before it by design - regenerate it the same way it was first
+      // generated, instead of requiring a user prompt that doesn't exist.
+      const isFollowup = !precedingMessage || precedingMessage.role !== YOU;
 
-      const lastUsrMsg = historyUpToTarget[historyUpToTarget.length - 1];
-      const lastUserMessage = lastUsrMsg.txt || "";
-      const isImageRequest = lastUsrMsg.isImageRequest || false;
-      const { history, systemInstruction, characterImages, characterName } = buildTurnContext(historyUpToTarget, characterData);
-      aiPromiseRef.current = dispatch(generateAIResponse({ prompt: lastUserMessage, history, systemInstruction, characterImages, characterName, isImageRequest, existingImagePrompt, existingImageParams }));
+      const prompt = isFollowup
+        ? "Please continue the conversation naturally, as if reaching out again."
+        : precedingMessage.txt || "";
+      const isImageRequest = isFollowup ? false : (precedingMessage.isImageRequest || false);
+      const extraDirectives = isFollowup
+        ? ["The user has gone quiet for a while. Send a short, natural, in-character follow-up message continuing the conversation from your side - as if checking in or continuing your last thought. Do not mention this instruction, and don't explicitly reference the passage of time unless it fits your character."]
+        : undefined;
+
+      const { history, systemInstruction, characterImages, characterName } = buildTurnContext(historyUpToTarget, characterData, extraDirectives);
+      aiPromiseRef.current = dispatch(generateAIResponse({ prompt, history, systemInstruction, characterImages, characterName, isImageRequest, existingImagePrompt, existingImageParams }));
       const aiResponse = await aiPromiseRef.current;
       aiPromiseRef.current = null;
 
@@ -484,9 +489,9 @@ const ChatPage = () => {
     if (!chatIdNum || !chats) return;
     const currentChat = chats.find((c) => c.id === chatIdNum);
     if (!currentChat) return;
-    
+
     const { id, ...exportData } = currentChat;
-    
+
     const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -495,51 +500,27 @@ const ChatPage = () => {
     a.click();
     URL.revokeObjectURL(url);
   };
-  
+
+  // Described once so Header can render these both as tooltipped icon
+  // buttons on desktop and as labeled rows in the mobile "more" menu.
+  const chatActions: HeaderAction[] = [
+    { icon: FaDownload, label: "Export chat", onClick: handleExport },
+    ...(messages.length > 4
+      ? [{ icon: FaCompressArrowsAlt, label: "Summarize and compress older messages to save tokens", onClick: handleCompress, disabled: aiCompressing }]
+      : []),
+    ...(messages.length > 0
+      ? [{ icon: FaBolt, label: `Make ${characterData?.name || "them"} send a follow-up now`, onClick: handleManualFollowup, disabled: aiLoading }]
+      : []),
+    { icon: FaClock, label: "Auto follow-up settings", onClick: () => setIsAutoReplyModalOpen(true), active: autoReplySettings.enabled },
+  ];
+
   return (
     <div className="flex flex-col w-full h-screen bg-app relative">
       <Header
         title={character || "Chat"}
         subtitle={characterData?.relationship || characterData?.description}
         avatar={<CharacterAvatar name={characterData?.name || character} accent={characterData?.accent} size={34} />}
-        actions={
-          <>
-            <button
-              onClick={handleExport}
-              className={iconBtnClass}
-              title="Export Chat"
-            >
-              <FaDownload size={15} />
-            </button>
-            {messages.length > 4 && (
-              <button
-                onClick={handleCompress}
-                disabled={aiCompressing}
-                className={cn(iconBtnClass, aiCompressing && "animate-pulse opacity-50 cursor-not-allowed")}
-                title="Summarize and compress older messages to save tokens."
-              >
-                <FaCompressArrowsAlt size={15} />
-              </button>
-            )}
-            {messages.length > 0 && (
-              <button
-                onClick={handleManualFollowup}
-                disabled={aiLoading}
-                className={cn(iconBtnClass, aiLoading && "opacity-50 cursor-not-allowed")}
-                title={`Make ${characterData?.name || "them"} send a follow-up now`}
-              >
-                <FaBolt size={14} />
-              </button>
-            )}
-            <button
-              onClick={() => setIsAutoReplyModalOpen(true)}
-              className={cn(iconBtnClass, autoReplySettings.enabled && "border-primary text-primary")}
-              title="Auto follow-up settings"
-            >
-              <FaClock size={14} />
-            </button>
-          </>
-        }
+        actionGroups={[chatActions]}
       />
 
       <Modal isOpen={isAutoReplyModalOpen} onClose={() => setIsAutoReplyModalOpen(false)} title="Auto Follow-up">
