@@ -11,6 +11,7 @@ import Modal from "./Modal";
 import { Chat, Character } from "../types";
 import { cn } from "../utils/cn";
 import { CharacterAvatar } from "./ui/CharacterAvatar";
+import Logo from "./ui/Logo";
 
 const formatChatTime = (timestamp?: number) => {
   if (!timestamp) return "";
@@ -106,11 +107,9 @@ const Sidebar = () => {
         )}
         aria-label="Sidebar"
       >
-        {/* Logo header */}
-        <div className="px-4 pt-[18px] pb-[14px] flex items-center gap-[11px] border-b border-line flex-shrink-0">
-          <div className="w-9 h-9 rounded-[11px] bg-gemini-logo flex items-center justify-center shadow-lg shadow-primary/30 flex-shrink-0">
-            <span className="text-onAccent font-bold text-lg">G</span>
-          </div>
+        {/* Logo header - h-[60px] to match Header.tsx so the border-b seam lines up */}
+        <div className="h-[60px] px-4 flex items-center gap-[11px] border-b border-line flex-shrink-0">
+          <Logo size={36} className="shadow-lg shadow-primary/30 rounded-[11px] flex-shrink-0" />
           <div className="leading-tight flex-1 min-w-0">
             <div className="font-bold text-[15.5px] tracking-tight text-ink">WhatsGemini</div>
             <div className="text-[11px] text-ink-faint font-medium">Gemini characters</div>

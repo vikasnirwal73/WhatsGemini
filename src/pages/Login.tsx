@@ -2,6 +2,7 @@ import React, { useState, useContext, useCallback } from "react";
 import { AuthContext } from "../contexts/AuthContext";
 import { Navigate } from "react-router-dom";
 import { cn } from "../utils/cn";
+import Logo from "../components/ui/Logo";
 
 const Login = () => {
   const [key, setKey] = useState("");
@@ -40,9 +41,7 @@ const Login = () => {
   return (
     <div className="flex items-center justify-center h-screen bg-app">
       <div className="bg-panel border border-line p-8 rounded-2xl shadow-xl w-96 max-w-[calc(100%-30px)]">
-        <div className="w-12 h-12 rounded-[13px] bg-gemini-logo flex items-center justify-center shadow-lg shadow-primary/30 mx-auto mb-5">
-          <span className="text-onAccent font-bold text-xl">G</span>
-        </div>
+        <Logo size={48} className="shadow-lg shadow-primary/30 rounded-[13px] mx-auto mb-5 block" />
         <h2 className="text-xl font-bold text-center text-ink mb-6">
           Enter Google API Key
         </h2>

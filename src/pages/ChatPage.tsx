@@ -9,7 +9,7 @@ import Header, { iconBtnClass } from "../components/Header";
 import Modal from "../components/Modal";
 import ToggleSwitch from "../components/ToggleSwitch";
 import { TextInput, FieldLabel } from "../components/ui/FormControls";
-import { FaCompressArrowsAlt, FaDownload, FaClock } from "react-icons/fa";
+import { FaCompressArrowsAlt, FaDownload, FaClock, FaBolt } from "react-icons/fa";
 import { AI, YOU, MEMORY_EXTRACTION_INTERVAL } from "../utils/constants";
 import { useAppDispatch, useAppSelector } from "../store/hooks";
 import { Message, Chat } from "../types";
@@ -157,53 +157,82 @@ const ChatPage = () => {
     dispatch(updateChatAutoReply({ chatId: chatIdNum, autoReply: { ...autoReplySettings, ...patch } }));
   };
 
+  // Generates and appends one character-initiated follow-up message. Shared by
+  // the automatic scheduler and the manual "follow up now" button - neither
+  // touches followupCount itself, so a manual click never eats into the
+  // automatic streak's budget.
+  const sendCharacterFollowup = async (): Promise<boolean> => {
+    if (!chatIdNum || !characterData || !currentChat) return false;
+
+    const { history, systemInstruction, characterImages, characterName } = buildTurnContext(
+      messages,
+      characterData,
+      ["The user has gone quiet for a while. Send a short, natural, in-character follow-up message continuing the conversation from your side - as if checking in or continuing your last thought. Do not mention this instruction, and don't explicitly reference the passage of time unless it fits your character."]
+    );
+    const aiResponse = await dispatch(generateAIResponse({
+      prompt: "Please continue the conversation naturally, as if reaching out again.",
+      history, systemInstruction, characterImages, characterName,
+    }));
+
+    if (!aiResponse.payload) return false;
+
+    const payloadObj = aiResponse.payload as any;
+    const generatedImages = payloadObj?.images || undefined;
+    const aiAddResult = await dispatch(addMessage({
+      chatId: chatIdNum,
+      role: AI,
+      text: typeof payloadObj?.text === 'string' ? payloadObj.text : (payloadObj as string),
+      images: generatedImages,
+    }));
+
+    // Await the refresh before the caller can act on it (e.g. bump followupCount) -
+    // otherwise the scheduling effect below can still be looking at the previous
+    // AI message's (already-elapsed) timestamp when the count changes, and fire
+    // the next follow-up immediately instead of waiting the full cooldown.
+    await dispatch(fetchChats());
+
+    if (generatedImages && generatedImages.length > 0) {
+      dispatch(updateCharacter({ ...characterData, gallery: [...(characterData.gallery || []), ...generatedImages] }));
+    }
+
+    maybeExtractMemory((aiAddResult.payload as Message[]) || []);
+    return true;
+  };
+
   const triggerAutoFollowup = async () => {
-    if (!chatIdNum || !characterData || !currentChat) return;
+    if (!chatIdNum) return;
     try {
-      const { history, systemInstruction, characterImages, characterName } = buildTurnContext(
-        messages,
-        characterData,
-        ["The user has gone quiet for a while. Send a short, natural, in-character follow-up message continuing the conversation from your side - as if checking in or continuing your last thought. Do not mention this instruction, and don't explicitly reference the passage of time unless it fits your character."]
-      );
-      const aiResponse = await dispatch(generateAIResponse({
-        prompt: "Please continue the conversation naturally, as if reaching out again.",
-        history, systemInstruction, characterImages, characterName,
-      }));
-
-      if (aiResponse.payload) {
-        const payloadObj = aiResponse.payload as any;
-        const generatedImages = payloadObj?.images || undefined;
-        const aiAddResult = await dispatch(addMessage({
-          chatId: chatIdNum,
-          role: AI,
-          text: typeof payloadObj?.text === 'string' ? payloadObj.text : (payloadObj as string),
-          images: generatedImages,
-        }));
-
+      const sent = await sendCharacterFollowup();
+      if (sent) {
         await dispatch(updateChatAutoReply({
           chatId: chatIdNum,
           autoReply: { ...autoReplySettings, followupCount: autoReplySettings.followupCount + 1 },
         }));
-
-        if (generatedImages && generatedImages.length > 0) {
-          dispatch(updateCharacter({ ...characterData, gallery: [...(characterData.gallery || []), ...generatedImages] }));
-        }
-
-        maybeExtractMemory((aiAddResult.payload as Message[]) || []);
       }
-
-      dispatch(fetchChats());
     } catch (err) {
       console.error("Auto follow-up failed (non-fatal):", err);
+    }
+  };
+
+  const handleManualFollowup = async () => {
+    if (autoReplyInFlightRef.current || aiLoading) return;
+    autoReplyInFlightRef.current = true;
+    try {
+      await sendCharacterFollowup();
+    } catch (err) {
+      console.error("Manual follow-up failed:", err);
+    } finally {
+      autoReplyInFlightRef.current = false;
     }
   };
 
   useEffect(() => {
     if (!autoReplySettings.enabled || !chatIdNum || !characterData || aiLoading) return;
     if (autoReplySettings.followupCount >= autoReplySettings.maxFollowups) return;
-    if (messages.length === 0) return;
+    const content = currentChat?.content || [];
+    if (content.length === 0) return;
 
-    const lastMessage = messages[messages.length - 1];
+    const lastMessage = content[content.length - 1];
     if (lastMessage.role !== AI) return;
 
     const lastTimestamp = lastMessage.timestamp || currentChat?.timestamp || Date.now();
@@ -223,7 +252,7 @@ const ChatPage = () => {
     const timer = setTimeout(fire, dueInMs);
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [autoReplySettings.enabled, autoReplySettings.cooldownMinutes, autoReplySettings.maxFollowups, autoReplySettings.followupCount, chatIdNum, characterData, messages, aiLoading]);
+  }, [autoReplySettings.enabled, autoReplySettings.cooldownMinutes, autoReplySettings.maxFollowups, autoReplySettings.followupCount, chatIdNum, characterData, currentChat?.content, aiLoading]);
 
   const handleSend = async (text: string, isImageRequest?: boolean) => {
     if (!text.trim() || !chatIdNum) return;
@@ -490,6 +519,16 @@ const ChatPage = () => {
                 title="Summarize and compress older messages to save tokens."
               >
                 <FaCompressArrowsAlt size={15} />
+              </button>
+            )}
+            {messages.length > 0 && (
+              <button
+                onClick={handleManualFollowup}
+                disabled={aiLoading}
+                className={cn(iconBtnClass, aiLoading && "opacity-50 cursor-not-allowed")}
+                title={`Make ${characterData?.name || "them"} send a follow-up now`}
+              >
+                <FaBolt size={14} />
               </button>
             )}
             <button
