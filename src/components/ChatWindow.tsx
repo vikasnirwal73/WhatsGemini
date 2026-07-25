@@ -54,6 +54,26 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ messages = [], tree, onSwitchBr
     }
   }, []);
 
+  // scrollTop isn't re-clamped when the container shrinks (mobile keyboard
+  // opening, browser chrome show/hide, orientation change) - it silently
+  // falls short of the new bottom, letting old messages peek out from under
+  // the floating composer. Snap back to bottom whenever that happens, but
+  // only if the user hadn't deliberately scrolled up to read history.
+  const isScrolledUpRef = useRef(isScrolledUp);
+  isScrolledUpRef.current = isScrolledUp;
+
+  useEffect(() => {
+    const el = scrollContainerRef.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(() => {
+      if (!isScrolledUpRef.current) {
+        el.scrollTop = el.scrollHeight;
+      }
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
   const startIndex = useMemo(() => {
     let index = 0;
 

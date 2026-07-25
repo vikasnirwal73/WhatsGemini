@@ -24,7 +24,8 @@ export const deriveImagePrompt = async (
   sdWebuiModel: string,
   useSdWebui: boolean,
   existingImagePrompt: string | undefined,
-  existingImageParams: SDImageParams | undefined
+  existingImageParams: SDImageParams | undefined,
+  signal?: AbortSignal
 ): Promise<ImageDerivationResult> => {
   if (existingImagePrompt) {
     return {
@@ -50,7 +51,12 @@ export const deriveImagePrompt = async (
   const derivationChat = ai.chats.create({ model: selectedModel, config: textModelConfig, history: [...historyForSdk] });
   const derivationPromptParts: Part[] = [{ text: derivationPrompt }];
 
-  const derivationResult = await derivationChat.sendMessage({ message: derivationPromptParts });
+  // sendMessage's per-call config replaces (rather than merges with) the chat's
+  // config, so textModelConfig has to be spread back in alongside the signal.
+  const derivationResult = await derivationChat.sendMessage({
+    message: derivationPromptParts,
+    config: { ...textModelConfig, abortSignal: signal },
+  });
   const derivationText = derivationResult.text || "";
 
   const promptMatch = useSdWebui ? derivationText.match(/PROMPT:\s*([\s\S]*?)PARAMS:/i) : derivationText.match(/PROMPT:\s*([\s\S]*?)SUMMARY:/i);
@@ -97,11 +103,12 @@ export const generateImage = async (
   derivedParams: SDImageParams,
   characterImages: string[] | undefined,
   characterName: string | undefined,
-  safetySettings: SafetySetting[]
+  safetySettings: SafetySetting[],
+  signal?: AbortSignal
 ): Promise<ImageGenerationResult> => {
   try {
     if (useSdWebui) {
-      const images = await generateSDImage(derivedImagePrompt, derivedParams, characterImages, characterName);
+      const images = await generateSDImage(derivedImagePrompt, derivedParams, characterImages, characterName, signal);
       return { images };
     }
 
@@ -113,7 +120,7 @@ export const generateImage = async (
     const imageRes = await ai.models.generateContent({
       model: imageModelName,
       contents: imagePromptParts,
-      config: { safetySettings }
+      config: { safetySettings, abortSignal: signal }
     });
 
     const images: string[] = [];

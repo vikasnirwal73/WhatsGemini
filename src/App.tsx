@@ -51,7 +51,7 @@ const EmptyChatState = () => {
 };
 
 const AppContent = () => {
-  const { apiKey } = useContext(AuthContext);
+  const { apiKey, authChecked } = useContext(AuthContext);
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
   const [error, setError] = useState<string | null>(null);
@@ -93,6 +93,12 @@ const AppContent = () => {
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [dispatch, navigate]);
+
+  // Wait for the stored API key to finish decrypting before deciding whether
+  // to redirect - otherwise every reload would flash the login page first.
+  if (!authChecked) {
+    return <PageLoader />;
+  }
 
   if (!apiKey) {
     return <Navigate to="/login" />;

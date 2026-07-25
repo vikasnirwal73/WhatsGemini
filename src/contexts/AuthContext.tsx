@@ -1,46 +1,58 @@
 import React, { createContext, useState, useEffect, useCallback, ReactNode } from "react";
 import { LS_GOOGLE_API_KEY } from "../utils/constants";
+import { encryptApiKey, decryptApiKey } from "../utils/secureApiKeyStorage";
 
 interface AuthContextType {
   apiKey: string | null;
-  saveApiKey: (key: string) => void;
+  authChecked: boolean;
+  saveApiKey: (key: string) => Promise<void>;
   logout: () => void;
 }
 
 export const AuthContext = createContext<AuthContextType>({
   apiKey: null,
-  saveApiKey: () => {},
+  authChecked: false,
+  saveApiKey: async () => {},
   logout: () => {},
 });
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  // Lazy initialization to prevent unnecessary localStorage reads
-  const getStoredApiKey = () => {
-    try {
-      return localStorage.getItem(LS_GOOGLE_API_KEY) || null;
-    } catch (error) {
-      console.error("Error accessing localStorage:", error);
-      return null;
-    }
-  };
+  const [apiKey, setApiKey] = useState<string | null>(null);
+  const [authChecked, setAuthChecked] = useState(false);
 
-  const [apiKey, setApiKey] = useState<string | null>(getStoredApiKey);
-
-  // Save API key to localStorage when it changes
+  // Decrypt the stored key once on mount. A value that fails to decrypt is
+  // treated as a legacy plaintext key from before encryption-at-rest was
+  // added, and is transparently re-saved in encrypted form.
   useEffect(() => {
-    if (apiKey) {
+    let cancelled = false;
+    (async () => {
       try {
-        localStorage.setItem(LS_GOOGLE_API_KEY, apiKey);
+        const stored = localStorage.getItem(LS_GOOGLE_API_KEY);
+        if (!stored) return;
+        try {
+          const decrypted = await decryptApiKey(stored);
+          if (!cancelled) setApiKey(decrypted);
+        } catch {
+          const encrypted = await encryptApiKey(stored);
+          localStorage.setItem(LS_GOOGLE_API_KEY, encrypted);
+          if (!cancelled) setApiKey(stored);
+        }
       } catch (error) {
-        console.error("Error saving API key to localStorage:", error);
+        console.error("Error accessing localStorage:", error);
+      } finally {
+        if (!cancelled) setAuthChecked(true);
       }
-    }
-  }, [apiKey]);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // Memoized function to save API key
-  const saveApiKey = useCallback((key: string) => {
+  const saveApiKey = useCallback(async (key: string) => {
     try {
-      localStorage.setItem(LS_GOOGLE_API_KEY, key);
+      const encrypted = await encryptApiKey(key);
+      localStorage.setItem(LS_GOOGLE_API_KEY, encrypted);
       setApiKey(key);
     } catch (error) {
       console.error("Error saving API key:", error);
@@ -58,7 +70,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ apiKey, saveApiKey, logout }}>
+    <AuthContext.Provider value={{ apiKey, authChecked, saveApiKey, logout }}>
       {children}
     </AuthContext.Provider>
   );

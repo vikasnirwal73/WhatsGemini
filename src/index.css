@@ -27,6 +27,7 @@
     /* Secondary/Accent Colors (Light) */
     --color-secondary: 122 92 192; /* Plume (#7A5CC0) */
     --color-secondary-hover: 104 73 168; /* Plume, darkened */
+    --color-on-secondary: 255 255 255; /* #FFFFFF - Plume is dark enough for white text */
 
     /* Chat Bubbles (Light) */
     --color-bubble-sent-bg: 213 247 206; /* #D5F7CE */
@@ -62,6 +63,7 @@
     /* Secondary/Accent Colors (Dark) */
     --color-secondary: 178 156 230; /* Plume (#B29CE6) */
     --color-secondary-hover: 196 176 238; /* Plume, lightened */
+    --color-on-secondary: 27 20 46; /* #1B142E - Plume is light in dark mode, needs dark text for contrast */
 
     /* Chat Bubbles (Dark) */
     --color-bubble-sent-bg: 11 93 74; /* #0B5D4A */

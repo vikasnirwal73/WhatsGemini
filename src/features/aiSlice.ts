@@ -28,7 +28,7 @@ export const generateAIResponse = createAsyncThunk(
       const state = getState() as RootState;
       const settings = state.settings;
 
-      const apiKey = getAPIKey();
+      const apiKey = await getAPIKey();
       if (!apiKey) throw new Error("API key is missing. Please log in.");
 
       const selectedModel = settings.selectedModel;
@@ -84,7 +84,7 @@ export const generateAIResponse = createAsyncThunk(
         const derivation = await deriveImagePrompt(
           ai, selectedModel, textModelConfig, historyForSdk, prompt,
           settings.imageGenPrompt, settings.sdWebuiModel, useSdWebui,
-          existingImagePrompt, existingImageParams
+          existingImagePrompt, existingImageParams, signal
         );
         trackUsage(derivation.usage, selectedModel);
 
@@ -94,7 +94,7 @@ export const generateAIResponse = createAsyncThunk(
 
         const imageResult = await generateImage(
           ai, useSdWebui, imageModelName, derivation.derivedImagePrompt, derivation.derivedParams,
-          characterImages, characterName, safetySettings
+          characterImages, characterName, safetySettings, signal
         );
         trackUsage(imageResult.usage, imageModelName);
         generatedImages = imageResult.images;
@@ -168,7 +168,7 @@ export const extractCharacterMemory = createAsyncThunk(
     { getState, rejectWithValue }
   ) => {
     try {
-      const apiKey = getAPIKey();
+      const apiKey = await getAPIKey();
       if (!apiKey) throw new Error("API key is missing. Please log in.");
 
       const state = getState() as RootState;

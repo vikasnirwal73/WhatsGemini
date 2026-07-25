@@ -1,6 +1,7 @@
 import { HarmCategory, HarmBlockThreshold, SafetySetting } from "@google/genai";
 import { LS_GOOGLE_API_KEY, LS_INITIAL_MESSAGES } from "../../../utils/constants";
 import { AISafetySettings, InitialMessage } from "../../../types";
+import { decryptApiKey } from "../../../utils/secureApiKeyStorage";
 
 // Helper function to get values from localStorage with fallbacks
 export const getStoredValue = <T>(key: string, defaultValue: T, parser: (val: string) => T = (val) => val as unknown as T): T => {
@@ -21,7 +22,17 @@ export const getInitialMessages = (): InitialMessage[] => {
   }
 };
 
-export const getAPIKey = (): string | null => getStoredValue<string | null>(LS_GOOGLE_API_KEY, null);
+export const getAPIKey = async (): Promise<string | null> => {
+  const stored = getStoredValue<string | null>(LS_GOOGLE_API_KEY, null);
+  if (!stored) return null;
+  try {
+    return await decryptApiKey(stored);
+  } catch {
+    // Legacy plaintext key (pre-encryption-at-rest) - AuthContext re-encrypts
+    // it on next app load, but callers shouldn't fail in the meantime.
+    return stored;
+  }
+};
 
 // Format safety settings into the required API format
 export const formatSafetySettings = (settings: AISafetySettings): SafetySetting[] => [

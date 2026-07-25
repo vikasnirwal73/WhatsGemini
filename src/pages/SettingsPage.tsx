@@ -17,7 +17,7 @@ import { ToastContainer, ToastData } from "../components/Toast";
 import UserProfileSettings from "../components/settings/UserProfileSettings";
 import TextModelSettings from "../components/settings/TextModelSettings";
 import ImageGenerationSettings from "../components/settings/ImageGenerationSettings";
-import { getApiKey } from "../utils/apiKeyManager";
+import { getAPIKey } from "../features/ai/utils/settings";
 import { useModal } from "../contexts/ModalContext";
 import { fetchChats } from "../features/chatSlice";
 import { fetchCharacters } from "../features/characterSlice";
@@ -92,7 +92,7 @@ const SettingsPage = () => {
 
   useEffect(() => {
     const fetchModels = async () => {
-      const apiKey = getApiKey();
+      const apiKey = await getAPIKey();
       if (!apiKey) return;
 
       try {
@@ -620,7 +620,7 @@ const SettingsPage = () => {
             <div className="flex flex-col sm:flex-row gap-4 mb-2">
                <button
                   onClick={handleExportSettings}
-                  className="flex-1 bg-secondary text-white py-2 px-4 rounded-lg hover:bg-secondary-hover transition flex items-center justify-center gap-2"
+                  className="flex-1 bg-secondary text-onSecondary py-2 px-4 rounded-lg hover:bg-secondary-hover transition flex items-center justify-center gap-2"
                >
                   <FaDownload /> Export Settings
                </button>

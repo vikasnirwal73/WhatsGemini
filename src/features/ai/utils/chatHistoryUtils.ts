@@ -121,7 +121,7 @@ export const trimTrailingUserMessages = (validHistory: Content[]): Content[] => 
 };
 
 export const performChatCompression = async (history: Content[], systemInstruction?: string): Promise<string> => {
-  const apiKey = getAPIKey();
+  const apiKey = await getAPIKey();
   if (!apiKey) throw new Error("API key is missing. Please log in.");
   const selectedModel = getStoredValue(LS_AI_MODEL, DEFAULT_AI_MODEL);
 

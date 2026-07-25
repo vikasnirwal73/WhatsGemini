@@ -22,7 +22,8 @@ export const generateSDImage = async (
   derivedImagePrompt: string,
   derivedParams: SDImageParams,
   characterImages?: string[],
-  characterName?: string
+  characterName?: string,
+  signal?: AbortSignal
 ): Promise<string[]> => {
   const generatedImages: string[] = [];
 
@@ -132,7 +133,8 @@ export const generateSDImage = async (
     headers: {
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify(payload)
+    body: JSON.stringify(payload),
+    signal
   });
 
   if (!response.ok) {

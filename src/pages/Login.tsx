@@ -7,9 +7,9 @@ const Login = () => {
   const [key, setKey] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const { saveApiKey, apiKey } = useContext(AuthContext);
+  const { saveApiKey, apiKey, authChecked } = useContext(AuthContext);
 
-  const handleLogin = useCallback(() => {
+  const handleLogin = useCallback(async () => {
     setError(null);
 
     if (!key.trim()) {
@@ -20,7 +20,7 @@ const Login = () => {
     setLoading(true);
 
     try {
-      saveApiKey(key);
+      await saveApiKey(key);
     } catch (err) {
       console.error("Error saving API key:", err);
       setError("Failed to save API key. Please try again.");
@@ -28,6 +28,10 @@ const Login = () => {
       setLoading(false);
     }
   }, [key, saveApiKey]);
+
+  if (!authChecked) {
+    return null;
+  }
 
   if (apiKey) {
     return <Navigate to="/" />;

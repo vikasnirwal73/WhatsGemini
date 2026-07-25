@@ -25,6 +25,7 @@ module.exports = {
           2: 'rgb(var(--color-accent-2) / <alpha-value>)',
         },
         onAccent: 'rgb(var(--color-on-accent) / <alpha-value>)',
+        onSecondary: 'rgb(var(--color-on-secondary) / <alpha-value>)',
 
         // Text
         ink: {
