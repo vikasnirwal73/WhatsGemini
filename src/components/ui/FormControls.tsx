@@ -2,7 +2,7 @@ import React from "react";
 import { FaChevronDown } from "react-icons/fa";
 import { cn } from "../../utils/cn";
 
-const fieldBase = "w-full p-3 bg-app text-ink placeholder-ink-muted rounded-xl border border-line focus:border-primary outline-none transition-all disabled:opacity-50";
+const fieldBase = "w-full p-3 bg-panel2 text-ink placeholder-ink-faint rounded-xl border border-line focus:border-primary outline-none transition-all disabled:opacity-50";
 
 export const TextInput = React.forwardRef<HTMLInputElement, React.InputHTMLAttributes<HTMLInputElement>>(
   ({ className, ...props }, ref) => (

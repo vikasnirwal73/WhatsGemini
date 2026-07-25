@@ -201,7 +201,7 @@ const ImageGenerationSettings: React.FC<ImageGenerationSettingsProps> = ({
           </span>
           <button
             onClick={handleSelectDirectory}
-            className="px-3 py-1.5 bg-primary text-white text-sm rounded-lg hover:bg-primary-hover transition whitespace-nowrap"
+            className="px-3 py-1.5 bg-primary text-onAccent text-sm rounded-lg hover:bg-primary-hover transition whitespace-nowrap"
           >
             Select Folder
           </button>

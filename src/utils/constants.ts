@@ -64,6 +64,21 @@ export const MODEL_PRICING: Record<string, { input: number; output: number }> = 
 // Fallback rate for a custom/unrecognized model string (e.g. hand-entered or from an
 // imported settings file) so the estimate stays in a sane ballpark instead of reading $0.
 export const DEFAULT_MODEL_PRICING = MODEL_PRICING["gemini-2.5-flash-lite"];
+// How many new messages accumulate in a chat before long-term memory extraction
+// runs again (independent of the compression threshold, which defaults to off).
+export const MEMORY_EXTRACTION_INTERVAL = 12;
+// Oldest facts are trimmed once a character's memory list exceeds this size.
+export const MAX_MEMORY_ENTRIES = 40;
+
+// Preset 2-color avatar gradients offered when creating/editing a character.
+export const CHARACTER_SWATCHES: [string, string][] = [
+  ["#10B981", "#0EA5A0"], // Emerald / Teal (default)
+  ["#6366F1", "#A855F7"], // Indigo / Purple
+  ["#F43F5E", "#FB7185"], // Rose / Pink
+  ["#0EA5E9", "#3B82F6"], // Sky / Blue
+  ["#1E293B", "#475569"], // Slate / Gray
+];
+
 export const ROLE = "role";
 export const MESSAGE = "message";
 export const LIGHT = "light";

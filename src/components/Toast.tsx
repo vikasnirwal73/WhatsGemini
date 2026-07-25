@@ -33,8 +33,8 @@ const Toast: React.FC<ToastProps> = ({ message, type = "success", duration = 500
       exit={{ opacity: 0, x: 40, scale: 0.95, transition: { duration: 0.15 } }}
       transition={{ type: "spring", stiffness: 400, damping: 30 }}
       className={cn(
-        "flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg min-w-[280px] max-w-[400px] text-white",
-        isError ? "bg-red-500" : "bg-primary"
+        "flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg min-w-[280px] max-w-[400px]",
+        isError ? "bg-red-500 text-white" : "bg-primary text-onAccent"
       )}
       role="alert"
     >

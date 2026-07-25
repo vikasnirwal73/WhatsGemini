@@ -16,6 +16,8 @@ export interface InitialMessage {
 }
 
 export interface Message {
+  id?: string; // uuid, assigned to every message going forward - required for branching
+  timestamp?: number;
   role: "user" | "model" | string;
   txt?: string; // The markdown text
   images?: string[]; // Array of local paths or object URLs
@@ -27,12 +29,35 @@ export interface Message {
   sampler_name?: string; // The specific sampler name used
 }
 
+// A single node in a chat's conversation tree - one specific message plus its
+// position in the branch structure. `Chat.content` is always the flattened
+// "active path" through this tree, so every existing consumer keeps reading
+// a plain Message[] unchanged.
+export interface MessageNode {
+  id: string;
+  message: Message;
+  parentId: string | null;
+  childIds: string[];
+}
+
+export interface ConversationTree {
+  nodes: Record<string, MessageNode>;
+}
+
 export interface Chat {
   id: number;
   title: string;
   timestamp: number;
   content: Message[];
   characterId?: number | null;
+  tree?: ConversationTree; // undefined until the chat's first branch action
+  activeLeafId?: string | null;
+  autoReply?: {
+    enabled: boolean;
+    cooldownMinutes: number;
+    maxFollowups: number;
+    followupCount: number;
+  };
 }
 
 export interface Character {
@@ -45,6 +70,8 @@ export interface Character {
   appearanceImages?: string[];
   avatar?: string;
   gallery?: string[];
+  accent?: [string, string]; // two-color avatar gradient, e.g. ["#10B981", "#0EA5A0"]
+  memory?: string[]; // durable facts about the user/relationship, extracted over time
 }
 
 export interface UserProfile {

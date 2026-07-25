@@ -4,60 +4,122 @@
 
 @layer base {
   :root {
-    /* Main App Backgrounds (Light) */
-    --color-app-bg: 242 240 245; /* Paper (#F2F0F5) */
-    --color-panel-bg: 255 255 255; /* White (#FFFFFF) */
-    --color-panel2-bg: 251 250 252; /* Secondary surface (#FBFAFC) */
+    /* Main App Backgrounds (Light) - "Persona Chat" design tokens */
+    --color-app-bg: 235 238 243; /* #EBEEF3 */
+    --color-panel-bg: 255 255 255; /* #FFFFFF */
+    --color-panel2-bg: 244 246 249; /* #F4F6F9 */
+    --color-panel3-bg: 233 237 242; /* #E9EDF2 */
+    --color-hover-bg: 241 244 248; /* #F1F4F8 */
+    --color-chat-bg: 217 224 232; /* #D9E0E8 */
 
     /* Typography (Light) */
-    --color-text-main: 28 24 38; /* Ink (#1C1826) */
-    --color-text-muted: 110 106 125; /* Mist (#6E6A7D) */
+    --color-text-main: 15 22 32; /* #0F1620 */
+    --color-text-muted: 90 102 117; /* #5A6675 */
+    --color-text-faint: 139 152 166; /* #8B98A6 */
 
     /* Brand/Primary Colors (Light) */
-    --color-primary: 18 115 95; /* Signal (#12735F) */
-    --color-primary-hover: 14 92 76; /* Signal, darkened */
+    --color-primary: 14 163 114; /* #0EA372 */
+    --color-primary-hover: 12 143 99; /* #0C8F63, darkened for hover */
+    --color-accent: 14 163 114; /* #0EA372, same as primary */
+    --color-accent-2: 12 156 147; /* #0C9C93 */
+    --color-on-accent: 255 255 255; /* #FFFFFF */
 
     /* Secondary/Accent Colors (Light) */
     --color-secondary: 122 92 192; /* Plume (#7A5CC0) */
     --color-secondary-hover: 104 73 168; /* Plume, darkened */
-    --color-accent: 169 112 28; /* Ember (#A9701C) */
 
     /* Chat Bubbles (Light) */
-    --color-bubble-sent: 18 115 95; /* Signal */
-    --color-bubble-received: 251 250 252; /* Secondary surface */
+    --color-bubble-sent-bg: 213 247 206; /* #D5F7CE */
+    --color-bubble-sent-text: 11 46 34; /* #0B2E22 */
+    --color-bubble-received-bg: 255 255 255; /* #FFFFFF */
+    --color-bubble-received-text: 15 22 32; /* #0F1620 */
 
     /* Borders (Light) */
-    --color-border-main: 225 222 232;
+    --color-border-main: 222 227 234; /* #DEE3EA */
   }
 
   .dark {
-    /* Main App Backgrounds (Dark) */
-    --color-app-bg: 20 16 25; /* Paper (#141019) */
-    --color-panel-bg: 29 25 38; /* Panel (#1D1926) */
-    --color-panel2-bg: 35 32 46; /* Secondary surface (#23202E) */
+    /* Main App Backgrounds (Dark) - "Persona Chat" design tokens */
+    --color-app-bg: 11 14 19; /* #0B0E13 */
+    --color-panel-bg: 20 26 34; /* #141A22 */
+    --color-panel2-bg: 28 36 47; /* #1C242F */
+    --color-panel3-bg: 37 47 60; /* #252F3C */
+    --color-hover-bg: 26 34 44; /* #1A222C */
+    --color-chat-bg: 9 12 17; /* #090C11 */
 
     /* Typography (Dark) */
-    --color-text-main: 241 238 245; /* Ink (#F1EEF5) */
-    --color-text-muted: 157 151 174; /* Mist (#9D97AE) */
+    --color-text-main: 234 240 246; /* #EAF0F6 */
+    --color-text-muted: 147 161 176; /* #93A1B0 */
+    --color-text-faint: 94 107 122; /* #5E6B7A */
 
     /* Brand/Primary Colors (Dark) */
-    /* Kept identical to light mode: sent-bubble/button text is hardcoded white,
-       and this jade is the darkest shade that still clears AA contrast for it. */
-    --color-primary: 18 115 95; /* Signal (#12735F) */
-    --color-primary-hover: 26 135 112; /* Signal, lightened for dark-surface hover */
+    --color-primary: 16 185 129; /* #10B981 */
+    --color-primary-hover: 20 201 143; /* #14C98F, lightened for hover */
+    --color-accent: 16 185 129; /* #10B981, same as primary */
+    --color-accent-2: 14 165 160; /* #0EA5A0 */
+    --color-on-accent: 4 20 15; /* #04140F */
 
     /* Secondary/Accent Colors (Dark) */
     --color-secondary: 178 156 230; /* Plume (#B29CE6) */
     --color-secondary-hover: 196 176 238; /* Plume, lightened */
-    --color-accent: 227 167 86; /* Ember (#E3A756) */
 
     /* Chat Bubbles (Dark) */
-    --color-bubble-sent: 18 115 95; /* Signal */
-    --color-bubble-received: 35 32 46; /* Secondary surface */
+    --color-bubble-sent-bg: 11 93 74; /* #0B5D4A */
+    --color-bubble-sent-text: 234 251 244; /* #EAFBF4 */
+    --color-bubble-received-bg: 28 36 47; /* #1C242F */
+    --color-bubble-received-text: 234 240 246; /* #EAF0F6 */
 
     /* Borders (Dark) */
-    --color-border-main: 50 45 63;
+    --color-border-main: 40 50 63; /* #28323F */
   }
+}
+
+::selection {
+  background: rgba(16, 185, 129, 0.3);
+}
+
+::-webkit-scrollbar {
+  width: 9px;
+  height: 9px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgb(var(--color-border-main));
+  border-radius: 6px;
+}
+
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 22px;
+  background: transparent;
+  cursor: pointer;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  margin-top: -6px;
+  border-radius: 50%;
+  background: rgb(var(--color-primary));
+  border: 3px solid rgb(var(--color-panel-bg));
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+  transition: transform 0.12s ease;
+}
+input[type="range"]::-webkit-slider-thumb:hover {
+  transform: scale(1.15);
+}
+input[type="range"]::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: rgb(var(--color-primary));
+  border: 3px solid rgb(var(--color-panel-bg));
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
 }
 
 /* Fix for mobile keyboard hiding input */

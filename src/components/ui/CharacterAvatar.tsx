@@ -10,14 +10,25 @@ const getInitials = (name?: string) => {
 
 interface CharacterAvatarProps {
   name?: string;
+  accent?: [string, string];
   size?: number;
   className?: string;
 }
 
-export const CharacterAvatar: React.FC<CharacterAvatarProps> = ({ name, size = 32, className }) => (
+export const CharacterAvatar: React.FC<CharacterAvatarProps> = ({ name, accent, size = 32, className }) => (
   <div
-    className={cn("rounded-full bg-gemini-logo flex items-center justify-center flex-shrink-0 text-white font-semibold shadow-sm", className)}
-    style={{ width: size, height: size, fontSize: size * 0.4 }}
+    className={cn(
+      "flex items-center justify-center flex-shrink-0 text-white font-semibold shadow-sm",
+      !accent && "bg-gemini-logo",
+      className
+    )}
+    style={{
+      width: size,
+      height: size,
+      fontSize: size * 0.4,
+      borderRadius: Math.round(size * 0.32),
+      ...(accent ? { background: `linear-gradient(135deg, ${accent[0]}, ${accent[1]})` } : {}),
+    }}
   >
     {getInitials(name)}
   </div>

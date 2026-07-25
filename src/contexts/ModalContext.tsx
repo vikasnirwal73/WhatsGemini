@@ -97,10 +97,10 @@ export const ModalProvider = ({ children }: { children: ReactNode }) => {
           )}
           <button
             onClick={modalState.onConfirm}
-            className={`px-4 py-2 text-sm font-medium text-white rounded-lg transition ${
+            className={`px-4 py-2 text-sm font-medium rounded-lg transition ${
               modalState.isConfirm
-                ? 'bg-red-500 hover:bg-red-600'
-                : 'bg-primary hover:bg-primary-hover'
+                ? 'bg-red-500 hover:bg-red-600 text-white'
+                : 'bg-primary hover:bg-primary-hover text-onAccent'
             }`}
           >
             {modalState.isConfirm ? 'Confirm' : 'OK'}

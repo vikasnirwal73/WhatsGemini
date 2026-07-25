@@ -1,7 +1,8 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import { dbService } from "../services/dbService";
-import { LS_INITIAL_MESSAGES } from "../utils/constants";
-import { Chat, Message } from "../types";
+import { LS_INITIAL_MESSAGES, YOU } from "../utils/constants";
+import { Chat, Message, ConversationTree } from "../types";
+import { addChildNode, flattenPath, generateNodeId } from "./chat/messageTree";
 
 // Helper function for error handling
 const handleDbError = (error: unknown, rejectWithValue: any) => {
@@ -59,7 +60,7 @@ export const addMessage = createAsyncThunk(
   async ({ chatId, role, text, images, isImageRequest, imagePrompt, imageParams }: { chatId: number; role: string; text: string; images?: string[], isImageRequest?: boolean, imagePrompt?: string, imageParams?: any }, { dispatch, rejectWithValue }) => {
     try {
       const chat = await dbService.getChatById(chatId);
-      
+
       // Retrieve initial messages from localStorage
       const savedMessages = JSON.parse(localStorage.getItem(LS_INITIAL_MESSAGES) || "[]") as any[];
 
@@ -67,20 +68,28 @@ export const addMessage = createAsyncThunk(
       if (chat.content.length === 0) {
         savedMessages.forEach((msg) => {
           if (msg.role && msg.message) {
-            chat.content.push({ role: msg.role, txt: msg.message, isSystem: true });
+            chat.content.push({ role: msg.role, txt: msg.message, isSystem: true, id: generateNodeId(), timestamp: Date.now() });
           }
         });
-
-        // Fetch character details for system instructions (no longer injected into chat stream directly)
-        if (chat.characterId) {
-          const character = await dbService.getCharacterById(chat.characterId);
-          if (character) {
-             // AI configuration moves to ChatPage / aiSlice
-          }
-        }
       }
 
-      chat.content.push({ role, txt: text, images, isImageRequest, imagePrompt, imageParams });
+      const newMessage: Message = { role, txt: text, images, isImageRequest, imagePrompt, imageParams, id: generateNodeId(), timestamp: Date.now() };
+
+      // A real reply from the user means any pending auto-follow-up streak is over.
+      if (role === YOU && chat.autoReply) {
+        chat.autoReply = { ...chat.autoReply, followupCount: 0 };
+      }
+
+      if (chat.tree) {
+        // Tree-aware chat (has been branched at least once): extend from the active leaf.
+        const { tree, nodeId } = addChildNode(chat.tree, chat.activeLeafId || null, newMessage);
+        chat.tree = tree;
+        chat.activeLeafId = nodeId;
+        chat.content = flattenPath(tree, nodeId);
+      } else {
+        chat.content.push(newMessage);
+      }
+
       await dbService.updateChat(chat);
       dispatch(fetchChats()); // Refresh state
       return chat.content;
@@ -99,14 +108,57 @@ export const deleteChat = createAsyncThunk("chat/delete", async (chatId: number,
   }
 });
 
+// Wholesale content replacement - used by chat compression. This intentionally
+// discards any branch tree: compression is already a deliberate "throw away
+// granular history" action, and a stale tree would otherwise silently
+// resurrect the pre-compression messages the next time a branch is touched.
 export const updateMessages = createAsyncThunk(
   "chat/updateMessages",
   async ({ chatId, newMessages }: { chatId: number; newMessages: Message[] }, { rejectWithValue }) => {
     try {
       const chat = await dbService.getChatById(chatId);
       chat.content = newMessages;
+      chat.tree = undefined;
+      chat.activeLeafId = undefined;
       await dbService.updateChat(chat);
       return { chatId, newMessages };
+    } catch (error) {
+      return handleDbError(error, rejectWithValue);
+    }
+  }
+);
+
+// Structured update used by branching regenerate/edit/switch-branch - keeps
+// Chat.content and Chat.tree in sync in a single write.
+export const updateChatTree = createAsyncThunk(
+  "chat/updateChatTree",
+  async (
+    { chatId, content, tree, activeLeafId }: { chatId: number; content: Message[]; tree: ConversationTree; activeLeafId: string | null },
+    { rejectWithValue }
+  ) => {
+    try {
+      const chat = await dbService.getChatById(chatId);
+      chat.content = content;
+      chat.tree = tree;
+      chat.activeLeafId = activeLeafId;
+      await dbService.updateChat(chat);
+      return { chatId, content, tree, activeLeafId };
+    } catch (error) {
+      return handleDbError(error, rejectWithValue);
+    }
+  }
+);
+
+// Updates just a chat's auto-follow-up settings (enabled/cooldown/max/count),
+// leaving content and tree untouched.
+export const updateChatAutoReply = createAsyncThunk(
+  "chat/updateChatAutoReply",
+  async ({ chatId, autoReply }: { chatId: number; autoReply: Chat["autoReply"] }, { rejectWithValue }) => {
+    try {
+      const chat = await dbService.getChatById(chatId);
+      chat.autoReply = autoReply;
+      await dbService.updateChat(chat);
+      return { chatId, autoReply };
     } catch (error) {
       return handleDbError(error, rejectWithValue);
     }
@@ -188,7 +240,29 @@ const chatSlice = createSlice({
         const chat = state.chats.find((c) => c.id === action.payload.chatId);
         if (chat) {
           chat.content = action.payload.newMessages;
+          chat.tree = undefined;
+          chat.activeLeafId = undefined;
         }
+      })
+      .addCase(updateChatTree.fulfilled, (state, action) => {
+        const chat = state.chats.find((c) => c.id === action.payload.chatId);
+        if (chat) {
+          chat.content = action.payload.content;
+          chat.tree = action.payload.tree;
+          chat.activeLeafId = action.payload.activeLeafId;
+        }
+      })
+      .addCase(updateChatTree.rejected, (state, action) => {
+        state.error = action.payload as string;
+      })
+      .addCase(updateChatAutoReply.fulfilled, (state, action) => {
+        const chat = state.chats.find((c) => c.id === action.payload.chatId);
+        if (chat) {
+          chat.autoReply = action.payload.autoReply;
+        }
+      })
+      .addCase(updateChatAutoReply.rejected, (state, action) => {
+        state.error = action.payload as string;
       })
       .addCase(updateMessages.rejected, (state, action) => {
         state.error = action.payload as string;

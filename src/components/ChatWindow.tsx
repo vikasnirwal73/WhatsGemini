@@ -2,35 +2,43 @@ import React, { useRef, useEffect, useCallback, useMemo, useState } from "react"
 import { FaCheck, FaTimes, FaArrowDown } from "react-icons/fa";
 import { motion } from "framer-motion";
 import { YOU, LS_INITIAL_MESSAGES } from "../utils/constants";
-import { Message } from "../types";
+import { Message, Character, ConversationTree } from "../types";
+import { getSiblingInfo } from "../features/chat/messageTree";
 import { DisplayImage } from "./DisplayImage";
 import ToggleSwitch from "./ToggleSwitch";
 import ChatMessage from "./chat/ChatMessage";
 import { DialogRoot, DialogContent, DialogTitle, DialogClose } from "./ui/Dialog";
+import { CharacterAvatar } from "./ui/CharacterAvatar";
 
 interface ChatWindowProps {
   messages: Message[];
+  tree?: ConversationTree;
+  onSwitchBranch?: (nodeId: string) => void;
   onRegenerate?: (index: number) => void;
   onEdit?: (index: number, text: string, isImageRequest?: boolean) => void;
   onSend?: (text: string, isImageRequest?: boolean) => void;
   aiLoading?: boolean;
   characterName?: string;
+  character?: Character;
 }
 
-const TypingIndicator = () => (
-  <div className="flex items-center gap-1 px-1 py-2">
-    {[0, 1, 2].map((i) => (
-      <motion.span
-        key={i}
-        className="w-1.5 h-1.5 rounded-full bg-ink-muted"
-        animate={{ y: [0, -4, 0], opacity: [0.5, 1, 0.5] }}
-        transition={{ duration: 1, repeat: Infinity, delay: i * 0.15, ease: "easeInOut" }}
-      />
-    ))}
+const TypingIndicator = ({ charInitials, accent }: { charInitials: string; accent?: [string, string] }) => (
+  <div className="flex items-end gap-3 mb-6">
+    <CharacterAvatar name={charInitials} accent={accent} size={32} className="mt-1" />
+    <div className="flex items-center gap-1 px-4 py-3.5 bg-bubble-received border border-line rounded-2xl rounded-bl-[5px]">
+      {[0, 1, 2].map((i) => (
+        <motion.span
+          key={i}
+          className="w-1.5 h-1.5 rounded-full bg-ink-faint"
+          animate={{ y: [0, -4, 0], opacity: [0.5, 1, 0.5] }}
+          transition={{ duration: 1, repeat: Infinity, delay: i * 0.15, ease: "easeInOut" }}
+        />
+      ))}
+    </div>
   </div>
 );
 
-const ChatWindow: React.FC<ChatWindowProps> = ({ messages = [], onRegenerate, onEdit, onSend, aiLoading, characterName }) => {
+const ChatWindow: React.FC<ChatWindowProps> = ({ messages = [], tree, onSwitchBranch, onRegenerate, onEdit, onSend, aiLoading, characterName, character }) => {
   const chatEndRef = useRef<HTMLDivElement>(null);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [editText, setEditText] = useState("");
@@ -171,33 +179,46 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ messages = [], onRegenerate, on
 
   return (
     <div
-      className="flex-1 p-4 overflow-auto bg-transparent relative z-1 h-full w-full max-w-4xl mx-auto pb-32"
+      className="flex-1 p-4 overflow-auto bg-chat relative z-1 h-full w-full max-w-4xl mx-auto pb-32"
       ref={scrollContainerRef}
       onScroll={handleScroll}
     >
       {filteredMessages.length === 0 ? (
-        <div className="flex flex-col items-center justify-center h-full w-full px-4 -mt-20">
-          <div className="w-20 h-20 rounded-full bg-gemini-logo flex items-center justify-center shadow-2xl mb-8">
-            <span className="text-white font-bold text-4xl">{charInitials}</span>
+        <div className="flex flex-col items-center h-full w-full px-4 pt-10">
+          <div className="flex flex-col items-center text-center gap-3 w-full max-w-[440px] px-5 py-8 bg-panel border border-line rounded-2xl shadow-sm">
+            <CharacterAvatar name={charInitials} accent={character?.accent} size={64} className="text-2xl" />
+            <div>
+              <div className="text-[19px] font-bold tracking-tight text-ink">{characterName || "New Conversation"}</div>
+              {character?.relationship && (
+                <div className="text-[13px] text-primary font-medium mt-0.5">{character.relationship}</div>
+              )}
+            </div>
+            <p className="text-[13.5px] leading-relaxed text-ink-muted">
+              {character?.description || "Send a message to get started."}
+            </p>
           </div>
-          <h2 className="text-2xl md:text-3xl font-medium text-ink mb-2">New Conversation</h2>
-          <p className="text-sm text-ink-muted">Send a message to get started.</p>
         </div>
       ) : (
-        filteredMessages.map((msg, i) => (
-          <ChatMessage
-            key={i}
-            msg={msg}
-            charInitials={charInitials}
-            aiLoading={aiLoading || false}
-            onCopy={handleCopyMessage}
-            onRegenerate={handleRegenerate}
-            onStartEdit={startEdit}
-            setFullscreenImage={setFullscreenImage}
-          />
-        ))
+        filteredMessages.map((msg, i) => {
+          const siblingInfo = tree && msg.id ? getSiblingInfo(tree, msg.id) : undefined;
+          return (
+            <ChatMessage
+              key={msg.id || i}
+              msg={msg}
+              charInitials={charInitials}
+              accent={character?.accent}
+              aiLoading={aiLoading || false}
+              onCopy={handleCopyMessage}
+              onRegenerate={handleRegenerate}
+              onStartEdit={startEdit}
+              setFullscreenImage={setFullscreenImage}
+              siblingInfo={siblingInfo && siblingInfo.total > 1 ? siblingInfo : undefined}
+              onSwitchBranch={onSwitchBranch}
+            />
+          );
+        })
       )}
-      {aiLoading && <TypingIndicator />}
+      {aiLoading && <TypingIndicator charInitials={charInitials} accent={character?.accent} />}
       <div ref={chatEndRef} />
       {isScrolledUp && (
         <button
@@ -205,7 +226,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ messages = [], onRegenerate, on
             setIsScrolledUp(false);
             chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
           }}
-          className="fixed bottom-24 right-6 z-50 p-3 bg-primary text-white rounded-full shadow-lg hover:bg-primary-hover transition transform hover:scale-105 flex items-center justify-center opacity-80 hover:opacity-100"
+          className="fixed bottom-24 right-6 z-50 p-3 bg-primary text-onAccent rounded-full shadow-lg hover:bg-primary-hover transition transform hover:scale-105 flex items-center justify-center opacity-80 hover:opacity-100"
           title="Scroll to bottom"
           aria-label="Scroll to bottom"
         >
@@ -265,7 +286,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ messages = [], onRegenerate, on
               <button
                 onClick={saveEdit}
                 disabled={!editText.trim()}
-                className="flex-1 sm:flex-none px-5 py-2.5 rounded-xl font-medium bg-primary text-white hover:bg-primary-hover transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-sm"
+                className="flex-1 sm:flex-none px-5 py-2.5 rounded-xl font-medium bg-primary text-onAccent hover:bg-primary-hover transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-sm"
               >
                 <FaCheck size={14} />
                 Save Changes

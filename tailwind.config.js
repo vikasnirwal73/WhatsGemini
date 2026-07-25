@@ -6,6 +6,10 @@ module.exports = {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        sans: ['Geist', '-apple-system', 'system-ui', 'sans-serif'],
+        mono: ['Geist Mono', 'ui-monospace', 'monospace'],
+      },
       colors: {
         // Now using CSS variables from index.css for easy extraction/tweaking
         primary: {
@@ -16,15 +20,21 @@ module.exports = {
           DEFAULT: 'rgb(var(--color-secondary) / <alpha-value>)',
           hover: 'rgb(var(--color-secondary-hover) / <alpha-value>)',
         },
-        accent: 'rgb(var(--color-accent) / <alpha-value>)',
+        accent: {
+          DEFAULT: 'rgb(var(--color-accent) / <alpha-value>)',
+          2: 'rgb(var(--color-accent-2) / <alpha-value>)',
+        },
+        onAccent: 'rgb(var(--color-on-accent) / <alpha-value>)',
 
         // Text
         ink: {
           DEFAULT: 'rgb(var(--color-text-main) / <alpha-value>)',
           muted: 'rgb(var(--color-text-muted) / <alpha-value>)',
+          faint: 'rgb(var(--color-text-faint) / <alpha-value>)',
         },
         // Borders
         line: 'rgb(var(--color-border-main) / <alpha-value>)',
+        hover: 'rgb(var(--color-hover-bg) / <alpha-value>)',
 
         // Backgrounds
         app: {
@@ -38,17 +48,15 @@ module.exports = {
           dark: 'rgb(var(--color-panel-bg) / <alpha-value>)',
         },
         panel2: 'rgb(var(--color-panel2-bg) / <alpha-value>)',
+        panel3: 'rgb(var(--color-panel3-bg) / <alpha-value>)',
+        chat: 'rgb(var(--color-chat-bg) / <alpha-value>)',
 
         // Chat Bubbles
         bubble: {
-          sent: {
-            light: 'rgb(var(--color-bubble-sent) / <alpha-value>)',
-            dark: 'rgb(var(--color-bubble-sent) / <alpha-value>)',
-          },
-          received: {
-            light: 'rgb(var(--color-bubble-received) / <alpha-value>)',
-            dark: 'rgb(var(--color-bubble-received) / <alpha-value>)',
-          },
+          sent: 'rgb(var(--color-bubble-sent-bg) / <alpha-value>)',
+          sentFg: 'rgb(var(--color-bubble-sent-text) / <alpha-value>)',
+          received: 'rgb(var(--color-bubble-received-bg) / <alpha-value>)',
+          receivedFg: 'rgb(var(--color-bubble-received-text) / <alpha-value>)',
         },
       },
       borderRadius: {
@@ -56,7 +64,7 @@ module.exports = {
       },
       backgroundImage: {
         'gemini-gradient': 'linear-gradient(135deg, #10b981 0%, #3b82f6 50%, #8b5cf6 100%)',
-        'gemini-logo': 'radial-gradient(circle at top left, #a78bfa, #f472b6, #fb923c, #38bdf8)',
+        'gemini-logo': 'linear-gradient(135deg, rgb(var(--color-accent)), rgb(var(--color-accent-2)))',
         'sparkle-gradient': 'linear-gradient(135deg, #e2e8f0 0%, #ffffff 100%)',
       }
     },

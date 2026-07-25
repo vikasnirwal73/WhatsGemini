@@ -18,6 +18,35 @@ export const buildValidHistory = (history: Content[], prompt: string): Content[]
   return validHistory;
 };
 
+// Shared summarization prompt used by both the automatic (threshold-triggered)
+// and manual (Compress button) compression paths - previously these had two
+// separate, divergent prompts doing the same job. Standardized on the more
+// thorough of the two: explicitly retains language/tone/emotional state so
+// the AI can resume seamlessly, not just facts.
+export const summarizeConversation = async (
+  ai: GoogleGenAI,
+  selectedModel: string,
+  messages: Content[],
+  systemInstruction?: string
+): Promise<{ summary: string; usage?: GenerateContentResponseUsageMetadata }> => {
+  const conversationText = messages
+    .map((m) => `${m.role === "user" ? "User" : "AI"}: ${m.parts?.[0]?.text || ""}`)
+    .join("\n\n");
+
+  const prompt = `Please provide a concise but comprehensive summary of the following conversation history.
+Retain all key facts, user preferences, important context, the language used (e.g., Hinglish, English), the tone, and the current emotional state of both the User and the AI. This summary will act as the AI's memory replacing the older messages.
+Do not act as a conversational partner, just provide the summary directly. Ensure you explicitly note the language format, tone, and emotional context so the AI can seamlessly resume in the exact same style and mood.
+
+Conversation:
+${conversationText}`;
+
+  const config: GenerateContentConfig = {};
+  if (systemInstruction) config.systemInstruction = systemInstruction;
+
+  const result = await ai.models.generateContent({ model: selectedModel, contents: prompt, config });
+  return { summary: result.text?.trim() || "", usage: result.usageMetadata };
+};
+
 // If history has grown past compressThreshold, summarizes the older half (excluding
 // any seeded initial messages) into a single system-style message via the text model,
 // keeping recent messages verbatim. Falls back to plain truncation if summarization fails.
@@ -42,26 +71,13 @@ export const autoCompressHistory = async (
   const oldMessagesForSummary = validHistory.slice(startIndex, startIndex + messagesToCompress);
   if (oldMessagesForSummary.length <= 2) return { history: validHistory };
 
-  const conversationText = oldMessagesForSummary
-    .map((m) => `${m.role === "user" ? "User" : "AI"}: ${m.parts?.[0]?.text || ""}`)
-    .join("\n\n");
-
-  const compressPrompt = `Provide a very concise but comprehensive summary of the following chat history.
-Retain key facts, user preferences, important context, and the emotional tone.
-Do NOT act as a conversational partner. Just reply with the summary block.
-
-Conversation:
-${conversationText}`;
-
   try {
-    const sumResult = await ai.models.generateContent({ model: selectedModel, contents: compressPrompt });
-    const summaryText = sumResult.text?.trim() || "";
-
-    if (!summaryText) return { history: validHistory };
+    const { summary, usage } = await summarizeConversation(ai, selectedModel, oldMessagesForSummary);
+    if (!summary) return { history: validHistory };
 
     const summaryMsg: Content = {
       role: "user",
-      parts: [{ text: `[SYSTEM: Older chat history has been compressed into this summary to save memory. Summary: ${summaryText}]` }]
+      parts: [{ text: `[SYSTEM: Older chat history has been compressed into this summary to save memory. Summary: ${summary}]` }]
     };
 
     const newHistory = [
@@ -69,7 +85,7 @@ ${conversationText}`;
       summaryMsg,
       ...validHistory.slice(startIndex + messagesToCompress)
     ];
-    return { history: newHistory, usage: sumResult.usageMetadata };
+    return { history: newHistory, usage };
   } catch (e) {
     console.warn("Auto-compression failed, falling back to truncation.", e);
     const fallback = [...validHistory];
@@ -104,33 +120,12 @@ export const trimTrailingUserMessages = (validHistory: Content[]): Content[] => 
   return validHistory;
 };
 
-export const performChatCompression = async (history: Content[], systemInstruction?: string) => {
+export const performChatCompression = async (history: Content[], systemInstruction?: string): Promise<string> => {
   const apiKey = getAPIKey();
   if (!apiKey) throw new Error("API key is missing. Please log in.");
   const selectedModel = getStoredValue(LS_AI_MODEL, DEFAULT_AI_MODEL);
 
   const ai = new GoogleGenAI({ apiKey });
-  const config: GenerateContentConfig = {};
-
-  if (systemInstruction) {
-    config.systemInstruction = systemInstruction;
-  }
-
-  const conversationText = history
-    .map((m) => `${m.role === "user" ? "User" : "AI"}: ${m.parts?.[0]?.text || ""}`)
-    .join("\n\n");
-
-  const prompt = `Please provide a concise but comprehensive summary of the following conversation history. 
-Retain all key facts, user preferences, important context, the language used (e.g., Hinglish, English), the tone, and the current emotional state of both the User and the AI. This summary will act as the AI's memory replacing the older messages.
-Do not act as a conversational partner, just provide the summary directly. Ensure you explicitly note the language format, tone, and emotional context so the AI can seamlessly resume in the exact same style and mood.
-
-Conversation:
-${conversationText}`;
-
-  const result = await ai.models.generateContent({
-    model: selectedModel,
-    contents: prompt,
-    config: config
-  });
-  return result.text?.trim() || "";
+  const { summary } = await summarizeConversation(ai, selectedModel, history, systemInstruction);
+  return summary;
 };

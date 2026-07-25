@@ -34,9 +34,12 @@ const Login = () => {
   }
 
   return (
-    <div className="flex items-center justify-center h-screen bg-app-light dark:bg-app-dark">
-      <div className="bg-panel-light dark:bg-panel-dark p-8 rounded-2xl shadow-xl w-96 max-w-[calc(100%-30px)]">
-        <h2 className="text-2xl font-bold text-center text-primary dark:text-white mb-6">
+    <div className="flex items-center justify-center h-screen bg-app">
+      <div className="bg-panel border border-line p-8 rounded-2xl shadow-xl w-96 max-w-[calc(100%-30px)]">
+        <div className="w-12 h-12 rounded-[13px] bg-gemini-logo flex items-center justify-center shadow-lg shadow-primary/30 mx-auto mb-5">
+          <span className="text-onAccent font-bold text-xl">G</span>
+        </div>
+        <h2 className="text-xl font-bold text-center text-ink mb-6">
           Enter Google API Key
         </h2>
 
@@ -48,13 +51,13 @@ const Login = () => {
           value={key}
           onChange={(e) => setKey(e.target.value)}
           placeholder="Enter your API Key..."
-          className="w-full p-3 bg-app-light dark:bg-app-dark text-black dark:text-white rounded-xl border border-transparent focus:border-primary outline-none mb-4 transition-all"
+          className="w-full p-3 bg-panel2 text-ink placeholder-ink-faint rounded-xl border border-line focus:border-primary outline-none mb-4 transition-all"
         />
 
         <button
           onClick={handleLogin}
           className={cn(
-            "w-full p-3 bg-primary text-white rounded-xl shadow-lg transition-all",
+            "w-full p-3 bg-primary text-onAccent rounded-xl shadow-lg transition-all font-semibold",
             loading || !key.trim() ? "opacity-70 cursor-not-allowed" : "hover:bg-primary-hover transform hover:scale-[1.02]"
           )}
           disabled={loading || !key.trim()}

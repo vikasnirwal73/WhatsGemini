@@ -4,6 +4,7 @@ import { Provider } from "react-redux";
 import { AuthProvider, AuthContext } from "./contexts/AuthContext";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { ModalProvider } from "./contexts/ModalContext";
+import { SidebarProvider, useSidebar } from "./contexts/SidebarContext";
 import store from "./store/store";
 import { useAppDispatch } from "./store/hooks";
 import { fetchChats, addChat } from "./features/chatSlice";
@@ -11,6 +12,7 @@ import { fetchCharacters } from "./features/characterSlice";
 import { LS_FONT_SIZE } from "./utils/constants";
 
 import Sidebar from "./components/Sidebar";
+import Header from "./components/Header";
 
 const ChatPage = lazy(() => import("./pages/ChatPage"));
 const Login = lazy(() => import("./pages/Login"));
@@ -25,6 +27,27 @@ const PageLoader = () => (
     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
   </div>
 );
+
+// Rendered at "/" (no chat selected). On mobile the sidebar is off-screen until
+// opened via the hamburger, so this still needs its own Header - without it,
+// there'd be no way to get back to the chat list on a phone.
+const EmptyChatState = () => {
+  const { open } = useSidebar();
+  return (
+    <div className="flex flex-col w-full h-screen bg-app">
+      <Header title="WhatsGemini" subtitle="Select a chat to get started" />
+      <div className="flex-1 flex flex-col items-center justify-center gap-4 text-ink-muted px-6 text-center">
+        <p className="text-sm">Select a chat from the sidebar to continue a conversation.</p>
+        <button
+          onClick={open}
+          className="md:hidden flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gemini-logo text-onAccent font-semibold text-sm shadow-lg shadow-primary/20"
+        >
+          Browse chats
+        </button>
+      </div>
+    </div>
+  );
+};
 
 const AppContent = () => {
   const { apiKey } = useContext(AuthContext);
@@ -83,25 +106,18 @@ const AppContent = () => {
   }
 
   return (
-    <div className="bg-app-light dark:bg-app-dark min-h-screen text-slate-900 dark:text-slate-100 font-sans">
+    <div className="bg-app min-h-screen text-ink font-sans">
       <div className="flex flex-col h-screen w-full">
         <div className="flex flex-1 overflow-hidden">
           <Sidebar />
-          <main className="flex-1 bg-app-light dark:bg-app-dark border-l border-gray-200 dark:border-gray-800 relative z-1">
+          <main className="flex-1 bg-app relative z-1 min-w-0">
             <Suspense fallback={<PageLoader />}>
               <Routes>
                 <Route path="/chat/:chatId" element={<ChatPage />} />
                 <Route path="/characters" element={<CharacterPage />} />
                 <Route path="/characters/:characterId/gallery" element={<CharacterGalleryPage />} />
                 <Route path="/settings" element={<SettingsPage />} />
-                <Route
-                  path="/"
-                  element={
-                    <div className="flex items-center justify-center h-full text-gray-500 dark:text-gray-400">
-                      Select a chat
-                    </div>
-                  }
-                />
+                <Route path="/" element={<EmptyChatState />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </Suspense>
@@ -117,14 +133,16 @@ const App = () => (
     <AuthProvider>
       <ThemeProvider>
         <ModalProvider>
-          <HashRouter>
-            <Suspense fallback={<PageLoader />}>
-              <Routes>
-                <Route path="/login" element={<Login />} />
-                <Route path="*" element={<AppContent />} />
-              </Routes>
-            </Suspense>
-          </HashRouter>
+          <SidebarProvider>
+            <HashRouter>
+              <Suspense fallback={<PageLoader />}>
+                <Routes>
+                  <Route path="/login" element={<Login />} />
+                  <Route path="*" element={<AppContent />} />
+                </Routes>
+              </Suspense>
+            </HashRouter>
+          </SidebarProvider>
         </ModalProvider>
       </ThemeProvider>
     </AuthProvider>

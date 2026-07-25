@@ -1,19 +1,44 @@
-import React, { useEffect, useState, useMemo, useRef, useCallback } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import { fetchChatById, fetchChats, addMessage, updateMessages } from "../features/chatSlice";
+import React, { useEffect, useState, useMemo, useRef } from "react";
+import { useParams } from "react-router-dom";
+import { fetchChatById, fetchChats, addMessage, updateMessages, updateChatTree, updateChatAutoReply } from "../features/chatSlice";
 import { fetchCharacterById, updateCharacter } from "../features/characterSlice";
-import { generateAIResponse, compressChatHistory } from "../features/aiSlice";
+import { generateAIResponse, compressChatHistory, extractCharacterMemory } from "../features/aiSlice";
 import ChatWindow from "../components/ChatWindow";
 import MessageInput from "../components/MessageInput";
-import { FaCog, FaCompressArrowsAlt, FaDownload } from "react-icons/fa";
-import { AI, MODEL, USER, YOU, LS_USER_PROFILE } from "../utils/constants";
+import Header, { iconBtnClass } from "../components/Header";
+import Modal from "../components/Modal";
+import ToggleSwitch from "../components/ToggleSwitch";
+import { TextInput, FieldLabel } from "../components/ui/FormControls";
+import { FaCompressArrowsAlt, FaDownload, FaClock } from "react-icons/fa";
+import { AI, YOU, MEMORY_EXTRACTION_INTERVAL } from "../utils/constants";
 import { useAppDispatch, useAppSelector } from "../store/hooks";
-import { Message, UserProfile } from "../types";
+import { Message, Chat } from "../types";
 import { stripLeakedBase64 } from "../features/ai/utils/apiUtils";
+import { buildChatHistory, buildSystemInstruction, buildTurnContext } from "../features/ai/utils/promptComposition";
+import { mergeMemory } from "../features/ai/utils/memoryExtraction";
+import { migrateToTree, addChildNode, flattenPath, getPathToNode, updateNodeMessage, findDefaultLeafFrom } from "../features/chat/messageTree";
+import { CharacterAvatar } from "../components/ui/CharacterAvatar";
+import { cn } from "../utils/cn";
+
+const DEFAULT_AUTO_REPLY = { enabled: false, cooldownMinutes: 3, maxFollowups: 2, followupCount: 0 };
+
+// Returns the chat's existing tree, or lazily migrates its flat content into
+// one (in-memory only - the caller persists it as part of whatever tree
+// operation triggered this). Always returns `content` alongside the tree -
+// when migrating, that's the ONLY copy of the messages whose `.id`s actually
+// match the (freshly generated) tree node ids, so callers must index into
+// this `content`, not the possibly-id-less `messages` React state, to find
+// the right node.
+const getOrBuildTree = (chat: Chat) => {
+  if (chat.tree) {
+    return { tree: chat.tree, activeLeafId: chat.activeLeafId ?? null, content: chat.content };
+  }
+  const migrated = migrateToTree(chat.content);
+  return { tree: migrated.tree, activeLeafId: migrated.activeLeafId, content: migrated.content };
+};
 
 const ChatPage = () => {
   const { chatId } = useParams();
-  const navigate = useNavigate();
   const dispatch = useAppDispatch();
 
   const chats = useAppSelector((state) => state.chat.chats);
@@ -49,6 +74,10 @@ const ChatPage = () => {
   }, [dispatch, chatIdNum]);
 
   const currentChat = useMemo(() => chats.find((chat) => chat.id === chatIdNum), [chats, chatIdNum]);
+  const characterData = useMemo(
+    () => characters.find((c) => c.id === currentChat?.characterId),
+    [characters, currentChat]
+  );
 
   useEffect(() => {
     if (currentChat) {
@@ -63,7 +92,22 @@ const ChatPage = () => {
       });
 
       if (needsDbUpdate && chatIdNum) {
-         dispatch(updateMessages({ chatId: chatIdNum, newMessages: cleanedMessages }));
+         if (currentChat.tree) {
+           // Clean every branch's text (not just the active path) via updateChatTree,
+           // since plain updateMessages would wipe the tree.
+           const cleanedNodes = Object.fromEntries(
+             Object.entries(currentChat.tree.nodes).map(([id, node]) => {
+               const original = node.message.txt || "";
+               const text = stripLeakedBase64(original);
+               return [id, text !== original ? { ...node, message: { ...node.message, txt: text } } : node];
+             })
+           );
+           const cleanedTree = { nodes: cleanedNodes };
+           const cleanedContent = flattenPath(cleanedTree, currentChat.activeLeafId);
+           dispatch(updateChatTree({ chatId: chatIdNum, content: cleanedContent, tree: cleanedTree, activeLeafId: currentChat.activeLeafId ?? null }));
+         } else {
+           dispatch(updateMessages({ chatId: chatIdNum, newMessages: cleanedMessages }));
+         }
       }
 
       setMessages(cleanedMessages);
@@ -71,60 +115,115 @@ const ChatPage = () => {
     }
   }, [currentChat, chatIdNum, dispatch]);
 
-  const createChatHistory = useCallback((msgs: Message[]) =>
-    msgs.map((msg) => {
-      // Clean old base64 leaks from database so they aren't passed into the context
-      const text = stripLeakedBase64(msg.txt || "");
-
-      // Instead of writing a literal system note that the AI might mimic,
-      // rely on the space fallback if the text is completely stripped.
-      return {
-        role: msg.role === YOU ? USER : MODEL,
-        parts: [{ text: text.trim() || " " }] // Gemini requires non-empty string, fallback to space
-      };
-    }), []);
-
-  const getSystemInstruction = useCallback(() => {
-    const charId = currentChat?.characterId;
-    if (!charId) return { text: undefined, images: undefined, characterName: undefined };
-    
-    const characterInfo = characters.find(c => c.id === charId);
-    if (!characterInfo) return { text: undefined, images: undefined, characterName: undefined };
-
-    let roleplayPrompt = `Role play as, Character Name: ${characterInfo.name}.\nCharacter description: ${characterInfo.description}.\nExample dialogue: ${characterInfo.prompt}`;
-            
-    try {
-      const userProfileRaw = localStorage.getItem(LS_USER_PROFILE);
-      if (userProfileRaw) {
-        const userProfile: UserProfile = JSON.parse(userProfileRaw);
-        const userNameStr = userProfile.name ? `User's Name: ${userProfile.name}.` : "";
-        const userBioStr = userProfile.bio ? `User's Bio/Details: ${userProfile.bio}.` : "";
-        if (userNameStr || userBioStr) {
-          roleplayPrompt += `\n\nAbout the User you are talking to:\n${userNameStr} ${userBioStr}`;
-        }
-      }
-      if (characterInfo.relationship) {
-        roleplayPrompt += `\nYour relationship with the user: ${characterInfo.relationship}`;
-      }
-      if (characterInfo.appearance) {
-        roleplayPrompt += `\nYour physical appearance/looks: ${characterInfo.appearance}`;
-      }
-    } catch (e) {
-      console.error("Error parsing user profile for context:", e);
-    }
-    
-    return { text: roleplayPrompt, images: characterInfo.appearanceImages, characterName: characterInfo.name };
-  }, [currentChat, characters]);
-
   useEffect(() => {
     if (messages.length > 0) {
       if (currentChat?.characterId) {
         dispatch(fetchCharacterById(currentChat.characterId as number));
       }
-      
-      // Calculate token count for the current chat context
     }
-  }, [dispatch, messages, createChatHistory, getSystemInstruction, currentChat]);
+  }, [dispatch, messages, currentChat]);
+
+  // Every MEMORY_EXTRACTION_INTERVAL messages, distill new durable facts from the
+  // recent conversation into the character's long-term memory. Independent of the
+  // compression threshold (which defaults to off) so it works for every character.
+  // Best-effort/silent: a failure here shouldn't interrupt the conversation.
+  const maybeExtractMemory = async (allMessages: Message[]) => {
+    if (!characterData || allMessages.length === 0 || allMessages.length % MEMORY_EXTRACTION_INTERVAL !== 0) return;
+
+    try {
+      const recentMessages = allMessages.slice(-MEMORY_EXTRACTION_INTERVAL);
+      const newFacts = await dispatch(
+        extractCharacterMemory({ recentMessages, existingMemory: characterData.memory || [] })
+      ).unwrap();
+
+      if (newFacts && newFacts.length > 0) {
+        const merged = mergeMemory(characterData.memory, newFacts);
+        dispatch(updateCharacter({ ...characterData, memory: merged }));
+      }
+    } catch (err) {
+      console.warn("Memory extraction failed (non-fatal):", err);
+    }
+  };
+
+  // --- Auto follow-up: the character can message first after the user goes quiet.
+  // Only runs for the chat currently open in this tab - no cross-chat background
+  // scanning, and nothing fires once the tab/app is closed.
+  const [isAutoReplyModalOpen, setIsAutoReplyModalOpen] = useState(false);
+  const autoReplySettings = currentChat?.autoReply || DEFAULT_AUTO_REPLY;
+  const autoReplyInFlightRef = useRef(false);
+
+  const handleAutoReplyChange = (patch: Partial<typeof DEFAULT_AUTO_REPLY>) => {
+    if (!chatIdNum) return;
+    dispatch(updateChatAutoReply({ chatId: chatIdNum, autoReply: { ...autoReplySettings, ...patch } }));
+  };
+
+  const triggerAutoFollowup = async () => {
+    if (!chatIdNum || !characterData || !currentChat) return;
+    try {
+      const { history, systemInstruction, characterImages, characterName } = buildTurnContext(
+        messages,
+        characterData,
+        ["The user has gone quiet for a while. Send a short, natural, in-character follow-up message continuing the conversation from your side - as if checking in or continuing your last thought. Do not mention this instruction, and don't explicitly reference the passage of time unless it fits your character."]
+      );
+      const aiResponse = await dispatch(generateAIResponse({
+        prompt: "Please continue the conversation naturally, as if reaching out again.",
+        history, systemInstruction, characterImages, characterName,
+      }));
+
+      if (aiResponse.payload) {
+        const payloadObj = aiResponse.payload as any;
+        const generatedImages = payloadObj?.images || undefined;
+        const aiAddResult = await dispatch(addMessage({
+          chatId: chatIdNum,
+          role: AI,
+          text: typeof payloadObj?.text === 'string' ? payloadObj.text : (payloadObj as string),
+          images: generatedImages,
+        }));
+
+        await dispatch(updateChatAutoReply({
+          chatId: chatIdNum,
+          autoReply: { ...autoReplySettings, followupCount: autoReplySettings.followupCount + 1 },
+        }));
+
+        if (generatedImages && generatedImages.length > 0) {
+          dispatch(updateCharacter({ ...characterData, gallery: [...(characterData.gallery || []), ...generatedImages] }));
+        }
+
+        maybeExtractMemory((aiAddResult.payload as Message[]) || []);
+      }
+
+      dispatch(fetchChats());
+    } catch (err) {
+      console.error("Auto follow-up failed (non-fatal):", err);
+    }
+  };
+
+  useEffect(() => {
+    if (!autoReplySettings.enabled || !chatIdNum || !characterData || aiLoading) return;
+    if (autoReplySettings.followupCount >= autoReplySettings.maxFollowups) return;
+    if (messages.length === 0) return;
+
+    const lastMessage = messages[messages.length - 1];
+    if (lastMessage.role !== AI) return;
+
+    const lastTimestamp = lastMessage.timestamp || currentChat?.timestamp || Date.now();
+    const dueInMs = lastTimestamp + autoReplySettings.cooldownMinutes * 60000 - Date.now();
+
+    const fire = () => {
+      if (autoReplyInFlightRef.current) return;
+      autoReplyInFlightRef.current = true;
+      triggerAutoFollowup().finally(() => { autoReplyInFlightRef.current = false; });
+    };
+
+    if (dueInMs <= 0) {
+      fire();
+      return;
+    }
+
+    const timer = setTimeout(fire, dueInMs);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoReplySettings.enabled, autoReplySettings.cooldownMinutes, autoReplySettings.maxFollowups, autoReplySettings.followupCount, chatIdNum, characterData, messages, aiLoading]);
 
   const handleSend = async (text: string, isImageRequest?: boolean) => {
     if (!text.trim() || !chatIdNum) return;
@@ -135,18 +234,17 @@ const ChatPage = () => {
       const resultAction = await dispatch(addMessage({ chatId: chatIdNum, role: YOU, text, isImageRequest }));
       const updatedMessages = resultAction.payload as Message[] || [];
 
-      const chatHistory = createChatHistory(updatedMessages);
-      const { text: systemInstruction, images: characterImages, characterName } = getSystemInstruction();
-      aiPromiseRef.current = dispatch(generateAIResponse({ prompt: text, history: chatHistory, systemInstruction, characterImages, characterName, isImageRequest }));
+      const { history, systemInstruction, characterImages, characterName } = buildTurnContext(updatedMessages, characterData);
+      aiPromiseRef.current = dispatch(generateAIResponse({ prompt: text, history, systemInstruction, characterImages, characterName, isImageRequest }));
       const aiResponse = await aiPromiseRef.current;
       aiPromiseRef.current = null;
 
       if (aiResponse.payload) {
         const payloadObj = aiResponse.payload as any;
         const generatedImages = payloadObj?.images || undefined;
-        await dispatch(addMessage({ 
-          chatId: chatIdNum, 
-          role: AI, 
+        const aiAddResult = await dispatch(addMessage({
+          chatId: chatIdNum,
+          role: AI,
           text: typeof payloadObj?.text === 'string' ? payloadObj.text : (payloadObj as string),
           images: generatedImages,
           imagePrompt: payloadObj?.imagePrompt,
@@ -159,6 +257,8 @@ const ChatPage = () => {
             dispatch(updateCharacter({ ...charToUpdate, gallery: [...(charToUpdate.gallery || []), ...generatedImages] }));
           }
         }
+
+        maybeExtractMemory((aiAddResult.payload as Message[]) || []);
       }
 
       dispatch(fetchChats());
@@ -169,38 +269,48 @@ const ChatPage = () => {
   };
 
   const handleEditMessage = async (index: number, newText: string, isImageRequest?: boolean) => {
-    if (!newText.trim() || !chatIdNum) return;
+    if (!newText.trim() || !chatIdNum || !currentChat) return;
 
     setError(null);
 
     try {
       const isLastUserMessage = messages[index].role === YOU && messages.slice(index + 1).every(m => m.role !== YOU);
+      const { tree, activeLeafId: currentActiveLeafId, content: treeContent } = getOrBuildTree(currentChat);
+      const targetNodeId = treeContent[index]?.id;
+
+      if (!targetNodeId || !tree.nodes[targetNodeId]) {
+        console.warn("Cannot edit: message not found.");
+        return;
+      }
 
       if (isLastUserMessage) {
-        // If it's the last user message edit, truncate it and any subsequent AI responses, then resend
-        const truncatedMessages = messages.slice(0, index);
-        await dispatch(updateMessages({ chatId: chatIdNum, newMessages: truncatedMessages }));
+        // Branch: the edited text becomes a new sibling of the original message
+        // (both children of the same parent), then generate a reply as its child.
+        const parentId = tree.nodes[targetNodeId].parentId;
+        const editedUserMsg: Message = { role: YOU, txt: newText, isImageRequest, timestamp: Date.now() };
+        const { tree: treeWithEdit, nodeId: editedNodeId } = addChildNode(tree, parentId, editedUserMsg);
+        const contentUpToEdit = flattenPath(treeWithEdit, editedNodeId);
 
-        // Add the edited message
-        const resultAction = await dispatch(addMessage({ chatId: chatIdNum, role: YOU, text: newText, isImageRequest }));
-        const updatedMessages = resultAction.payload as Message[] || [];
+        // Persist the branch point immediately so it survives even if generation fails.
+        await dispatch(updateChatTree({ chatId: chatIdNum, content: contentUpToEdit, tree: treeWithEdit, activeLeafId: editedNodeId }));
 
-        // Generate new AI response
-        const chatHistory = createChatHistory(updatedMessages);
-        const { text: systemInstruction, images: characterImages, characterName } = getSystemInstruction();
-        aiPromiseRef.current = dispatch(generateAIResponse({ prompt: newText, history: chatHistory, systemInstruction, characterImages, characterName, isImageRequest }));
+        const { history, systemInstruction, characterImages, characterName } = buildTurnContext(contentUpToEdit, characterData);
+        aiPromiseRef.current = dispatch(generateAIResponse({ prompt: newText, history, systemInstruction, characterImages, characterName, isImageRequest }));
         const aiResponse = await aiPromiseRef.current;
         aiPromiseRef.current = null;
 
         if (aiResponse.payload) {
           const payloadObj = aiResponse.payload as any;
           const generatedImages = payloadObj?.images || undefined;
-          await dispatch(addMessage({ 
-            chatId: chatIdNum, 
-            role: AI, 
-            text: typeof payloadObj?.text === 'string' ? payloadObj.text : (payloadObj as string),
-            images: generatedImages
-          }));
+          const newAiMsg: Message = {
+            role: AI,
+            txt: typeof payloadObj?.text === 'string' ? payloadObj.text : (payloadObj as string),
+            images: generatedImages,
+            timestamp: Date.now(),
+          };
+          const { tree: finalTree, nodeId: aiNodeId } = addChildNode(treeWithEdit, editedNodeId, newAiMsg);
+          const finalContent = flattenPath(finalTree, aiNodeId);
+          await dispatch(updateChatTree({ chatId: chatIdNum, content: finalContent, tree: finalTree, activeLeafId: aiNodeId }));
 
           if (generatedImages && generatedImages.length > 0 && currentChat?.characterId) {
             const charToUpdate = characters.find(c => c.id === currentChat.characterId);
@@ -208,12 +318,14 @@ const ChatPage = () => {
               dispatch(updateCharacter({ ...charToUpdate, gallery: [...(charToUpdate.gallery || []), ...generatedImages] }));
             }
           }
+
+          maybeExtractMemory(finalContent);
         }
       } else {
-        // If it's NOT the last user message, just update locally in the store
-        const updatedMessages = [...messages];
-        updatedMessages[index] = { ...updatedMessages[index], txt: newText };
-        await dispatch(updateMessages({ chatId: chatIdNum, newMessages: updatedMessages }));
+        // Mid-conversation edit: update this node's text in place, no branch, no regeneration.
+        const updatedTree = updateNodeMessage(tree, targetNodeId, { ...tree.nodes[targetNodeId].message, txt: newText });
+        const updatedContent = flattenPath(updatedTree, currentActiveLeafId);
+        await dispatch(updateChatTree({ chatId: chatIdNum, content: updatedContent, tree: updatedTree, activeLeafId: currentActiveLeafId }));
       }
 
       dispatch(fetchChats());
@@ -224,43 +336,51 @@ const ChatPage = () => {
   };
 
   const handleRegenerate = async (index: number) => {
-    if (index < 0 || index >= messages.length || !chatIdNum) return;
+    if (index < 0 || index >= messages.length || !chatIdNum || !currentChat) return;
 
     setError(null);
 
     try {
-      const aiMessageBeingDropped = messages[index];
-      const existingImagePrompt = aiMessageBeingDropped?.imagePrompt;
-      const existingImageParams = aiMessageBeingDropped?.imageParams;
+      const { tree, content: treeContent } = getOrBuildTree(currentChat);
+      const targetMessage = treeContent[index];
+      const existingImagePrompt = targetMessage?.imagePrompt;
+      const existingImageParams = targetMessage?.imageParams;
 
-      const updatedMessages = messages.slice(0, index);
-      await dispatch(updateMessages({ chatId: chatIdNum, newMessages: updatedMessages }));
+      const targetNodeId = targetMessage?.id;
+      if (!targetNodeId || !tree.nodes[targetNodeId]) {
+        console.warn("Cannot regenerate: message not found.");
+        return;
+      }
+      const parentId = tree.nodes[targetNodeId].parentId;
+      const historyUpToTarget = getPathToNode(tree, targetNodeId);
 
-      if (!updatedMessages.length || updatedMessages[updatedMessages.length - 1].role !== YOU) {
-        console.warn("Cannot regenerate without a user message.");
+      if (!historyUpToTarget.length || historyUpToTarget[historyUpToTarget.length - 1].role !== YOU) {
+        console.warn("Cannot regenerate without a preceding user message.");
         return;
       }
 
-      const lastUsrMsg = updatedMessages[updatedMessages.length - 1];
+      const lastUsrMsg = historyUpToTarget[historyUpToTarget.length - 1];
       const lastUserMessage = lastUsrMsg.txt || "";
       const isImageRequest = lastUsrMsg.isImageRequest || false;
-      const chatHistory = createChatHistory(updatedMessages);
-      const { text: systemInstruction, images: characterImages, characterName } = getSystemInstruction();
-      aiPromiseRef.current = dispatch(generateAIResponse({ prompt: lastUserMessage, history: chatHistory, systemInstruction, characterImages, characterName, isImageRequest, existingImagePrompt, existingImageParams }));
+      const { history, systemInstruction, characterImages, characterName } = buildTurnContext(historyUpToTarget, characterData);
+      aiPromiseRef.current = dispatch(generateAIResponse({ prompt: lastUserMessage, history, systemInstruction, characterImages, characterName, isImageRequest, existingImagePrompt, existingImageParams }));
       const aiResponse = await aiPromiseRef.current;
       aiPromiseRef.current = null;
 
       if (aiResponse.payload) {
         const payloadObj = aiResponse.payload as any;
         const generatedImages = payloadObj?.images || undefined;
-        await dispatch(addMessage({ 
-          chatId: chatIdNum, 
-          role: AI, 
-          text: typeof payloadObj?.text === 'string' ? payloadObj.text : (payloadObj as string),
+        const newMessage: Message = {
+          role: AI,
+          txt: typeof payloadObj?.text === 'string' ? payloadObj.text : (payloadObj as string),
           images: generatedImages,
           imagePrompt: payloadObj?.imagePrompt,
-          imageParams: payloadObj?.imageParams
-        }));
+          imageParams: payloadObj?.imageParams,
+          timestamp: Date.now(),
+        };
+        const { tree: newTree, nodeId: newNodeId } = addChildNode(tree, parentId, newMessage);
+        const newContent = flattenPath(newTree, newNodeId);
+        await dispatch(updateChatTree({ chatId: chatIdNum, content: newContent, tree: newTree, activeLeafId: newNodeId }));
 
         if (generatedImages && generatedImages.length > 0 && currentChat?.characterId) {
           const charToUpdate = characters.find(c => c.id === currentChat.characterId);
@@ -268,6 +388,8 @@ const ChatPage = () => {
             dispatch(updateCharacter({ ...charToUpdate, gallery: [...(charToUpdate.gallery || []), ...generatedImages] }));
           }
         }
+
+        maybeExtractMemory(newContent);
       }
 
       dispatch(fetchChats());
@@ -277,8 +399,15 @@ const ChatPage = () => {
     }
   };
 
-  const handleInfoClick = () => {
-    navigate("/settings");
+  // Switches which sibling variant is displayed for a branched message - pure
+  // navigation, no API call. Only reachable via the pager, which only renders
+  // once a chat already has a tree, so no lazy-migration needed here.
+  const handleSwitchBranch = async (nodeId: string) => {
+    if (!chatIdNum || !currentChat?.tree || !currentChat.tree.nodes[nodeId]) return;
+    const tree = currentChat.tree;
+    const leafId = findDefaultLeafFrom(tree, nodeId);
+    const newContent = flattenPath(tree, leafId);
+    await dispatch(updateChatTree({ chatId: chatIdNum, content: newContent, tree, activeLeafId: leafId }));
   };
 
   const handleStopGenerating = () => {
@@ -296,8 +425,8 @@ const ChatPage = () => {
       // Keep only the last 2 messages uncompressed if possible, but summarize everything before
       const cutoff = Math.max(messages.length - 2, 2);
       const msgsToCompress = messages.slice(0, cutoff);
-      const historyToCompress = createChatHistory(msgsToCompress);
-      const { text: systemInstructionText } = getSystemInstruction();
+      const historyToCompress = buildChatHistory(msgsToCompress);
+      const { text: systemInstructionText } = buildSystemInstruction(characterData);
 
       const summaryObj = await dispatch(compressChatHistory({ history: historyToCompress, systemInstruction: systemInstructionText })).unwrap();
 
@@ -340,57 +469,87 @@ const ChatPage = () => {
   
   return (
     <div className="flex flex-col w-full h-screen bg-app relative">
-      {/* Chat Header */}
-      <ChatHeader onInfoClick={handleInfoClick} onCompressClick={handleCompress} onExportClick={handleExport} isCompressing={aiCompressing} canCompress={messages.length > 4} />
+      <Header
+        title={character || "Chat"}
+        subtitle={characterData?.relationship || characterData?.description}
+        avatar={<CharacterAvatar name={characterData?.name || character} accent={characterData?.accent} size={34} />}
+        actions={
+          <>
+            <button
+              onClick={handleExport}
+              className={iconBtnClass}
+              title="Export Chat"
+            >
+              <FaDownload size={15} />
+            </button>
+            {messages.length > 4 && (
+              <button
+                onClick={handleCompress}
+                disabled={aiCompressing}
+                className={cn(iconBtnClass, aiCompressing && "animate-pulse opacity-50 cursor-not-allowed")}
+                title="Summarize and compress older messages to save tokens."
+              >
+                <FaCompressArrowsAlt size={15} />
+              </button>
+            )}
+            <button
+              onClick={() => setIsAutoReplyModalOpen(true)}
+              className={cn(iconBtnClass, autoReplySettings.enabled && "border-primary text-primary")}
+              title="Auto follow-up settings"
+            >
+              <FaClock size={14} />
+            </button>
+          </>
+        }
+      />
+
+      <Modal isOpen={isAutoReplyModalOpen} onClose={() => setIsAutoReplyModalOpen(false)} title="Auto Follow-up">
+        <ToggleSwitch
+          checked={autoReplySettings.enabled}
+          onChange={(val) => handleAutoReplyChange({ enabled: val })}
+          label="Let the character follow up on their own"
+        />
+        <div>
+          <FieldLabel hint="How long to wait after their last message before following up.">Cooldown (minutes)</FieldLabel>
+          <TextInput
+            type="number"
+            min="1"
+            max="120"
+            value={autoReplySettings.cooldownMinutes}
+            onChange={(e) => handleAutoReplyChange({ cooldownMinutes: Math.max(1, Number(e.target.value)) })}
+          />
+        </div>
+        <div>
+          <FieldLabel hint="Stops following up on its own after this many messages, until you reply again.">Max follow-ups</FieldLabel>
+          <TextInput
+            type="number"
+            min="1"
+            max="10"
+            value={autoReplySettings.maxFollowups}
+            onChange={(e) => handleAutoReplyChange({ maxFollowups: Math.max(1, Number(e.target.value)) })}
+          />
+        </div>
+        {autoReplySettings.enabled && (
+          <p className="text-xs text-ink-faint">
+            {autoReplySettings.followupCount}/{autoReplySettings.maxFollowups} follow-up(s) sent since you last replied. Only runs while this chat is open in your browser.
+          </p>
+        )}
+      </Modal>
 
       {/* Error Message */}
       {error && <p className="text-red-500 text-center p-2 absolute top-16 w-full z-20">{error}</p>}
 
       {/* Chat Messages */}
       <div className="flex-1 overflow-hidden relative">
-        <ChatWindow characterName={character} messages={messages} onRegenerate={handleRegenerate} onEdit={handleEditMessage} aiLoading={aiLoading} onSend={handleSend} />
+        <ChatWindow characterName={character} character={characterData} messages={messages} tree={currentChat?.tree} onSwitchBranch={handleSwitchBranch} onRegenerate={handleRegenerate} onEdit={handleEditMessage} aiLoading={aiLoading} onSend={handleSend} />
       </div>
 
       {/* Message Input Floating */}
       <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 w-full max-w-4xl px-4 z-20">
-        <MessageInput onSend={handleSend} disabled={aiLoading} onStop={handleStopGenerating} tokenCount={aiTokenCount} costEstimate={aiCostEstimate} />
+        <MessageInput onSend={handleSend} disabled={aiLoading} onStop={handleStopGenerating} tokenCount={aiTokenCount} costEstimate={aiCostEstimate} characterName={characterData?.name || character} />
       </div>
     </div>
   );
 };
-
-const ChatHeader = ({ onInfoClick, onCompressClick, onExportClick, isCompressing, canCompress }: { onInfoClick: () => void, onCompressClick: () => void, onExportClick: () => void, isCompressing: boolean, canCompress: boolean }) => (
-  // pl-16 clears the fixed mobile sidebar-toggle button (top-3 left-4, ~52px wide)
-  // which would otherwise sit directly on top of the title - md:pl-8 once it's hidden.
-  <div className="flex items-center justify-between pl-16 pr-4 py-5 md:px-8 bg-transparent text-ink z-10">
-    <h2 className="text-2xl font-medium tracking-wide">Chat</h2>
-    <div className="flex items-center gap-3">
-      <button
-        onClick={onExportClick}
-        className="p-2 rounded-full hover:bg-panel2 transition text-ink-muted hover:text-ink"
-        title="Export Chat"
-      >
-        <FaDownload size={18} />
-      </button>
-      {canCompress && (
-        <button
-          onClick={onCompressClick}
-          disabled={isCompressing}
-          className={`p-2 rounded-full transition text-ink-muted ${isCompressing ? 'animate-pulse opacity-50 cursor-not-allowed' : 'hover:bg-panel2 hover:text-ink'}`}
-          title="Summarize and compress older messages to save tokens."
-        >
-          <FaCompressArrowsAlt size={18} />
-        </button>
-      )}
-      <button
-        onClick={onInfoClick}
-        className="p-2 rounded-full hover:bg-panel2 transition text-ink-muted hover:text-ink"
-        title="Gemini Context"
-      >
-        <FaCog size={22} />
-      </button>
-    </div>
-  </div>
-);
 
 export default ChatPage;

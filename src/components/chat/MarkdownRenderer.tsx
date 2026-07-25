@@ -63,17 +63,17 @@ const MarkdownRenderer = React.memo(({ msgText, isUser }: { msgText: string | an
         remarkPlugins={[remarkGfm]}
         components={{
           p: ({ node, ...props }) => <p className="mb-2 last:mb-0" {...props} />,
-          em: ({ node, ...props }) => <em className={cn("italic", isUser ? 'text-white/80' : 'text-gray-500 dark:text-gray-400')} {...props} />,
+          em: ({ node, ...props }) => <em className={cn("italic", isUser ? 'text-bubble-sentFg/80' : 'text-ink-muted')} {...props} />,
           // eslint-disable-next-line jsx-a11y/anchor-has-content
-          a: ({ node, ...props }) => <a className={cn(isUser ? 'text-white underline' : 'text-blue-500 hover:underline')} target="_blank" rel="noopener noreferrer" {...props} aria-hidden="true" />,
+          a: ({ node, ...props }) => <a className={cn(isUser ? 'text-bubble-sentFg underline' : 'text-primary hover:underline')} target="_blank" rel="noopener noreferrer" {...props} aria-hidden="true" />,
           ul: ({ node, ...props }) => <ul className="list-disc ml-5 mb-2" {...props} />,
           ol: ({ node, ...props }) => <ol className="list-decimal ml-5 mb-2" {...props} />,
           li: ({ node, ...props }) => <li className="mb-1" {...props} />,
           code: CodeBlock,
-          blockquote: ({ node, ...props }) => <blockquote className={cn("border-l-4 pl-4 py-1 my-2 italic", isUser ? 'border-white/50' : 'border-gray-300')} {...props} />,
-          table: ({ node, ...props }) => <div className="overflow-x-auto my-2"><table className={cn("min-w-full divide-y border", isUser ? 'divide-white/20 border-white/20' : 'divide-gray-200 dark:divide-gray-700 border-gray-200 dark:border-gray-700')} {...props} /></div>,
-          th: ({ node, ...props }) => <th className={cn("px-3 py-2 text-left text-xs font-medium uppercase tracking-wider border-b", isUser ? 'bg-white/10 border-white/20 text-white' : 'bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-300')} {...props} />,
-          td: ({ node, ...props }) => <td className={cn("px-3 py-2 whitespace-nowrap text-sm border-b", isUser ? 'border-white/20 text-white' : 'border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300')} {...props} />,
+          blockquote: ({ node, ...props }) => <blockquote className={cn("border-l-4 pl-4 py-1 my-2 italic", isUser ? 'border-bubble-sentFg/50' : 'border-line')} {...props} />,
+          table: ({ node, ...props }) => <div className="overflow-x-auto my-2"><table className={cn("min-w-full divide-y border", isUser ? 'divide-bubble-sentFg/20 border-bubble-sentFg/20' : 'divide-line border-line')} {...props} /></div>,
+          th: ({ node, ...props }) => <th className={cn("px-3 py-2 text-left text-xs font-medium uppercase tracking-wider border-b", isUser ? 'bg-black/5 border-bubble-sentFg/20 text-bubble-sentFg' : 'bg-panel2 border-line text-ink-muted')} {...props} />,
+          td: ({ node, ...props }) => <td className={cn("px-3 py-2 whitespace-nowrap text-sm border-b", isUser ? 'border-bubble-sentFg/20 text-bubble-sentFg' : 'border-line text-ink-muted')} {...props} />,
         }}
       >
         {safeText}

@@ -1,5 +1,5 @@
 import React, { useCallback } from "react";
-import { FaCopy, FaRedo, FaEdit, FaEllipsisV } from "react-icons/fa";
+import { FaCopy, FaRedo, FaEdit, FaEllipsisV, FaChevronLeft, FaChevronRight } from "react-icons/fa";
 import { motion } from "framer-motion";
 import { cn } from "../../utils/cn";
 import { Message } from "../../types";
@@ -7,25 +7,38 @@ import { AI, YOU } from "../../utils/constants";
 import MarkdownRenderer from "./MarkdownRenderer";
 import { DropdownMenu, DropdownMenuItem } from "../ui/DropdownMenu";
 import { DisplayImage } from "../DisplayImage";
+import { CharacterAvatar } from "../ui/CharacterAvatar";
+
+interface SiblingInfo {
+  index: number;
+  total: number;
+  siblingIds: string[];
+}
 
 interface ChatMessageProps {
   msg: Message;
   charInitials: string;
+  accent?: [string, string];
   aiLoading: boolean;
   onCopy: (text: string) => void;
   onRegenerate: (msg: Message) => void;
   onStartEdit: (msg: Message) => void;
   setFullscreenImage: (src: string) => void;
+  siblingInfo?: SiblingInfo;
+  onSwitchBranch?: (nodeId: string) => void;
 }
 
 const ChatMessage = React.memo(({
   msg,
   charInitials,
+  accent,
   aiLoading,
   onCopy,
   onRegenerate,
   onStartEdit,
   setFullscreenImage,
+  siblingInfo,
+  onSwitchBranch,
 }: ChatMessageProps) => {
   const isUser = msg.role === YOU;
 
@@ -42,17 +55,15 @@ const ChatMessage = React.memo(({
     >
       {/* AI Avatar */}
       {!isUser && (
-        <div className="w-8 h-8 rounded-full bg-gemini-logo flex items-center justify-center flex-shrink-0 mt-1 mr-3 shadow-md">
-          <span className="text-white font-bold text-sm">{charInitials}</span>
-        </div>
+        <CharacterAvatar name={charInitials} accent={accent} size={32} className="mt-1 mr-3 shadow-md" />
       )}
 
       <div
         className={cn(
-          "relative p-4 rounded-3xl max-w-[85%] md:max-w-[70%] shadow-sm min-w-0 group",
+          "relative p-4 rounded-2xl max-w-[85%] md:max-w-[70%] shadow-sm min-w-0 group",
           isUser
-            ? "bg-primary text-white rounded-tr-sm"
-            : "bg-panel2 text-ink rounded-tl-sm border border-line"
+            ? "bg-bubble-sent text-bubble-sentFg rounded-br-[5px]"
+            : "bg-bubble-received text-bubble-receivedFg rounded-bl-[5px] border border-line"
         )}
         style={{ fontSize: "var(--chat-font-size, 16px)" }}
       >
@@ -64,9 +75,33 @@ const ChatMessage = React.memo(({
             srcContext={imgSrc}
             alt="Generated"
             onClick={() => setFullscreenImage(imgSrc)}
-            className="mt-2 max-w-full rounded-lg shadow-sm border border-white/20 dark:border-slate-700 cursor-zoom-in hover:opacity-90 transition-opacity"
+            className="mt-2 max-w-full rounded-lg shadow-sm border border-line cursor-zoom-in hover:opacity-90 transition-opacity"
           />
         ))}
+
+        {siblingInfo && (
+          <div className={cn("flex items-center gap-1.5 mt-2 text-[11px] font-mono", isUser ? "text-bubble-sentFg/70 justify-end" : "text-ink-faint")}>
+            <button
+              onClick={() => siblingInfo.index > 0 && onSwitchBranch?.(siblingInfo.siblingIds[siblingInfo.index - 1])}
+              disabled={siblingInfo.index === 0}
+              className="p-0.5 rounded hover:bg-black/10 disabled:opacity-30 disabled:cursor-not-allowed transition"
+              aria-label="Previous variant"
+              title="Previous variant"
+            >
+              <FaChevronLeft size={9} />
+            </button>
+            <span>{siblingInfo.index + 1}/{siblingInfo.total}</span>
+            <button
+              onClick={() => siblingInfo.index < siblingInfo.total - 1 && onSwitchBranch?.(siblingInfo.siblingIds[siblingInfo.index + 1])}
+              disabled={siblingInfo.index === siblingInfo.total - 1}
+              className="p-0.5 rounded hover:bg-black/10 disabled:opacity-30 disabled:cursor-not-allowed transition"
+              aria-label="Next variant"
+              title="Next variant"
+            >
+              <FaChevronRight size={9} />
+            </button>
+          </div>
+        )}
 
         {/* Always visible (not hover-gated) so the menu is reachable on touch devices */}
         <div className="absolute top-2 right-2">
@@ -76,7 +111,7 @@ const ChatMessage = React.memo(({
                 className={cn(
                   "p-1.5 rounded-full transition",
                   isUser
-                    ? "text-white/80 hover:text-white hover:bg-white/20"
+                    ? "text-bubble-sentFg/70 hover:text-bubble-sentFg hover:bg-black/10"
                     : "text-ink-muted hover:text-ink hover:bg-app"
                 )}
                 title="More options"

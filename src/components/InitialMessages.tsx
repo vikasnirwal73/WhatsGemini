@@ -108,7 +108,7 @@ const InitialMessages: React.FC<InitialMessagesProps> = ({ onSave }) => {
       ))}
       <button
         onClick={handleAddMessage}
-        className="mx-auto mt-4 flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-full shadow-md hover:bg-primary-hover transition w-max"
+        className="mx-auto mt-4 flex items-center gap-2 bg-primary text-onAccent px-4 py-2 rounded-full shadow-md hover:bg-primary-hover transition w-max"
       >
         <FaPlus /> Add Message
       </button>

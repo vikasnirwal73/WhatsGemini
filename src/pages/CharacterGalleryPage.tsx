@@ -3,9 +3,11 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useAppDispatch, useAppSelector } from "../store/hooks";
 import { fetchCharacterById } from "../features/characterSlice";
 import { fetchChats } from "../features/chatSlice";
-import { FaArrowLeft, FaTimes, FaChevronLeft, FaChevronRight } from "react-icons/fa";
+import { FaTimes, FaChevronLeft, FaChevronRight } from "react-icons/fa";
 import { DisplayImage } from "../components/DisplayImage";
 import { DialogRoot, DialogContent, DialogTitle, DialogClose } from "../components/ui/Dialog";
+import Header from "../components/Header";
+import { CharacterAvatar } from "../components/ui/CharacterAvatar";
 
 const CharacterGalleryPage = () => {
   const { characterId } = useParams();
@@ -93,7 +95,12 @@ const CharacterGalleryPage = () => {
   }
 
   return (
-    <div className="w-full h-screen flex flex-col bg-app overflow-auto p-4 md:p-8 relative">
+    <div className="w-full h-screen flex flex-col bg-app relative">
+      <Header
+        title={`${character.name}'s Gallery`}
+        avatar={<CharacterAvatar name={character.name} accent={character.accent} size={34} />}
+        onBack={goBackInfo}
+      />
       {/* Fullscreen Image Viewer */}
       <DialogRoot open={selectedImage !== null} onOpenChange={(open) => !open && setSelectedImage(null)}>
         <DialogContent size="full" className="!bg-transparent !border-none !shadow-none flex items-center justify-center">
@@ -138,23 +145,13 @@ const CharacterGalleryPage = () => {
         </DialogContent>
       </DialogRoot>
 
+      <div className="flex-1 overflow-auto p-4 md:p-8">
       <div className="w-full max-w-5xl mx-auto bg-transparent">
-        {/* Header */}
-        {/* pl-11 clears the fixed mobile sidebar-toggle button, which otherwise sits
-            directly on top of and intercepts taps meant for the Back button below. */}
-        <div className="flex items-center justify-between mb-6 pb-4 border-b border-line pl-11 md:pl-0">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={goBackInfo}
-              className="p-2 rounded-full hover:bg-panel2 transition text-ink-muted"
-              title="Back"
-            >
-              <FaArrowLeft size={16} />
-            </button>
-            <h2 className="text-xl font-medium tracking-wide text-ink">
-              {character.name}'s Gallery
-            </h2>
-          </div>
+        <div className="mb-6">
+          <h1 className="text-xl font-semibold tracking-tight text-ink">
+            {character.name}'s Gallery
+          </h1>
+          <p className="text-sm text-ink-muted mt-1">Images generated in conversation with {character.name}.</p>
         </div>
 
         {/* Gallery Grid */}
@@ -176,6 +173,7 @@ const CharacterGalleryPage = () => {
             ))}
           </div>
         )}
+      </div>
       </div>
     </div>
   );

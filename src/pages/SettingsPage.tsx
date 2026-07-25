@@ -10,7 +10,8 @@ import {
   setSdWebuiModel, setMaxOutputTokens, setCompressThreshold, setMaxChatLength,
   setTemperature, setSafetySettings, setFontSize, setImageResolution
 } from "../features/settingsSlice";
-import { FaArrowLeft, FaDownload, FaUpload, FaInfoCircle, FaChevronDown, FaChevronUp, FaFileArchive } from "react-icons/fa";
+import { FaDownload, FaUpload, FaInfoCircle, FaChevronDown, FaFileArchive, FaUser, FaMicrochip, FaImage, FaComments, FaShieldAlt, FaDatabase } from "react-icons/fa";
+import Header from "../components/Header";
 import InitialMessages from "../components/InitialMessages";
 import { ToastContainer, ToastData } from "../components/Toast";
 import UserProfileSettings from "../components/settings/UserProfileSettings";
@@ -438,16 +439,24 @@ const SettingsPage = () => {
     }
   };
 
-  const renderAccordion = (id: string, title: string, children: React.ReactNode) => {
+  const renderAccordion = (id: string, icon: React.ReactNode, title: string, subtitle: string, children: React.ReactNode) => {
     const isOpen = openSection === id;
     return (
-      <div className="bg-panel rounded-2xl mb-4 shadow-sm border border-line overflow-hidden transition-all duration-200">
+      <div className="bg-panel rounded-2xl mb-3 border border-line overflow-hidden transition-all duration-200">
         <button
-          className="w-full flex justify-between items-center p-5 text-lg font-medium text-ink"
+          className="w-full flex items-center gap-[13px] p-4 text-left"
           onClick={() => toggleSection(id)}
         >
-          <span>{title}</span>
-          {isOpen ? <FaChevronUp size={14} /> : <FaChevronDown size={14} />}
+          <span className="w-[34px] h-[34px] rounded-[10px] bg-panel3 flex items-center justify-center text-primary flex-shrink-0">
+            {icon}
+          </span>
+          <span className="flex-1 min-w-0">
+            <span className="block text-[14px] font-semibold text-ink">{title}</span>
+            <span className="block text-xs text-ink-faint mt-0.5">{subtitle}</span>
+          </span>
+          <span className={`text-ink-muted transition-transform duration-200 flex-shrink-0 ${isOpen ? "rotate-180" : ""}`}>
+            <FaChevronDown size={13} />
+          </span>
         </button>
         {isOpen && (
           <div className="px-5 pb-5 border-t border-line pt-4">
@@ -459,40 +468,28 @@ const SettingsPage = () => {
   };
 
   return (
-    <div className="w-full h-screen flex justify-center bg-app overflow-auto p-4 md:p-4">
+    <div className="w-full h-screen flex flex-col bg-app">
+      <Header title="Settings" subtitle="Gemini connection, chat behavior, and data" onBack={goBackOrHome} />
+      <div className="flex-1 overflow-auto p-4 md:p-8 flex justify-center">
       <div className="w-full max-w-[32rem] bg-transparent">
 
-        {/* Header */}
-        {/* pl-11 clears the fixed mobile sidebar-toggle button, which otherwise sits
-            directly on top of and intercepts taps meant for the Back button below. */}
-        <div className="flex items-center justify-between mb-6 pb-4 border-b border-line pl-11 md:pl-0">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={goBackOrHome}
-              className="p-2 rounded-full hover:bg-panel2 transition text-ink-muted"
-              title="Back"
-            >
-              <FaArrowLeft size={16} />
-            </button>
-            <h2 className="text-xl font-medium tracking-wide text-ink">
-              Gemini Context
-            </h2>
-          </div>
+        <div className="mb-6 flex items-center justify-between">
+          <h1 className="text-xl font-semibold tracking-tight text-ink">Gemini Context</h1>
           <FaInfoCircle className="text-ink-muted" size={18} />
         </div>
 
         {/* Toast Notifications */}
         <ToastContainer toasts={toasts} removeToast={removeToast} />
 
-        {renderAccordion("profile", "User Profile",
-          <UserProfileSettings 
+        {renderAccordion("profile", <FaUser size={15} />, "User Profile", "Your name and bio",
+          <UserProfileSettings
             userProfile={userProfile} 
             setUserProfile={(val) => dispatch(setUserProfile(val))} 
           />
         )}
 
-        {renderAccordion("text", "Text Generation Model",
-          <TextModelSettings 
+        {renderAccordion("text", <FaMicrochip size={15} />, "Text Generation Model", "Model, temperature, tokens",
+          <TextModelSettings
             temperature={temperature}
             setTemperature={(val) => dispatch(setTemperature(val))}
             selectedModel={selectedModel}
@@ -505,8 +502,8 @@ const SettingsPage = () => {
           />
         )}
 
-        {renderAccordion("image", "Image Generation Settings",
-          <ImageGenerationSettings 
+        {renderAccordion("image", <FaImage size={15} />, "Image Generation Settings", "Model, ratio, count",
+          <ImageGenerationSettings
             useSdWebui={useSdWebui}
             setUseSdWebui={(val) => dispatch(setUseSdWebui(val))}
             sdWebuiApiUrl={sdWebuiApiUrl}
@@ -536,7 +533,7 @@ const SettingsPage = () => {
           />
         )}
 
-        {renderAccordion("chat", "Chat Interface Settings",
+        {renderAccordion("chat", <FaComments size={15} />, "Chat Interface Settings", "System prompt, bubbles, sending",
           <>
             <FieldLabel>Max Chat Length (0 for unlimited)</FieldLabel>
             <TextInput
@@ -568,7 +565,7 @@ const SettingsPage = () => {
           </>
         )}
 
-        {renderAccordion("safety", "Safety Settings",
+        {renderAccordion("safety", <FaShieldAlt size={15} />, "Safety Settings", "Content filtering thresholds",
           <>
             {safetyCategories.map((category) => (
               <div key={category} className="mb-4">
@@ -588,7 +585,7 @@ const SettingsPage = () => {
           </>
         )}
 
-        {renderAccordion("data", "Data & Import/Export",
+        {renderAccordion("data", <FaDatabase size={15} />, "Data & Import/Export", "Import / export conversations",
           <>
             <p className="text-sm font-medium text-ink mb-1">Full Backup</p>
             <p className="text-xs text-ink-muted mb-3">
@@ -597,7 +594,7 @@ const SettingsPage = () => {
             <div className="flex flex-col sm:flex-row gap-4 mb-6">
                <button
                   onClick={handleExportFullBackup}
-                  className="flex-1 bg-primary text-white py-2 px-4 rounded-lg hover:bg-primary-hover transition flex items-center justify-center gap-2"
+                  className="flex-1 bg-primary text-onAccent py-2 px-4 rounded-lg hover:bg-primary-hover transition flex items-center justify-center gap-2"
                >
                   <FaFileArchive /> Export Full Backup
                </button>
@@ -643,6 +640,7 @@ const SettingsPage = () => {
             </div>
           </>
         )}
+      </div>
       </div>
     </div>
   );

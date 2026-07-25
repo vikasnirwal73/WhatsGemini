@@ -1,32 +1,36 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { fetchChats, deleteChat, addChat, importChat } from "../features/chatSlice";
 import { fetchCharacters } from "../features/characterSlice";
 import { Link, useNavigate } from "react-router-dom";
-import { FaBars, FaTrash, FaFileImport, FaEdit, FaPlus, FaCog, FaSignOutAlt, FaUserPlus, FaMoon, FaSun } from "react-icons/fa";
+import { FaTrash, FaFileImport, FaPlus, FaSearch } from "react-icons/fa";
 import { useAppDispatch, useAppSelector } from "../store/hooks";
-import { AuthContext } from "../contexts/AuthContext";
-import { ThemeContext } from "../contexts/ThemeContext";
 import { useModal } from "../contexts/ModalContext";
+import { useSidebar } from "../contexts/SidebarContext";
 import Modal from "./Modal";
-import { DARK } from "../utils/constants";
 import { Chat, Character } from "../types";
 import { cn } from "../utils/cn";
 import { CharacterAvatar } from "./ui/CharacterAvatar";
 
+const formatChatTime = (timestamp?: number) => {
+  if (!timestamp) return "";
+  const date = new Date(timestamp);
+  const isToday = date.toDateString() === new Date().toDateString();
+  return isToday
+    ? date.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })
+    : date.toLocaleDateString([], { month: "short", day: "numeric" });
+};
+
 const Sidebar = () => {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
-  const { logout } = React.useContext(AuthContext);
-  const { toggleTheme, theme } = React.useContext(ThemeContext);
   const { showConfirm } = useModal();
-
-  const isDarkMode = theme === DARK;
+  const { isOpen, close } = useSidebar();
 
   const chats = useAppSelector((state) => state.chat.chats);
   const characters = useAppSelector((state) => state.character.characters);
-  const [isOpen, setIsOpen] = useState(false);
   const [isNewChatModalOpen, setIsNewChatModalOpen] = useState(false);
+  const [search, setSearch] = useState("");
 
   useEffect(() => {
     dispatch(fetchChats());
@@ -38,9 +42,9 @@ const Sidebar = () => {
     if (confirmed) {
       dispatch(deleteChat(chatId));
       navigate("/");
-      setIsOpen(false);
+      close();
     }
-  }, [dispatch, navigate, showConfirm]);
+  }, [dispatch, navigate, showConfirm, close]);
 
   const handleCharacterClick = useCallback(async (characterId: number, characterName: string) => {
     const existingChat = chats.find((chat: Chat) => chat.characterId === characterId);
@@ -52,8 +56,8 @@ const Sidebar = () => {
         navigate(`/chat/${(result.payload as Chat).id}`);
       }
     }
-    setIsOpen(false);
-  }, [chats, dispatch, navigate]);
+    close();
+  }, [chats, dispatch, navigate, close]);
 
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
@@ -71,8 +75,8 @@ const Sidebar = () => {
         const chatData = JSON.parse(e.target?.result as string);
         const result = await dispatch(importChat(chatData)).unwrap();
         if (result && result.id) {
-            navigate(`/chat/${result.id}`);
-            setIsOpen(false);
+          navigate(`/chat/${result.id}`);
+          close();
         }
       } catch (error) {
         console.error("Failed to import chat:", error);
@@ -83,110 +87,81 @@ const Sidebar = () => {
     event.target.value = '';
   };
 
+  const filteredChats = useMemo(() => {
+    if (!search.trim()) return chats;
+    const q = search.trim().toLowerCase();
+    return chats.filter((chat) => {
+      const character = characters.find((c) => c.id === chat.characterId);
+      return chat.title.toLowerCase().includes(q) || character?.name.toLowerCase().includes(q);
+    });
+  }, [chats, characters, search]);
+
   return (
     <>
-      {/* Mobile Sidebar Toggle */}
-      <button
-        className="md:hidden fixed top-3 left-4 z-50 bg-primary p-2 rounded-full text-white shadow-md hover:bg-primary-hover transition"
-        onClick={() => setIsOpen(true)}
-        title="Open Menu"
-        aria-label="Open Sidebar"
-      >
-        <FaBars size={20} />
-      </button>
-
       {/* Sidebar */}
       <aside
         className={cn(
-          "fixed z-50 top-0 left-0 w-[300px] h-full bg-app shadow-md border-r border-line flex flex-col transition-transform transform md:relative md:translate-x-0",
+          "fixed z-50 top-0 left-0 w-[300px] h-full bg-panel border-r border-line flex flex-col transition-transform transform md:relative md:translate-x-0",
           isOpen ? "translate-x-0" : "-translate-x-full"
         )}
         aria-label="Sidebar"
       >
-        <div className="p-5 flex flex-col gap-5">
-          {/* Logo Header */}
-          <div className="flex items-center justify-between">
-            <Link to="/" onClick={() => setIsOpen(false)} className="flex items-center gap-3 transition hover:opacity-80">
-              <div className="w-8 h-8 rounded-full bg-gemini-logo flex items-center justify-center shadow-lg">
-                <span className="text-white font-bold text-lg">G</span>
-              </div>
-              <span className="text-xl font-bold tracking-tight text-ink">
-                whatsgemini
-              </span>
-            </Link>
-            <button
-              className="p-2 text-ink-muted hover:text-ink transition rounded-full hover:bg-panel2"
-              title="Compose"
-              onClick={() => setIsNewChatModalOpen(true)}
-            >
-              <FaEdit size={16} />
-            </button>
+        {/* Logo header */}
+        <div className="px-4 pt-[18px] pb-[14px] flex items-center gap-[11px] border-b border-line flex-shrink-0">
+          <div className="w-9 h-9 rounded-[11px] bg-gemini-logo flex items-center justify-center shadow-lg shadow-primary/30 flex-shrink-0">
+            <span className="text-onAccent font-bold text-lg">G</span>
           </div>
+          <div className="leading-tight flex-1 min-w-0">
+            <div className="font-bold text-[15.5px] tracking-tight text-ink">WhatsGemini</div>
+            <div className="text-[11px] text-ink-faint font-medium">Gemini characters</div>
+          </div>
+        </div>
 
-          {/* New Chat Button */}
+        {/* New chat / Import */}
+        <div className="px-3.5 pt-3 pb-2.5 flex flex-col gap-2 flex-shrink-0">
           <button
-            onClick={() => {
-               setIsNewChatModalOpen(true);
-            }}
-            className="w-full flex items-center justify-center gap-2 bg-panel2 text-ink py-3 px-4 rounded-full hover:bg-line/60 transition shadow-sm font-medium"
+            onClick={() => setIsNewChatModalOpen(true)}
+            className="w-full flex items-center justify-center gap-2 py-[11px] rounded-[11px] bg-gemini-logo text-onAccent text-[13.5px] font-semibold shadow-lg shadow-primary/25 hover:brightness-105 transition"
           >
             <FaPlus size={12} />
-            <span>New Chat</span>
+            <span>New chat</span>
           </button>
+          <button
+            onClick={handleImportClick}
+            className="w-full flex items-center justify-center gap-2 py-2.5 rounded-[11px] border border-line bg-panel2 text-ink-muted text-[13px] font-medium hover:border-primary hover:text-ink transition"
+          >
+            <FaFileImport size={13} />
+            <span>Import chat</span>
+          </button>
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleFileChange}
+            accept=".json"
+            style={{ display: "none" }}
+          />
         </div>
 
-        <div className="px-3 flex-1 flex flex-col overflow-y-auto">
-          <ChatList chats={chats} characters={characters} onDeleteChat={handleDeleteChat} setIsOpen={setIsOpen} />
-        </div>
-
-        <div className="p-4 border-t border-line flex flex-col gap-2">
-            <Link
-                to="/characters"
-                onClick={() => setIsOpen(false)}
-                className="w-full flex items-center gap-3 text-ink py-2 px-4 rounded-lg hover:bg-panel2 transition"
-            >
-                <FaUserPlus size={16} />
-                <span className="font-medium text-sm">Characters</span>
-            </Link>
-            <button
-                onClick={handleImportClick}
-                className="w-full flex items-center gap-3 text-ink py-2 px-4 rounded-lg hover:bg-panel2 transition"
-            >
-                <FaFileImport size={16} />
-                <span className="font-medium text-sm">Import Chat</span>
-            </button>
+        {/* Search */}
+        <div className="px-3.5 pb-2.5 flex-shrink-0">
+          <div className="flex items-center gap-2 bg-panel2 border border-line rounded-[10px] px-[11px] py-[9px]">
+            <FaSearch size={12} className="text-ink-faint flex-shrink-0" />
             <input
-                type="file"
-                ref={fileInputRef}
-                onChange={handleFileChange}
-                accept=".json"
-                style={{ display: "none" }}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search conversations"
+              aria-label="Search conversations"
+              className="flex-1 min-w-0 bg-transparent text-[12.5px] text-ink placeholder-ink-faint outline-none"
             />
-            <Link
-                to="/settings"
-                onClick={() => setIsOpen(false)}
-                className="w-full flex items-center gap-3 text-ink py-2 px-4 rounded-lg hover:bg-panel2 transition"
-            >
-                <FaCog size={16} />
-                <span className="font-medium text-sm">Settings</span>
-            </Link>
+          </div>
+        </div>
 
-            <div className="flex items-center gap-2 mt-2">
-              <button
-                  onClick={toggleTheme}
-                  className="flex-1 flex items-center justify-center gap-2 text-ink py-2 px-4 rounded-lg hover:bg-panel2 transition bg-panel2/60"
-                  title="Toggle Theme"
-              >
-                  {isDarkMode ? <FaSun size={14} /> : <FaMoon size={14} />}
-              </button>
-              <button
-                  onClick={logout}
-                  className="flex-1 flex items-center justify-center gap-2 text-ink py-2 px-4 rounded-lg hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/30 dark:hover:text-red-400 transition bg-panel2/60"
-                  title="Logout"
-              >
-                  <FaSignOutAlt size={14} />
-              </button>
-            </div>
+        {/* Chat list */}
+        <div className="flex-1 overflow-y-auto px-2 pb-2.5">
+          <div className="text-[10.5px] font-semibold tracking-[0.09em] uppercase text-ink-faint px-2 pt-2 pb-1.5">
+            Recent
+          </div>
+          <ChatList chats={filteredChats} characters={characters} onDeleteChat={handleDeleteChat} onNavigate={close} />
         </div>
       </aside>
 
@@ -195,7 +170,7 @@ const Sidebar = () => {
         {isOpen && (
           <motion.div
             className="fixed inset-0 bg-black z-40 md:hidden"
-            onClick={() => setIsOpen(false)}
+            onClick={close}
             initial={{ opacity: 0 }}
             animate={{ opacity: 0.5 }}
             exit={{ opacity: 0 }}
@@ -222,7 +197,7 @@ const Sidebar = () => {
               }}
               className="flex items-center gap-3 p-3 rounded-xl hover:bg-panel2 text-left transition"
             >
-              <CharacterAvatar name={char.name} size={40} />
+              <CharacterAvatar name={char.name} accent={char.accent} size={40} />
               <div>
                 <h3 className="font-medium text-ink">{char.name}</h3>
                 {char.description && (
@@ -237,21 +212,24 @@ const Sidebar = () => {
   );
 };
 
-const ChatList = ({ chats, characters, onDeleteChat, setIsOpen }: { chats: Chat[], characters: Character[], onDeleteChat: (id: number) => void, setIsOpen: (val: boolean) => void }) => {
+const ChatList = ({ chats, characters, onDeleteChat, onNavigate }: { chats: Chat[], characters: Character[], onDeleteChat: (id: number) => void, onNavigate: () => void }) => {
   return (
-    <div className="flex-1 flex flex-col gap-1">
+    <div className="flex-1 flex flex-col gap-0.5">
       {chats.map((chat) => {
         const character = characters.find((c) => c.id === chat.characterId);
 
         return (
-          <Link to={`/chat/${chat.id}`}
+          <Link
+            to={`/chat/${chat.id}`}
             key={chat.id}
-            className="flex items-center gap-3 p-3 rounded-xl cursor-pointer group hover:bg-panel2 transition"
+            onClick={onNavigate}
+            className="flex items-center gap-3 p-2.5 rounded-xl cursor-pointer group hover:bg-hover transition"
           >
-            <CharacterAvatar name={character?.name || chat.title} size={32} />
-            <div className="flex-1 flex flex-col overflow-hidden" onClick={() => { setIsOpen(false) }}>
-              <div className="flex justify-between items-center w-full">
-                <span className="text-ink font-medium text-sm truncate">{chat.title}</span>
+            <CharacterAvatar name={character?.name || chat.title} accent={character?.accent} size={34} />
+            <div className="flex-1 flex flex-col overflow-hidden min-w-0">
+              <div className="flex items-center gap-1.5">
+                <span className="flex-1 min-w-0 text-ink font-semibold text-[13.5px] truncate">{chat.title}</span>
+                <span className="text-[10.5px] text-ink-faint flex-shrink-0">{formatChatTime(chat.timestamp)}</span>
               </div>
               {character?.description && (
                 <span className="text-xs text-ink-muted truncate">{character.description}</span>
@@ -259,7 +237,7 @@ const ChatList = ({ chats, characters, onDeleteChat, setIsOpen }: { chats: Chat[
             </div>
             <button
               onClick={(e) => { e.preventDefault(); onDeleteChat(chat.id); }}
-              className="p-1.5 text-ink-muted/60 hover:text-red-500 hover:bg-red-500/10 transition rounded-lg flex-shrink-0"
+              className="p-1.5 text-ink-faint hover:text-red-500 hover:bg-red-500/10 transition rounded-lg flex-shrink-0"
               title="Delete Chat"
               aria-label={`Delete chat with ${chat.title}`}
             >

@@ -1,13 +1,14 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import { GoogleGenAI, Content, GenerateContentConfig, GenerateContentResponseUsageMetadata } from "@google/genai";
 import { performChatCompression, buildValidHistory, autoCompressHistory, truncateHistory, trimTrailingUserMessages } from "./ai/utils/chatHistoryUtils";
-import { AI, MODEL_PRICING, DEFAULT_MODEL_PRICING } from "../utils/constants";
+import { AI, YOU, MODEL_PRICING, DEFAULT_MODEL_PRICING } from "../utils/constants";
 import { getAPIKey, formatSafetySettings } from "./ai/utils/settings";
-import { extractAndSaveBase64ImagesLocally } from "./ai/utils/apiUtils";
+import { extractAndSaveBase64ImagesLocally, stripLeakedBase64 } from "./ai/utils/apiUtils";
 import { deriveImagePrompt, generateImage } from "./ai/utils/imageGeneration";
 import { streamTextResponse } from "./ai/utils/textResponse";
+import { extractMemoryFacts } from "./ai/utils/memoryExtraction";
 import { RootState } from "../store/store";
-import { SDImageParams } from "../types";
+import { SDImageParams, Message } from "../types";
 
 export interface GenerateAIResponseResult {
   text: string;
@@ -41,7 +42,8 @@ export const generateAIResponse = createAsyncThunk(
         safetySettings: safetySettings,
       };
       if (systemInstruction) {
-        textModelConfig.systemInstruction = systemInstruction.trim().replace(/\s+/g, ' ');
+        // Already normalized once by buildSystemInstruction - no need to re-clean here.
+        textModelConfig.systemInstruction = systemInstruction;
       }
 
       let totalTokens = 0;
@@ -154,6 +156,34 @@ export const compressChatHistory = createAsyncThunk(
     } catch (error: any) {
       console.error("AI Compress Error:", error);
       return rejectWithValue(error.message || "Failed to compress history.");
+    }
+  }
+);
+
+// Async Thunk for extracting long-term character memory from a slice of recent messages
+export const extractCharacterMemory = createAsyncThunk(
+  "ai/extractCharacterMemory",
+  async (
+    { recentMessages, existingMemory }: { recentMessages: Message[]; existingMemory: string[] },
+    { getState, rejectWithValue }
+  ) => {
+    try {
+      const apiKey = getAPIKey();
+      if (!apiKey) throw new Error("API key is missing. Please log in.");
+
+      const state = getState() as RootState;
+      const selectedModel = state.settings.selectedModel;
+      const ai = new GoogleGenAI({ apiKey });
+
+      const conversationText = recentMessages
+        .map((m) => `${m.role === YOU ? "User" : "AI"}: ${stripLeakedBase64(m.txt || "")}`)
+        .join("\n\n");
+
+      const { facts } = await extractMemoryFacts(ai, selectedModel, conversationText, existingMemory);
+      return facts;
+    } catch (error: any) {
+      console.error("Memory extraction error:", error);
+      return rejectWithValue(error.message || "Failed to extract memory.");
     }
   }
 );
