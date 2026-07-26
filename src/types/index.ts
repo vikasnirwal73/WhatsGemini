@@ -58,6 +58,7 @@ export interface Chat {
     maxFollowups: number;
     followupCount: number;
   };
+  pinned?: boolean;
 }
 
 export interface Character {
@@ -72,6 +73,7 @@ export interface Character {
   gallery?: string[];
   accent?: [string, string]; // two-color avatar gradient, e.g. ["#10B981", "#0EA5A0"]
   memory?: string[]; // durable facts about the user/relationship, extracted over time
+  voiceURI?: string; // SpeechSynthesisVoice.voiceURI used to read this character's messages aloud
 }
 
 export interface UserProfile {

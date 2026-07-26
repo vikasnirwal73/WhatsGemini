@@ -16,8 +16,9 @@ import { Message, Chat } from "../types";
 import { stripLeakedBase64 } from "../features/ai/utils/apiUtils";
 import { buildChatHistory, buildSystemInstruction, buildTurnContext } from "../features/ai/utils/promptComposition";
 import { mergeMemory } from "../features/ai/utils/memoryExtraction";
-import { migrateToTree, addChildNode, flattenPath, getPathToNode, updateNodeMessage, findDefaultLeafFrom } from "../features/chat/messageTree";
+import { migrateToTree, addChildNode, flattenPath, getPathToNode, updateNodeMessage, findDefaultLeafFrom, deleteBranch, getSiblingInfo } from "../features/chat/messageTree";
 import { CharacterAvatar } from "../components/ui/CharacterAvatar";
+import { useModal } from "../contexts/ModalContext";
 
 const DEFAULT_AUTO_REPLY = { enabled: false, cooldownMinutes: 3, maxFollowups: 2, followupCount: 0 };
 
@@ -39,6 +40,7 @@ const getOrBuildTree = (chat: Chat) => {
 const ChatPage = () => {
   const { chatId } = useParams();
   const dispatch = useAppDispatch();
+  const { showConfirm } = useModal();
 
   const chats = useAppSelector((state) => state.chat.chats);
   const characters = useAppSelector((state) => state.character.characters);
@@ -163,6 +165,13 @@ const ChatPage = () => {
   const sendCharacterFollowup = async (): Promise<boolean> => {
     if (!chatIdNum || !characterData || !currentChat) return false;
 
+    // Only the first follow-up after an image-toggled user turn also carries a
+    // picture - once a follow-up (auto or manual) has already fired since that
+    // user message, later ones go back to text-only.
+    const lastUserIndex = messages.map((m) => m.role).lastIndexOf(YOU);
+    const aiMessagesSinceLastUser = lastUserIndex >= 0 ? messages.slice(lastUserIndex + 1).filter((m) => m.role === AI).length : 0;
+    const includeImage = lastUserIndex >= 0 && Boolean(messages[lastUserIndex].isImageRequest) && aiMessagesSinceLastUser === 1;
+
     const { history, systemInstruction, characterImages, characterName } = buildTurnContext(
       messages,
       characterData,
@@ -171,6 +180,7 @@ const ChatPage = () => {
     const aiResponse = await dispatch(generateAIResponse({
       prompt: "Please continue the conversation naturally, as if reaching out again.",
       history, systemInstruction, characterImages, characterName,
+      isImageRequest: includeImage, isCharacterInitiated: true,
     }));
 
     if (!aiResponse.payload) return false;
@@ -182,6 +192,9 @@ const ChatPage = () => {
       role: AI,
       text: typeof payloadObj?.text === 'string' ? payloadObj.text : (payloadObj as string),
       images: generatedImages,
+      isImageRequest: Boolean(generatedImages && generatedImages.length > 0),
+      imagePrompt: payloadObj?.imagePrompt,
+      imageParams: payloadObj?.imageParams,
     }));
 
     // Await the refresh before the caller can act on it (e.g. bump followupCount) -
@@ -391,13 +404,15 @@ const ChatPage = () => {
       const prompt = isFollowup
         ? "Please continue the conversation naturally, as if reaching out again."
         : precedingMessage.txt || "";
-      const isImageRequest = isFollowup ? false : (precedingMessage.isImageRequest || false);
+      // For a followup, whether it had a picture is recorded on the followup
+      // message itself (no preceding user turn to read it off of).
+      const isImageRequest = isFollowup ? (targetMessage?.isImageRequest || false) : (precedingMessage.isImageRequest || false);
       const extraDirectives = isFollowup
         ? ["The user has gone quiet for a while. Send a short, natural, in-character follow-up message continuing the conversation from your side - as if checking in or continuing your last thought. Do not mention this instruction, and don't explicitly reference the passage of time unless it fits your character."]
         : undefined;
 
       const { history, systemInstruction, characterImages, characterName } = buildTurnContext(historyUpToTarget, characterData, extraDirectives);
-      aiPromiseRef.current = dispatch(generateAIResponse({ prompt, history, systemInstruction, characterImages, characterName, isImageRequest, existingImagePrompt, existingImageParams }));
+      aiPromiseRef.current = dispatch(generateAIResponse({ prompt, history, systemInstruction, characterImages, characterName, isImageRequest, isCharacterInitiated: isFollowup, existingImagePrompt, existingImageParams }));
       const aiResponse = await aiPromiseRef.current;
       aiPromiseRef.current = null;
 
@@ -408,6 +423,7 @@ const ChatPage = () => {
           role: AI,
           txt: typeof payloadObj?.text === 'string' ? payloadObj.text : (payloadObj as string),
           images: generatedImages,
+          isImageRequest: isFollowup ? Boolean(generatedImages && generatedImages.length > 0) : undefined,
           imagePrompt: payloadObj?.imagePrompt,
           imageParams: payloadObj?.imageParams,
           timestamp: Date.now(),
@@ -442,6 +458,31 @@ const ChatPage = () => {
     const leafId = findDefaultLeafFrom(tree, nodeId);
     const newContent = flattenPath(tree, leafId);
     await dispatch(updateChatTree({ chatId: chatIdNum, content: newContent, tree, activeLeafId: leafId }));
+  };
+
+  // Deletes a branch variant - and everything generated after it in that
+  // branch - the counterpart to the pager's switch action. Only reachable
+  // when the node has siblings (a lone variant is just "the conversation",
+  // not something to delete from here).
+  const handleDeleteBranch = async (nodeId: string) => {
+    if (!chatIdNum || !currentChat?.tree) return;
+    const tree = currentChat.tree;
+    if (!tree.nodes[nodeId]) return;
+
+    const { siblingIds } = getSiblingInfo(tree, nodeId);
+    if (siblingIds.length <= 1) return;
+
+    const confirmed = await showConfirm("Delete Variant", "Delete this variant and everything that came after it in this branch? This can't be undone.");
+    if (!confirmed) return;
+
+    const { tree: newTree } = deleteBranch(tree, nodeId);
+    const remainingSiblingIds = siblingIds.filter((id) => id !== nodeId);
+    // Land on whichever remaining variant was closest to the one just deleted.
+    const deletedIndex = siblingIds.indexOf(nodeId);
+    const fallbackId = remainingSiblingIds[Math.min(deletedIndex, remainingSiblingIds.length - 1)];
+    const newLeafId = findDefaultLeafFrom(newTree, fallbackId);
+    const newContent = flattenPath(newTree, newLeafId);
+    await dispatch(updateChatTree({ chatId: chatIdNum, content: newContent, tree: newTree, activeLeafId: newLeafId }));
   };
 
   const handleStopGenerating = () => {
@@ -561,7 +602,7 @@ const ChatPage = () => {
 
       {/* Chat Messages */}
       <div className="flex-1 overflow-hidden relative">
-        <ChatWindow characterName={character} character={characterData} messages={messages} tree={currentChat?.tree} onSwitchBranch={handleSwitchBranch} onRegenerate={handleRegenerate} onEdit={handleEditMessage} aiLoading={aiLoading} onSend={handleSend} />
+        <ChatWindow characterName={character} character={characterData} messages={messages} tree={currentChat?.tree} onSwitchBranch={handleSwitchBranch} onDeleteBranch={handleDeleteBranch} onRegenerate={handleRegenerate} onEdit={handleEditMessage} aiLoading={aiLoading} onSend={handleSend} />
       </div>
 
       {/* Message Input Floating */}

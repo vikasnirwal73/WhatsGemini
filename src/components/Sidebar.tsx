@@ -1,9 +1,9 @@
 import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { fetchChats, deleteChat, addChat, importChat } from "../features/chatSlice";
+import { fetchChats, deleteChat, addChat, importChat, updateChatPinned } from "../features/chatSlice";
 import { fetchCharacters } from "../features/characterSlice";
 import { Link, useNavigate } from "react-router-dom";
-import { FaTrash, FaFileImport, FaPlus, FaSearch } from "react-icons/fa";
+import { FaTrash, FaFileImport, FaPlus, FaSearch, FaThumbtack } from "react-icons/fa";
 import { useAppDispatch, useAppSelector } from "../store/hooks";
 import { useModal } from "../contexts/ModalContext";
 import { useSidebar } from "../contexts/SidebarContext";
@@ -12,6 +12,7 @@ import { Chat, Character } from "../types";
 import { cn } from "../utils/cn";
 import { CharacterAvatar } from "./ui/CharacterAvatar";
 import Logo from "./ui/Logo";
+import { stripLeakedBase64 } from "../features/ai/utils/apiUtils";
 
 const formatChatTime = (timestamp?: number) => {
   if (!timestamp) return "";
@@ -20,6 +21,48 @@ const formatChatTime = (timestamp?: number) => {
   return isToday
     ? date.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })
     : date.toLocaleDateString([], { month: "short", day: "numeric" });
+};
+
+// The snippet row is a single-line CSS `truncate` (clipped by rendered pixel
+// width, not character count), so the match has to land near the start of the
+// snippet string or it gets clipped away before it's ever visible. Keep the
+// leading context short; the trailing context can be long since it just gets
+// truncated off harmlessly.
+const SNIPPET_BEFORE = 14;
+const SNIPPET_AFTER = 60;
+const escapeRegExp = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+// Highlights every case-insensitive occurrence of `query` inside `text`.
+const HighlightedText = ({ text, query }: { text: string; query: string }) => {
+  if (!query.trim()) return <>{text}</>;
+  const parts = text.split(new RegExp(`(${escapeRegExp(query)})`, "gi"));
+  return (
+    <>
+      {parts.map((part, i) =>
+        part.toLowerCase() === query.toLowerCase() ? (
+          <mark key={i} className="bg-primary/25 text-ink rounded-sm">{part}</mark>
+        ) : (
+          <React.Fragment key={i}>{part}</React.Fragment>
+        )
+      )}
+    </>
+  );
+};
+
+// Finds the first message whose text contains `query` (case-insensitive) and
+// returns a short window of context around the match, WhatsApp-search style.
+const findMessageSnippet = (chat: Chat, query: string): string | undefined => {
+  const q = query.toLowerCase();
+  for (const msg of chat.content || []) {
+    const text = stripLeakedBase64(msg.txt || "").trim();
+    if (!text) continue;
+    const idx = text.toLowerCase().indexOf(q);
+    if (idx === -1) continue;
+    const start = Math.max(0, idx - SNIPPET_BEFORE);
+    const end = Math.min(text.length, idx + q.length + SNIPPET_AFTER);
+    return `${start > 0 ? "…" : ""}${text.slice(start, end)}${end < text.length ? "…" : ""}`;
+  }
+  return undefined;
 };
 
 const Sidebar = () => {
@@ -46,6 +89,10 @@ const Sidebar = () => {
       close();
     }
   }, [dispatch, navigate, showConfirm, close]);
+
+  const handleTogglePin = useCallback((chatId: number, pinned: boolean) => {
+    dispatch(updateChatPinned({ chatId, pinned: !pinned }));
+  }, [dispatch]);
 
   const handleCharacterClick = useCallback(async (characterId: number, characterName: string) => {
     const existingChat = chats.find((chat: Chat) => chat.characterId === characterId);
@@ -89,13 +136,24 @@ const Sidebar = () => {
   };
 
   const filteredChats = useMemo(() => {
-    if (!search.trim()) return chats;
-    const q = search.trim().toLowerCase();
-    return chats.filter((chat) => {
+    const q = search.trim();
+    if (!q) return chats.map((chat) => ({ chat, snippet: undefined as string | undefined }));
+
+    const lowerQ = q.toLowerCase();
+    const results: { chat: Chat; snippet?: string }[] = [];
+    for (const chat of chats) {
       const character = characters.find((c) => c.id === chat.characterId);
-      return chat.title.toLowerCase().includes(q) || character?.name.toLowerCase().includes(q);
-    });
+      const titleMatches = chat.title.toLowerCase().includes(lowerQ) || Boolean(character?.name.toLowerCase().includes(lowerQ));
+      const snippet = titleMatches ? undefined : findMessageSnippet(chat, q);
+      if (titleMatches || snippet) {
+        results.push({ chat, snippet });
+      }
+    }
+    return results;
   }, [chats, characters, search]);
+
+  const pinnedItems = useMemo(() => filteredChats.filter((i) => i.chat.pinned), [filteredChats]);
+  const unpinnedItems = useMemo(() => filteredChats.filter((i) => !i.chat.pinned), [filteredChats]);
 
   return (
     <>
@@ -148,8 +206,8 @@ const Sidebar = () => {
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search conversations"
-              aria-label="Search conversations"
+              placeholder="Search chats and messages"
+              aria-label="Search chats and messages"
               className="flex-1 min-w-0 bg-transparent text-[12.5px] text-ink placeholder-ink-faint outline-none"
             />
           </div>
@@ -157,10 +215,28 @@ const Sidebar = () => {
 
         {/* Chat list */}
         <div className="flex-1 overflow-y-auto px-2 pb-2.5">
-          <div className="text-[10.5px] font-semibold tracking-[0.09em] uppercase text-ink-faint px-2 pt-2 pb-1.5">
-            Recent
-          </div>
-          <ChatList chats={filteredChats} characters={characters} onDeleteChat={handleDeleteChat} onNavigate={close} />
+          {search.trim() && filteredChats.length === 0 ? (
+            <p className="text-center text-ink-faint text-[12.5px] px-3 py-6">No chats or messages match "{search.trim()}".</p>
+          ) : (
+            <>
+              {pinnedItems.length > 0 && (
+                <>
+                  <div className="text-[10.5px] font-semibold tracking-[0.09em] uppercase text-ink-faint px-2 pt-2 pb-1.5">
+                    Pinned
+                  </div>
+                  <ChatList items={pinnedItems} characters={characters} onDeleteChat={handleDeleteChat} onTogglePin={handleTogglePin} onNavigate={close} query={search.trim()} />
+                </>
+              )}
+              {unpinnedItems.length > 0 && (
+                <>
+                  <div className="text-[10.5px] font-semibold tracking-[0.09em] uppercase text-ink-faint px-2 pt-2 pb-1.5">
+                    {pinnedItems.length > 0 ? "Other chats" : "Recent"}
+                  </div>
+                  <ChatList items={unpinnedItems} characters={characters} onDeleteChat={handleDeleteChat} onTogglePin={handleTogglePin} onNavigate={close} query={search.trim()} />
+                </>
+              )}
+            </>
+          )}
         </div>
       </aside>
 
@@ -211,10 +287,10 @@ const Sidebar = () => {
   );
 };
 
-const ChatList = ({ chats, characters, onDeleteChat, onNavigate }: { chats: Chat[], characters: Character[], onDeleteChat: (id: number) => void, onNavigate: () => void }) => {
+const ChatList = ({ items, characters, onDeleteChat, onTogglePin, onNavigate, query }: { items: { chat: Chat; snippet?: string }[], characters: Character[], onDeleteChat: (id: number) => void, onTogglePin: (id: number, pinned: boolean) => void, onNavigate: () => void, query: string }) => {
   return (
     <div className="flex-1 flex flex-col gap-0.5">
-      {chats.map((chat) => {
+      {items.map(({ chat, snippet }) => {
         const character = characters.find((c) => c.id === chat.characterId);
 
         return (
@@ -227,13 +303,32 @@ const ChatList = ({ chats, characters, onDeleteChat, onNavigate }: { chats: Chat
             <CharacterAvatar name={character?.name || chat.title} accent={character?.accent} size={34} />
             <div className="flex-1 flex flex-col overflow-hidden min-w-0">
               <div className="flex items-center gap-1.5">
-                <span className="flex-1 min-w-0 text-ink font-semibold text-[13.5px] truncate">{chat.title}</span>
+                <span className="flex-1 min-w-0 text-ink font-semibold text-[13.5px] truncate">
+                  <HighlightedText text={chat.title} query={query} />
+                </span>
                 <span className="text-[10.5px] text-ink-faint flex-shrink-0">{formatChatTime(chat.timestamp)}</span>
               </div>
-              {character?.description && (
+              {snippet ? (
+                <span className="text-xs text-ink-muted truncate">
+                  <HighlightedText text={snippet} query={query} />
+                </span>
+              ) : character?.description ? (
                 <span className="text-xs text-ink-muted truncate">{character.description}</span>
-              )}
+              ) : null}
             </div>
+            <button
+              onClick={(e) => { e.preventDefault(); onTogglePin(chat.id, Boolean(chat.pinned)); }}
+              className={cn(
+                "p-1.5 transition rounded-lg flex-shrink-0",
+                chat.pinned
+                  ? "text-primary"
+                  : "text-ink-faint opacity-0 group-hover:opacity-100 hover:text-primary hover:bg-primary/10"
+              )}
+              title={chat.pinned ? "Unpin chat" : "Pin chat"}
+              aria-label={chat.pinned ? `Unpin chat with ${chat.title}` : `Pin chat with ${chat.title}`}
+            >
+              <FaThumbtack size={12} />
+            </button>
             <button
               onClick={(e) => { e.preventDefault(); onDeleteChat(chat.id); }}
               className="p-1.5 text-ink-faint hover:text-red-500 hover:bg-red-500/10 transition rounded-lg flex-shrink-0"

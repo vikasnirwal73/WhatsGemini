@@ -23,7 +23,7 @@ export interface GenerateAIResponseResult {
 
 export const generateAIResponse = createAsyncThunk(
   "ai/generateResponse",
-  async ({ prompt, history = [], systemInstruction, characterImages, characterName, isImageRequest = false, existingImagePrompt, existingImageParams }: { prompt: string; history?: Content[], systemInstruction?: string, characterImages?: string[], characterName?: string, isImageRequest?: boolean, existingImagePrompt?: string, existingImageParams?: SDImageParams }, { getState, rejectWithValue, signal }) => {
+  async ({ prompt, history = [], systemInstruction, characterImages, characterName, isImageRequest = false, isCharacterInitiated = false, existingImagePrompt, existingImageParams }: { prompt: string; history?: Content[], systemInstruction?: string, characterImages?: string[], characterName?: string, isImageRequest?: boolean, isCharacterInitiated?: boolean, existingImagePrompt?: string, existingImageParams?: SDImageParams }, { getState, rejectWithValue, signal }) => {
     try {
       const state = getState() as RootState;
       const settings = state.settings;
@@ -84,7 +84,7 @@ export const generateAIResponse = createAsyncThunk(
         const derivation = await deriveImagePrompt(
           ai, selectedModel, textModelConfig, historyForSdk, prompt,
           settings.imageGenPrompt, settings.sdWebuiModel, useSdWebui,
-          existingImagePrompt, existingImageParams, signal
+          existingImagePrompt, existingImageParams, signal, isCharacterInitiated
         );
         trackUsage(derivation.usage, selectedModel);
 

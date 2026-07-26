@@ -165,6 +165,21 @@ export const updateChatAutoReply = createAsyncThunk(
   }
 );
 
+// Updates just a chat's pinned flag, leaving content and tree untouched.
+export const updateChatPinned = createAsyncThunk(
+  "chat/updateChatPinned",
+  async ({ chatId, pinned }: { chatId: number; pinned: boolean }, { rejectWithValue }) => {
+    try {
+      const chat = await dbService.getChatById(chatId);
+      chat.pinned = pinned;
+      await dbService.updateChat(chat);
+      return { chatId, pinned };
+    } catch (error) {
+      return handleDbError(error, rejectWithValue);
+    }
+  }
+);
+
 export const importChat = createAsyncThunk("chat/import", async (chatData: any, { rejectWithValue }) => {
   try {
     const isArray = Array.isArray(chatData);
@@ -262,6 +277,15 @@ const chatSlice = createSlice({
         }
       })
       .addCase(updateChatAutoReply.rejected, (state, action) => {
+        state.error = action.payload as string;
+      })
+      .addCase(updateChatPinned.fulfilled, (state, action) => {
+        const chat = state.chats.find((c) => c.id === action.payload.chatId);
+        if (chat) {
+          chat.pinned = action.payload.pinned;
+        }
+      })
+      .addCase(updateChatPinned.rejected, (state, action) => {
         state.error = action.payload as string;
       })
       .addCase(updateMessages.rejected, (state, action) => {

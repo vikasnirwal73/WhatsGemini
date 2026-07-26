@@ -14,6 +14,13 @@ export interface ImageDerivationResult {
 // chat context) into an SD-style image prompt, optional generation params, and an
 // in-character reply acknowledging the picture. Skipped in favor of the prior
 // prompt/params when regenerating an existing image.
+//
+// isCharacterInitiated distinguishes two very different situations that both flow
+// through this function: a real user turn (toggle + message, which may or may not
+// literally ask for a picture in its text) vs. a character-initiated follow-up
+// (no user message at all - the character is choosing to share a picture on its
+// own). Conflating them used to make every image reply say "here's the picture you
+// asked for" even when the user's actual text never asked for one.
 export const deriveImagePrompt = async (
   ai: GoogleGenAI,
   selectedModel: string,
@@ -25,13 +32,17 @@ export const deriveImagePrompt = async (
   useSdWebui: boolean,
   existingImagePrompt: string | undefined,
   existingImageParams: SDImageParams | undefined,
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  isCharacterInitiated = false
 ): Promise<ImageDerivationResult> => {
   if (existingImagePrompt) {
+    const regenSummary = isCharacterInitiated
+      ? "Here's another look at that same moment.\n[Image Context: Retrying generation of the previous scene]"
+      : "Here is the regenerated image you requested.\n[Image Context: Retrying generation of the previous scene]";
     return {
       derivedImagePrompt: existingImagePrompt,
       derivedParams: existingImageParams || {},
-      derivedSummary: "Here is the regenerated image you requested.\n[Image Context: Retrying generation of the previous scene]",
+      derivedSummary: regenSummary,
     };
   }
 
@@ -46,7 +57,15 @@ export const deriveImagePrompt = async (
     ? `three sections formatted exactly like this:\n\nPROMPT:\n<...>${sdInstruction}\n\nSUMMARY:`
     : `two sections formatted exactly like this:\n\nPROMPT:\n<...>\n\nSUMMARY:`;
 
-  const derivationPrompt = `(INTERNAL DIRECTIVE) User request: "${prompt}"\nThe user wants a picture/image based on the current context.${useSdWebui ? sdModelInfo : ""}\n\nYou must function as an expert prompt engineer. Prioritize this base style rule:\n${imageGenPrompt}\n\nPlease output EXACTLY ${parseSection}\n\nPROMPT:\n<write a highly detailed, clean, and optimized tag-based SD 1.5 image generation prompt based on the user request and context. Make sure the subject matches your visual description.>${sdInstruction}\n\nSUMMARY:\n<Respond IN CHARACTER to the user, maintaining your exact persona, personality, and tone. Acknowledge that you are showing/sending them the requested picture. MUST INCLUDE: At the end of your response, append [Image Context: <short visual description of the generated image>] so you can remember what you sent in future turns.>`;
+  const requestContext = isCharacterInitiated
+    ? `(INTERNAL DIRECTIVE) You are sending a follow-up message and have decided, entirely on your own initiative, to share a picture as part of it. There was no request from the user for this - you're choosing to send it because it fits the moment.`
+    : `(INTERNAL DIRECTIVE) The user's message: "${prompt}"\nAn image will be generated to accompany your reply. Base it on the user's message and the surrounding context - do not assume the message itself explicitly asked for a picture unless it actually did.`;
+
+  const summaryInstruction = isCharacterInitiated
+    ? `<Respond IN CHARACTER, maintaining your exact persona, personality, and tone, as a natural follow-up message. Naturally mention that you're sharing a picture, framed as your own idea - never imply the user asked for it.`
+    : `<Respond IN CHARACTER to the user's message above, maintaining your exact persona, personality, and tone. Only say you're "sending/showing the picture they asked for" if their message literally asked for one - otherwise just reply naturally to what they actually said, and let the picture accompany your reply without claiming they requested it.`;
+
+  const derivationPrompt = `${requestContext}${useSdWebui ? sdModelInfo : ""}\n\nYou must function as an expert prompt engineer. Prioritize this base style rule:\n${imageGenPrompt}\n\nPlease output EXACTLY ${parseSection}\n\nPROMPT:\n<write a highly detailed, clean, and optimized tag-based SD 1.5 image generation prompt that fits the scene and context. Make sure the subject matches your visual description.>${sdInstruction}\n\nSUMMARY:\n${summaryInstruction} MUST INCLUDE: At the end of your response, append [Image Context: <short visual description of the generated image>] so you can remember what you sent in future turns.>`;
 
   const derivationChat = ai.chats.create({ model: selectedModel, config: textModelConfig, history: [...historyForSdk] });
   const derivationPromptParts: Part[] = [{ text: derivationPrompt }];

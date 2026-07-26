@@ -7,6 +7,7 @@ import {
   updateNodeMessage,
   getSiblingInfo,
   findDefaultLeafFrom,
+  deleteBranch,
 } from "./messageTree";
 import { Message, ConversationTree } from "../../types";
 
@@ -168,6 +169,69 @@ describe("getSiblingInfo", () => {
   it("falls back gracefully for an unknown nodeId", () => {
     const { tree } = migrateToTree([msg("user", "a")]);
     expect(getSiblingInfo(tree, "missing")).toEqual({ index: 0, total: 1, siblingIds: ["missing"] });
+  });
+});
+
+describe("deleteBranch", () => {
+  it("removes a leaf sibling and detaches it from the parent's childIds", () => {
+    const { tree, activeLeafId } = migrateToTree([msg("user", "a"), msg("model", "b")]);
+    const parentId = tree.nodes[activeLeafId!].parentId!;
+    const { tree: tree2, nodeId: branchA } = addChildNode(tree, parentId, msg("model", "b-alt"));
+
+    const { tree: tree3, parentId: reportedParentId } = deleteBranch(tree2, branchA);
+
+    expect(reportedParentId).toBe(parentId);
+    expect(tree3.nodes[branchA]).toBeUndefined();
+    expect(tree3.nodes[parentId].childIds).toEqual([activeLeafId]);
+    expect(tree3.nodes[activeLeafId!]).toBeDefined();
+  });
+
+  it("removes the entire descendant subtree, not just the node itself", () => {
+    const { tree, activeLeafId } = migrateToTree([msg("user", "a")]);
+    const { tree: t2, nodeId: child } = addChildNode(tree, activeLeafId, msg("model", "b"));
+    const { tree: t3, nodeId: grandchild } = addChildNode(t2, child, msg("user", "c"));
+
+    const { tree: t4 } = deleteBranch(t3, child);
+
+    expect(t4.nodes[child]).toBeUndefined();
+    expect(t4.nodes[grandchild]).toBeUndefined();
+    expect(t4.nodes[activeLeafId!].childIds).toEqual([]);
+  });
+
+  it("leaves unrelated branches untouched", () => {
+    const { tree, activeLeafId } = migrateToTree([msg("user", "a")]);
+    const { tree: t2, nodeId: branchA } = addChildNode(tree, activeLeafId, msg("model", "b1"));
+    const { tree: t3, nodeId: branchB } = addChildNode(t2, activeLeafId, msg("model", "b2"));
+
+    const { tree: t4 } = deleteBranch(t3, branchA);
+
+    expect(t4.nodes[branchA]).toBeUndefined();
+    expect(t4.nodes[branchB]).toBeDefined();
+    expect(t4.nodes[activeLeafId!].childIds).toEqual([branchB]);
+  });
+
+  it("is a no-op (returns the same tree, null parentId) for an unknown nodeId", () => {
+    const { tree } = migrateToTree([msg("user", "a")]);
+    const result = deleteBranch(tree, "missing");
+    expect(result.tree).toBe(tree);
+    expect(result.parentId).toBeNull();
+  });
+
+  it("reports a null parentId when deleting a root node", () => {
+    const { tree, activeLeafId } = migrateToTree([msg("user", "a")]);
+    const { parentId } = deleteBranch(tree, activeLeafId!);
+    expect(parentId).toBeNull();
+  });
+
+  it("does not mutate the original tree object", () => {
+    const { tree, activeLeafId } = migrateToTree([msg("user", "a"), msg("model", "b")]);
+    const parentId = tree.nodes[activeLeafId!].parentId!;
+    const { tree: tree2, nodeId: branchA } = addChildNode(tree, parentId, msg("model", "b-alt"));
+
+    deleteBranch(tree2, branchA);
+
+    expect(tree2.nodes[branchA]).toBeDefined();
+    expect(tree2.nodes[parentId].childIds).toContain(branchA);
   });
 });
 

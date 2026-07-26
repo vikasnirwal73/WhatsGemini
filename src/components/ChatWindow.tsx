@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { YOU, LS_INITIAL_MESSAGES } from "../utils/constants";
 import { Message, Character, ConversationTree } from "../types";
 import { getSiblingInfo } from "../features/chat/messageTree";
+import { speak, stopSpeaking } from "../utils/speech";
 import { DisplayImage } from "./DisplayImage";
 import ToggleSwitch from "./ToggleSwitch";
 import ChatMessage from "./chat/ChatMessage";
@@ -14,6 +15,7 @@ interface ChatWindowProps {
   messages: Message[];
   tree?: ConversationTree;
   onSwitchBranch?: (nodeId: string) => void;
+  onDeleteBranch?: (nodeId: string) => void;
   onRegenerate?: (index: number) => void;
   onEdit?: (index: number, text: string, isImageRequest?: boolean) => void;
   onSend?: (text: string, isImageRequest?: boolean) => void;
@@ -38,7 +40,7 @@ const TypingIndicator = ({ charInitials, accent }: { charInitials: string; accen
   </div>
 );
 
-const ChatWindow: React.FC<ChatWindowProps> = ({ messages = [], tree, onSwitchBranch, onRegenerate, onEdit, onSend, aiLoading, characterName, character }) => {
+const ChatWindow: React.FC<ChatWindowProps> = ({ messages = [], tree, onSwitchBranch, onDeleteBranch, onRegenerate, onEdit, onSend, aiLoading, characterName, character }) => {
   const chatEndRef = useRef<HTMLDivElement>(null);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [editText, setEditText] = useState("");
@@ -46,6 +48,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ messages = [], tree, onSwitchBr
   const [fullscreenImage, setFullscreenImage] = useState<string | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [isScrolledUp, setIsScrolledUp] = useState(false);
+  const [speakingMessageId, setSpeakingMessageId] = useState<string | null>(null);
 
   const handleScroll = useCallback(() => {
     if (scrollContainerRef.current) {
@@ -188,6 +191,32 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ messages = [], tree, onSwitchBr
     navigator.clipboard.writeText(text);
   }, []);
 
+  const handleToggleSpeak = useCallback((msg: Message) => {
+    if (!msg.id) return;
+    if (speakingMessageId === msg.id) {
+      stopSpeaking();
+      setSpeakingMessageId(null);
+      return;
+    }
+    const id = msg.id;
+    speak(msg.txt || "", character?.voiceURI, () => {
+      setSpeakingMessageId((current) => (current === id ? null : current));
+    });
+    setSpeakingMessageId(id);
+  }, [speakingMessageId, character?.voiceURI]);
+
+  // If the message currently being read aloud disappears from the active
+  // path (chat switch, edit, regenerate, branch-delete), stop instead of
+  // reading a message that's no longer even shown.
+  useEffect(() => {
+    if (speakingMessageId && !messages.some((m) => m.id === speakingMessageId)) {
+      stopSpeaking();
+      setSpeakingMessageId(null);
+    }
+  }, [messages, speakingMessageId]);
+
+  useEffect(() => () => stopSpeaking(), []);
+
   const getInitials = (name?: string) => {
     if (!name || name === "New Chat" || name.trim() === "Chat") return "G";
     const parts = name.split(" ").filter(Boolean);
@@ -234,6 +263,9 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ messages = [], tree, onSwitchBr
               setFullscreenImage={setFullscreenImage}
               siblingInfo={siblingInfo && siblingInfo.total > 1 ? siblingInfo : undefined}
               onSwitchBranch={onSwitchBranch}
+              onDeleteBranch={onDeleteBranch}
+              isSpeaking={Boolean(msg.id) && speakingMessageId === msg.id}
+              onToggleSpeak={handleToggleSpeak}
             />
           );
         })

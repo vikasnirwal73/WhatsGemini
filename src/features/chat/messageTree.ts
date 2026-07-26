@@ -85,6 +85,32 @@ export const getSiblingInfo = (tree: ConversationTree, nodeId: string): { index:
   return { index: index === -1 ? 0 : index, total: siblingIds.length, siblingIds };
 };
 
+// Removes a node and its entire descendant subtree (everything that was
+// generated after it in that branch) - used to delete an unwanted variant.
+// Returns the parent id so the caller can pick a replacement active leaf
+// from a remaining sibling.
+export const deleteBranch = (tree: ConversationTree, nodeId: string): { tree: ConversationTree; parentId: string | null } => {
+  const node = tree.nodes[nodeId];
+  if (!node) return { tree, parentId: null };
+
+  const toRemove = new Set<string>();
+  const collect = (id: string) => {
+    toRemove.add(id);
+    tree.nodes[id]?.childIds.forEach(collect);
+  };
+  collect(nodeId);
+
+  const nodes: Record<string, MessageNode> = {};
+  for (const [id, n] of Object.entries(tree.nodes)) {
+    if (!toRemove.has(id)) nodes[id] = n;
+  }
+  if (node.parentId && nodes[node.parentId]) {
+    nodes[node.parentId] = { ...nodes[node.parentId], childIds: nodes[node.parentId].childIds.filter((id) => id !== nodeId) };
+  }
+
+  return { tree: { nodes }, parentId: node.parentId };
+};
+
 // Given a chosen sibling, find which leaf should become active: descend into
 // the most-recently-added child at each level, i.e. resume wherever that
 // branch was last left off.

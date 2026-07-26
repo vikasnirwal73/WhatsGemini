@@ -1,5 +1,5 @@
-import React, { useCallback } from "react";
-import { FaCopy, FaRedo, FaEdit, FaEllipsisV, FaChevronLeft, FaChevronRight } from "react-icons/fa";
+import React, { useCallback, useMemo } from "react";
+import { FaCopy, FaRedo, FaEdit, FaEllipsisV, FaChevronLeft, FaChevronRight, FaTrash, FaVolumeUp, FaStop } from "react-icons/fa";
 import { motion } from "framer-motion";
 import { cn } from "../../utils/cn";
 import { Message } from "../../types";
@@ -8,6 +8,7 @@ import MarkdownRenderer from "./MarkdownRenderer";
 import { DropdownMenu, DropdownMenuItem } from "../ui/DropdownMenu";
 import { DisplayImage } from "../DisplayImage";
 import { CharacterAvatar } from "../ui/CharacterAvatar";
+import { isSpeechSynthesisSupported } from "../../utils/speech";
 
 interface SiblingInfo {
   index: number;
@@ -26,6 +27,9 @@ interface ChatMessageProps {
   setFullscreenImage: (src: string) => void;
   siblingInfo?: SiblingInfo;
   onSwitchBranch?: (nodeId: string) => void;
+  onDeleteBranch?: (nodeId: string) => void;
+  isSpeaking?: boolean;
+  onToggleSpeak?: (msg: Message) => void;
 }
 
 const ChatMessage = React.memo(({
@@ -39,12 +43,18 @@ const ChatMessage = React.memo(({
   setFullscreenImage,
   siblingInfo,
   onSwitchBranch,
+  onDeleteBranch,
+  isSpeaking,
+  onToggleSpeak,
 }: ChatMessageProps) => {
   const isUser = msg.role === YOU;
+  const speechSupported = useMemo(() => isSpeechSynthesisSupported(), []);
 
   const handleCopy = useCallback(() => onCopy(msg.txt || ""), [onCopy, msg.txt]);
   const handleRegenerate = useCallback(() => onRegenerate(msg), [onRegenerate, msg]);
   const handleEdit = useCallback(() => onStartEdit(msg), [onStartEdit, msg]);
+  const handleDeleteBranch = useCallback(() => msg.id && onDeleteBranch?.(msg.id), [onDeleteBranch, msg.id]);
+  const handleToggleSpeak = useCallback(() => onToggleSpeak?.(msg), [onToggleSpeak, msg]);
 
   return (
     <motion.div
@@ -80,26 +90,48 @@ const ChatMessage = React.memo(({
         ))}
 
         {siblingInfo && (
-          <div className={cn("flex items-center gap-1.5 mt-2 text-[11px] font-mono", isUser ? "text-bubble-sentFg/70 justify-end" : "text-ink-faint")}>
-            <button
-              onClick={() => siblingInfo.index > 0 && onSwitchBranch?.(siblingInfo.siblingIds[siblingInfo.index - 1])}
-              disabled={siblingInfo.index === 0}
-              className="p-0.5 rounded hover:bg-black/10 disabled:opacity-30 disabled:cursor-not-allowed transition"
-              aria-label="Previous variant"
-              title="Previous variant"
+          <div className={cn("flex items-center mt-2", isUser ? "justify-end" : "justify-start")}>
+            <div
+              className={cn(
+                "flex items-center gap-0.5 rounded-full text-[11px] font-mono font-semibold pl-1.5 pr-1 py-1",
+                isUser ? "bg-black/10 text-bubble-sentFg" : "bg-panel2 border border-line text-ink-muted"
+              )}
+              title={`${siblingInfo.total} variants of this message`}
             >
-              <FaChevronLeft size={9} />
-            </button>
-            <span>{siblingInfo.index + 1}/{siblingInfo.total}</span>
-            <button
-              onClick={() => siblingInfo.index < siblingInfo.total - 1 && onSwitchBranch?.(siblingInfo.siblingIds[siblingInfo.index + 1])}
-              disabled={siblingInfo.index === siblingInfo.total - 1}
-              className="p-0.5 rounded hover:bg-black/10 disabled:opacity-30 disabled:cursor-not-allowed transition"
-              aria-label="Next variant"
-              title="Next variant"
-            >
-              <FaChevronRight size={9} />
-            </button>
+              <button
+                onClick={() => siblingInfo.index > 0 && onSwitchBranch?.(siblingInfo.siblingIds[siblingInfo.index - 1])}
+                disabled={siblingInfo.index === 0}
+                className="p-1 rounded-full hover:bg-black/10 disabled:opacity-30 disabled:cursor-not-allowed transition"
+                aria-label="Previous variant"
+                title="Previous variant"
+              >
+                <FaChevronLeft size={9} />
+              </button>
+              <span className="px-0.5">{siblingInfo.index + 1}/{siblingInfo.total}</span>
+              <button
+                onClick={() => siblingInfo.index < siblingInfo.total - 1 && onSwitchBranch?.(siblingInfo.siblingIds[siblingInfo.index + 1])}
+                disabled={siblingInfo.index === siblingInfo.total - 1}
+                className="p-1 rounded-full hover:bg-black/10 disabled:opacity-30 disabled:cursor-not-allowed transition"
+                aria-label="Next variant"
+                title="Next variant"
+              >
+                <FaChevronRight size={9} />
+              </button>
+              {onDeleteBranch && (
+                <>
+                  <span className="w-px h-3 bg-current opacity-20 mx-0.5" />
+                  <button
+                    onClick={handleDeleteBranch}
+                    disabled={aiLoading}
+                    className="p-1 rounded-full hover:bg-red-500/15 hover:text-red-500 disabled:opacity-30 disabled:cursor-not-allowed transition"
+                    aria-label="Delete this variant"
+                    title="Delete this variant"
+                  >
+                    <FaTrash size={9} />
+                  </button>
+                </>
+              )}
+            </div>
           </div>
         )}
 
@@ -125,6 +157,9 @@ const ChatMessage = React.memo(({
             {msg.role === AI && (
               <DropdownMenuItem icon={FaRedo} label="Regenerate" onClick={handleRegenerate} disabled={aiLoading} />
             )}
+            {msg.role === AI && speechSupported && (
+              <DropdownMenuItem icon={isSpeaking ? FaStop : FaVolumeUp} label={isSpeaking ? "Stop speaking" : "Speak"} onClick={handleToggleSpeak} />
+            )}
             <DropdownMenuItem icon={FaEdit} label="Edit" onClick={handleEdit} disabled={aiLoading} />
           </DropdownMenu>
         </div>
@@ -138,6 +173,11 @@ const ChatMessage = React.memo(({
             <button onClick={handleRegenerate} className="flex items-center gap-1.5 hover:text-ink transition">
               <FaRedo size={12} /> Regenerate
             </button>
+            {speechSupported && (
+              <button onClick={handleToggleSpeak} className={cn("flex items-center gap-1.5 transition", isSpeaking ? "text-primary" : "hover:text-ink")}>
+                {isSpeaking ? <FaStop size={12} /> : <FaVolumeUp size={12} />} {isSpeaking ? "Stop" : "Speak"}
+              </button>
+            )}
             <button onClick={handleEdit} className="flex items-center gap-1.5 hover:text-ink transition">
               <FaEdit size={12} /> Edit
             </button>

@@ -2,17 +2,18 @@ import React, { useState, useEffect, useRef } from "react";
 import { fetchCharacters, addCharacter, deleteCharacter, updateCharacter } from "../features/characterSlice";
 import { addChat } from "../features/chatSlice";
 import { useNavigate } from "react-router-dom";
-import { FaTrash, FaEdit, FaTimes, FaDownload, FaUpload, FaCopy, FaImages, FaPlus, FaComment, FaEllipsisV } from "react-icons/fa";
+import { FaTrash, FaEdit, FaTimes, FaDownload, FaUpload, FaCopy, FaImages, FaPlus, FaComment, FaEllipsisV, FaPlay } from "react-icons/fa";
 import { DropdownMenu, DropdownMenuItem } from "../components/ui/DropdownMenu";
 import { useAppDispatch, useAppSelector } from "../store/hooks";
 import { Character, Chat } from "../types";
 import { useModal } from "../contexts/ModalContext";
 import { dbService } from "../services/dbService";
 import { DisplayImage } from "../components/DisplayImage";
-import { TextInput, TextArea } from "../components/ui/FormControls";
+import { TextInput, TextArea, Select, FieldLabel } from "../components/ui/FormControls";
 import { CharacterAvatar } from "../components/ui/CharacterAvatar";
 import Header from "../components/Header";
 import { CHARACTER_SWATCHES, MEMORY_EXTRACTION_INTERVAL } from "../utils/constants";
+import { isSpeechSynthesisSupported, getVoices, speak } from "../utils/speech";
 
 const CharacterPage = () => {
   const dispatch = useAppDispatch();
@@ -32,11 +33,18 @@ const CharacterPage = () => {
   const [appearanceImages, setAppearanceImages] = useState<string[]>([]);
   const [avatar, setAvatar] = useState("");
   const [accentIndex, setAccentIndex] = useState(0);
+  const [voiceURI, setVoiceURI] = useState("");
+  const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
   const [editCharacter, setEditCharacter] = useState<Character | null>(null);
 
   useEffect(() => {
     dispatch(fetchCharacters());
   }, [dispatch]);
+
+  useEffect(() => {
+    if (!isSpeechSynthesisSupported()) return;
+    getVoices().then(setVoices);
+  }, []);
 
   const resetForm = () => {
     setEditCharacter(null);
@@ -48,6 +56,7 @@ const CharacterPage = () => {
     setAppearanceImages([]);
     setAvatar("");
     setAccentIndex(0);
+    setVoiceURI("");
   }
 
   const handleCreateCharacter = () => {
@@ -56,7 +65,7 @@ const CharacterPage = () => {
       return;
     }
 
-    dispatch(addCharacter({ name, description, prompt, relationship, appearance, appearanceImages, avatar, accent: CHARACTER_SWATCHES[accentIndex] }));
+    dispatch(addCharacter({ name, description, prompt, relationship, appearance, appearanceImages, avatar, accent: CHARACTER_SWATCHES[accentIndex], voiceURI: voiceURI || undefined }));
     resetForm();
   };
 
@@ -82,6 +91,7 @@ const CharacterPage = () => {
     setAppearance(char.appearance || "");
     setAppearanceImages(char.appearanceImages || []);
     setAccentIndex(findSwatchIndex(char.accent));
+    setVoiceURI(char.voiceURI || "");
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -94,6 +104,7 @@ const CharacterPage = () => {
     setAppearance(char.appearance || "");
     setAppearanceImages(char.appearanceImages || []);
     setAccentIndex(findSwatchIndex(char.accent));
+    setVoiceURI(char.voiceURI || "");
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -103,7 +114,7 @@ const CharacterPage = () => {
       return;
     }
 
-    dispatch(updateCharacter({ id: editCharacter.id, name, description, prompt, relationship, appearance, appearanceImages, avatar, accent: CHARACTER_SWATCHES[accentIndex], gallery: editCharacter.gallery }));
+    dispatch(updateCharacter({ id: editCharacter.id, name, description, prompt, relationship, appearance, appearanceImages, avatar, accent: CHARACTER_SWATCHES[accentIndex], voiceURI: voiceURI || undefined, gallery: editCharacter.gallery }));
     resetForm();
   };
 
@@ -128,6 +139,7 @@ const CharacterPage = () => {
       appearance: char.appearance || "",
       appearanceImages: char.appearanceImages || [],
       accent: char.accent,
+      voiceURI: char.voiceURI,
     };
 
     const jsonString = JSON.stringify(dataToExport, null, 2);
@@ -171,6 +183,7 @@ const CharacterPage = () => {
             appearance: parsed.appearance || "",
             appearanceImages: parsed.appearanceImages || [],
             accent: parsed.accent,
+            voiceURI: parsed.voiceURI,
           })
         );
 
@@ -294,6 +307,30 @@ const CharacterPage = () => {
                   </div>
                 </div>
               </div>
+
+              {isSpeechSynthesisSupported() && (
+                <div>
+                  <FieldLabel hint="Used to read this character's replies aloud with the speak button in chat.">Voice (optional)</FieldLabel>
+                  <div className="flex gap-2">
+                    <Select value={voiceURI} onChange={(e) => setVoiceURI(e.target.value)} className="flex-1">
+                      <option value="">Browser default</option>
+                      {voices.map((v) => (
+                        <option key={v.voiceURI} value={v.voiceURI}>{v.name} ({v.lang})</option>
+                      ))}
+                    </Select>
+                    <button
+                      type="button"
+                      onClick={() => speak(`Hi, I'm ${name || "your character"}.`, voiceURI || undefined)}
+                      disabled={voices.length === 0}
+                      className="w-11 h-11 flex-shrink-0 rounded-xl border border-line bg-panel2 text-ink-muted hover:border-primary hover:text-primary transition flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+                      title="Preview voice"
+                      aria-label="Preview voice"
+                    >
+                      <FaPlay size={12} />
+                    </button>
+                  </div>
+                </div>
+              )}
 
               <TextInput
                 type="text"

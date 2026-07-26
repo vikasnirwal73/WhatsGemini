@@ -1,7 +1,8 @@
-import React, { useState, useCallback, useRef, useEffect } from "react";
-import { FaPaperPlane, FaStop, FaCog, FaImage, FaTimes } from "react-icons/fa";
+import React, { useState, useCallback, useRef, useEffect, useMemo } from "react";
+import { FaPaperPlane, FaStop, FaCog, FaImage, FaTimes, FaMicrophone } from "react-icons/fa";
 import { cn } from "../utils/cn";
 import ImageSettingsModal from "./ImageSettingsModal";
+import { isSpeechRecognitionSupported, createSpeechRecognition } from "../utils/speech";
 
 interface MessageInputProps {
   onSend: (text: string, isImageRequest?: boolean) => void;
@@ -18,8 +19,68 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSend, disabled = false, o
   const [text, setText] = useState("");
   const [isImageRequest, setIsImageRequest] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
+  const [isListening, setIsListening] = useState(false);
 
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const recognitionRef = useRef<SpeechRecognition | null>(null);
+  // Text already in the box before this dictation session started, and the
+  // finalized (non-interim) speech recognized so far in it - rebuilt into
+  // `text` on every result event so live partial transcripts just update in
+  // place instead of needing a separate ghost-text overlay.
+  const baseTextRef = useRef("");
+  const finalTranscriptRef = useRef("");
+  const micSupported = useMemo(() => isSpeechRecognitionSupported(), []);
+
+  const stopListening = useCallback(() => {
+    recognitionRef.current?.stop();
+  }, []);
+
+  const startListening = useCallback(() => {
+    const recognition = createSpeechRecognition();
+    if (!recognition) return;
+
+    baseTextRef.current = text;
+    finalTranscriptRef.current = "";
+
+    recognition.onresult = (event) => {
+      let interim = "";
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const transcript = event.results[i][0].transcript;
+        if (event.results[i].isFinal) {
+          finalTranscriptRef.current += transcript + " ";
+        } else {
+          interim += transcript;
+        }
+      }
+      const base = baseTextRef.current;
+      const joinedBase = base && !base.endsWith(" ") ? base + " " : base;
+      setText((joinedBase + finalTranscriptRef.current + interim).trimStart());
+    };
+    recognition.onerror = () => {
+      setIsListening(false);
+      recognitionRef.current = null;
+    };
+    recognition.onend = () => {
+      setIsListening(false);
+      recognitionRef.current = null;
+    };
+
+    recognitionRef.current = recognition;
+    recognition.start();
+    setIsListening(true);
+  }, [text]);
+
+  const toggleListening = useCallback(() => {
+    if (disabled) return;
+    if (isListening) {
+      stopListening();
+    } else {
+      startListening();
+    }
+  }, [disabled, isListening, startListening, stopListening]);
+
+  // Stop dictation if the composer unmounts mid-session (e.g. navigating away).
+  useEffect(() => () => recognitionRef.current?.stop(), []);
 
   const resize = useCallback(() => {
     const el = inputRef.current;
@@ -38,10 +99,11 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSend, disabled = false, o
     const trimmedText = text.trim();
     if (!trimmedText) return;
 
+    if (isListening) stopListening();
     onSend(trimmedText, isImageRequest);
     setText("");
     setIsImageRequest(false); // Disable/uncheck it afterward
-  }, [text, isImageRequest, onSend, disabled]);
+  }, [text, isImageRequest, onSend, disabled, isListening, stopListening]);
 
   // Scroll input into view when focused (helps with mobile keyboards)
   const handleFocus = useCallback(() => {
@@ -76,6 +138,25 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSend, disabled = false, o
         </div>
       )}
 
+      {isListening && (
+        <div className="flex items-center gap-2.5 px-3 py-2 bg-red-500/10 border border-red-500/50 rounded-xl">
+          <span className="relative flex-shrink-0 w-2.5 h-2.5">
+            <span className="absolute inset-0 rounded-full bg-red-500 animate-ping opacity-75" />
+            <span className="absolute inset-0 rounded-full bg-red-500" />
+          </span>
+          <span className="flex-1 text-[12.5px] text-ink font-medium">
+            Listening… speak, then tap the mic to stop.
+          </span>
+          <button
+            onClick={stopListening}
+            className="w-6 h-6 rounded-md flex items-center justify-center text-ink-muted hover:bg-panel3 hover:text-ink transition flex-shrink-0"
+            aria-label="Stop listening"
+          >
+            <FaTimes size={11} />
+          </button>
+        </div>
+      )}
+
       <div className="flex items-end gap-2">
         <button
           onClick={() => setIsImageRequest((v) => !v)}
@@ -92,6 +173,24 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSend, disabled = false, o
         >
           <FaImage size={15} />
         </button>
+
+        {micSupported && (
+          <button
+            onClick={toggleListening}
+            disabled={disabled}
+            title={isListening ? "Stop dictation" : "Dictate a message"}
+            aria-label={isListening ? "Stop dictation" : "Dictate a message"}
+            aria-pressed={isListening}
+            className={cn(
+              "w-11 h-11 flex-shrink-0 rounded-[13px] border flex items-center justify-center transition disabled:opacity-50 disabled:cursor-not-allowed",
+              isListening
+                ? "border-red-500 bg-red-500/10 text-red-500"
+                : "border-line bg-panel2 text-ink-faint hover:border-primary hover:text-ink"
+            )}
+          >
+            <FaMicrophone size={15} />
+          </button>
+        )}
 
         <button
           onClick={() => setIsSettingsModalOpen(true)}
