@@ -12,7 +12,7 @@ import { DisplayImage } from "../components/DisplayImage";
 import { TextInput, TextArea, Select, FieldLabel } from "../components/ui/FormControls";
 import { CharacterAvatar } from "../components/ui/CharacterAvatar";
 import Header from "../components/Header";
-import { CHARACTER_SWATCHES, MEMORY_EXTRACTION_INTERVAL } from "../utils/constants";
+import { CHARACTER_SWATCHES, MEMORY_EXTRACTION_INTERVAL, SAMPLE_CHARACTER } from "../utils/constants";
 import { isSpeechSynthesisSupported, getVoices, speak } from "../utils/speech";
 
 const CharacterPage = () => {
@@ -67,6 +67,11 @@ const CharacterPage = () => {
 
     dispatch(addCharacter({ name, description, prompt, relationship, appearance, appearanceImages, avatar, accent: CHARACTER_SWATCHES[accentIndex], voiceURI: voiceURI || undefined }));
     resetForm();
+  };
+
+  const handleTrySampleCharacter = async () => {
+    const character = await dispatch(addCharacter(SAMPLE_CHARACTER)).unwrap();
+    if (character) handleChatWithCharacter(character);
   };
 
   const handleDeleteCharacter = async (id: number) => {
@@ -466,7 +471,16 @@ const CharacterPage = () => {
               </div>
             </div>
             {!loading && characters.length === 0 ? (
-              <p className="text-ink-muted">No characters created yet.</p>
+              <div className="bg-panel border border-line rounded-2xl p-6 text-center flex flex-col items-center gap-3">
+                <p className="text-ink-muted">No characters created yet.</p>
+                <p className="text-sm text-ink-muted">Fill out the form to build your own, or jump straight into a chat with a ready-made one.</p>
+                <button
+                  onClick={handleTrySampleCharacter}
+                  className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gemini-logo text-onAccent font-semibold text-sm shadow-lg shadow-primary/20 hover:brightness-105 transition"
+                >
+                  Try a sample character
+                </button>
+              </div>
             ) : (
               <div className="grid gap-4" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(232px, 1fr))" }}>
                 {characters.map((char) => (

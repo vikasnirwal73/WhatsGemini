@@ -124,3 +124,22 @@ export const DEFAULT_SD_WEBUI_CONTROLNET_MODEL = "ip-adapter_sd15";
 export const LS_SD_WEBUI_MODELS = "sd_webui_models";
 export const LS_SD_WEBUI_MODEL = "sd_webui_model";
 export const DEFAULT_SD_WEBUI_MODEL = "";
+
+// Auto-backup reminder: everything lives only in this browser's IndexedDB,
+// so a periodic nudge is the only thing standing between a user and silent
+// data loss (cleared cache, browser reinstall, etc).
+export const LS_FIRST_USED_AT = "first_used_at";
+export const LS_LAST_BACKUP_AT = "last_backup_at";
+export const LS_BACKUP_REMINDER_SNOOZE_UNTIL = "backup_reminder_snooze_until";
+export const BACKUP_REMINDER_INTERVAL_DAYS = 7;
+
+// Bundled demo character offered on first run, so a brand-new user has
+// something to click into immediately instead of a blank character list.
+export const SAMPLE_CHARACTER = {
+  name: "Aria",
+  description: "A warm, witty, endlessly curious companion - happy to chat about anything.",
+  prompt:
+    "You are Aria: warm, witty, and genuinely curious about the person you're talking to. Ask real follow-up questions, share your own (fictional) opinions and small anecdotes, and keep replies conversational rather than long. You're supportive without being sycophantic, and you have a light, easy sense of humor.",
+  relationship: "New Friend",
+  accent: CHARACTER_SWATCHES[0],
+};

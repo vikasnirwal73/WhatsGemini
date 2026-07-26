@@ -1,8 +1,10 @@
 import React, { useState, useContext, useCallback } from "react";
 import { AuthContext } from "../contexts/AuthContext";
 import { Navigate } from "react-router-dom";
+import { FaExternalLinkAlt, FaLock } from "react-icons/fa";
 import { cn } from "../utils/cn";
 import Logo from "../components/ui/Logo";
+import { TextInput } from "../components/ui/FormControls";
 
 const Login = () => {
   const [key, setKey] = useState("");
@@ -42,20 +44,39 @@ const Login = () => {
     <div className="flex items-center justify-center h-screen bg-app">
       <div className="bg-panel border border-line p-8 rounded-2xl shadow-xl w-96 max-w-[calc(100%-30px)]">
         <Logo size={48} className="shadow-lg shadow-primary/30 rounded-[13px] mx-auto mb-5 block" />
-        <h2 className="text-xl font-bold text-center text-ink mb-6">
-          Enter Google API Key
+        <h2 className="text-xl font-bold text-center text-ink mb-1.5">
+          Welcome to WhatsGemini
         </h2>
+        <p className="text-sm text-ink-muted text-center mb-6">
+          Chat with characters powered by Gemini. You'll just need a free Google API key to get started.
+        </p>
+
+        <a
+          href="https://aistudio.google.com/apikey"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center justify-center gap-1.5 text-[13px] text-primary font-medium hover:underline mb-4"
+        >
+          Get a free API key from Google AI Studio
+          <FaExternalLinkAlt size={10} />
+        </a>
 
         {/* Error Message */}
         {error && <p className="text-red-500 text-sm text-center mb-4">{error}</p>}
 
-        <input
+        <TextInput
           type="text"
           value={key}
           onChange={(e) => setKey(e.target.value)}
-          placeholder="Enter your API Key..."
-          className="w-full p-3 bg-panel2 text-ink placeholder-ink-faint rounded-xl border border-line focus:border-primary outline-none mb-4 transition-all"
+          placeholder="Paste your API key here..."
+          className="mb-2"
+          onKeyDown={(e) => e.key === "Enter" && handleLogin()}
         />
+
+        <p className="flex items-center gap-1.5 text-[11.5px] text-ink-faint mb-4">
+          <FaLock size={9} className="flex-shrink-0" />
+          Stored encrypted, only on this device - never sent anywhere but Google's API.
+        </p>
 
         <button
           onClick={handleLogin}

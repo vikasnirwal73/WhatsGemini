@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useSelector } from "react-redux";
 import { RootState } from "../store/store";
 import { useAppDispatch } from "../store/hooks";
@@ -61,13 +61,16 @@ import {
   imageModels,
   LS_COMPRESS_THRESHOLD,
   // DEFAULT_COMPRESS_THRESHOLD,
+  LS_LAST_BACKUP_AT,
 } from "../utils/constants";
 import { AISafetySettings } from "../types";
 import { dbService } from "../services/dbService";
 import { TextInput, Select, FieldLabel } from "../components/ui/FormControls";
+import { formatRelativeTime } from "../utils/formatRelativeTime";
 
 const SettingsPage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { showConfirm } = useModal();
   const [initialMessagesKey, setInitialMessagesKey] = useState(0);
   const [toasts, setToasts] = useState<ToastData[]>([]);
@@ -172,7 +175,8 @@ const SettingsPage = () => {
     safetySettings, fontSize, imageResolution
   } = settings;
 
-  const [openSection, setOpenSection] = useState<string>("profile");
+  const [openSection, setOpenSection] = useState<string>(() => (location.state as { openSection?: string } | null)?.openSection || "profile");
+  const [lastBackupAt, setLastBackupAt] = useState<number>(() => Number(localStorage.getItem(LS_LAST_BACKUP_AT) || 0));
 
   const toggleSection = (section: string) => {
     setOpenSection(prev => prev === section ? "" : section);
@@ -395,6 +399,10 @@ const SettingsPage = () => {
       message += imagesIncluded > 0 ? `, including ${imagesIncluded} image(s).` : ".";
       if (imagesSkipped > 0) message += ` ${imagesSkipped} local image(s) couldn't be read and were skipped.`;
       addToast(message, "success");
+
+      const now = Date.now();
+      localStorage.setItem(LS_LAST_BACKUP_AT, String(now));
+      setLastBackupAt(now);
     } catch (err) {
       console.error("Backup export error:", err);
       addToast("Failed to create backup.", "error");
@@ -599,8 +607,11 @@ const SettingsPage = () => {
         {renderAccordion("data", <FaDatabase size={15} />, "Data & Import/Export", "Import / export conversations",
           <>
             <p className="text-sm font-medium text-ink mb-1">Full Backup</p>
-            <p className="text-xs text-ink-muted mb-3">
+            <p className="text-xs text-ink-muted mb-1">
               All chats, characters, settings, and locally-saved images (if you've picked a save folder) in one zip - everything lives only in this browser, so it's worth keeping a copy. Restoring always adds to your existing library, never overwrites it.
+            </p>
+            <p className="text-xs text-ink-faint mb-3">
+              Last backup: {lastBackupAt ? formatRelativeTime(lastBackupAt) : "never"}
             </p>
             <div className="flex flex-col sm:flex-row gap-4 mb-6">
                <button

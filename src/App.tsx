@@ -6,14 +6,16 @@ import { ThemeProvider } from "./contexts/ThemeContext";
 import { ModalProvider } from "./contexts/ModalContext";
 import { SidebarProvider, useSidebar } from "./contexts/SidebarContext";
 import store from "./store/store";
-import { useAppDispatch } from "./store/hooks";
+import { useAppDispatch, useAppSelector } from "./store/hooks";
 import { fetchChats, addChat } from "./features/chatSlice";
-import { fetchCharacters } from "./features/characterSlice";
-import { LS_FONT_SIZE } from "./utils/constants";
+import { fetchCharacters, addCharacter } from "./features/characterSlice";
+import { LS_FONT_SIZE, LS_FIRST_USED_AT, SAMPLE_CHARACTER } from "./utils/constants";
 
 import Sidebar from "./components/Sidebar";
 import Header from "./components/Header";
 import ServiceWorkerUpdater from "./components/ServiceWorkerUpdater";
+import BackupReminderBanner from "./components/BackupReminderBanner";
+import Logo from "./components/ui/Logo";
 import { TooltipProvider } from "./components/ui/Tooltip";
 
 const ChatPage = lazy(() => import("./pages/ChatPage"));
@@ -33,19 +35,71 @@ const PageLoader = () => (
 // Rendered at "/" (no chat selected). On mobile the sidebar is off-screen until
 // opened via the hamburger, so this still needs its own Header - without it,
 // there'd be no way to get back to the chat list on a phone.
+//
+// For a brand-new user (no characters yet) this doubles as the first-run
+// screen, since there's nothing else to select from the sidebar - a bare
+// "select a chat" message would just be a dead end.
 const EmptyChatState = () => {
   const { open } = useSidebar();
+  const dispatch = useAppDispatch();
+  const navigate = useNavigate();
+  const characters = useAppSelector((state) => state.character.characters);
+  const charactersLoading = useAppSelector((state) => state.character.loading);
+  const [creatingSample, setCreatingSample] = useState(false);
+  const isFirstRun = !charactersLoading && characters.length === 0;
+
+  const handleTrySample = async () => {
+    setCreatingSample(true);
+    try {
+      const character = await dispatch(addCharacter(SAMPLE_CHARACTER)).unwrap();
+      const chat = await dispatch(addChat({ title: character.name, characterId: character.id })).unwrap();
+      if (chat?.id) navigate(`/chat/${chat.id}`);
+    } catch (err) {
+      console.error("Failed to create sample character:", err);
+      setCreatingSample(false);
+    }
+  };
+
   return (
     <div className="flex flex-col w-full h-screen bg-app">
-      <Header title="WhatsGemini" subtitle="Select a chat to get started" />
+      <Header title="WhatsGemini" subtitle={isFirstRun ? "Welcome!" : "Select a chat to get started"} />
       <div className="flex-1 flex flex-col items-center justify-center gap-4 text-ink-muted px-6 text-center">
-        <p className="text-sm">Select a chat from the sidebar to continue a conversation.</p>
-        <button
-          onClick={open}
-          className="md:hidden flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gemini-logo text-onAccent font-semibold text-sm shadow-lg shadow-primary/20"
-        >
-          Browse chats
-        </button>
+        {isFirstRun ? (
+          <>
+            <Logo size={48} className="shadow-lg shadow-primary/30 rounded-[13px] mb-1" />
+            <div>
+              <h2 className="text-lg font-bold text-ink mb-1.5">Welcome to WhatsGemini</h2>
+              <p className="text-sm max-w-[360px]">
+                Create a character - a persona for Gemini to embody - then start chatting. Not sure where to start?
+              </p>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-2.5 mt-1">
+              <button
+                onClick={handleTrySample}
+                disabled={creatingSample}
+                className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gemini-logo text-onAccent font-semibold text-sm shadow-lg shadow-primary/20 disabled:opacity-60 disabled:cursor-not-allowed transition"
+              >
+                {creatingSample ? "Creating..." : "Try a sample character"}
+              </button>
+              <button
+                onClick={() => navigate("/characters")}
+                className="px-4 py-2.5 rounded-xl border border-line bg-panel2 text-ink font-medium text-sm hover:border-primary hover:text-primary transition"
+              >
+                Create your own
+              </button>
+            </div>
+          </>
+        ) : (
+          <>
+            <p className="text-sm">Select a chat from the sidebar to continue a conversation.</p>
+            <button
+              onClick={open}
+              className="md:hidden flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gemini-logo text-onAccent font-semibold text-sm shadow-lg shadow-primary/20"
+            >
+              Browse chats
+            </button>
+          </>
+        )}
       </div>
     </div>
   );
@@ -69,10 +123,17 @@ const AppContent = () => {
     };
 
     fetchData();
-    
+
     // Apply font size
     const fontSize = localStorage.getItem(LS_FONT_SIZE) || "16px";
     document.documentElement.style.setProperty('--chat-font-size', fontSize);
+
+    // Marks when this browser first saw an authenticated user - the backup
+    // reminder falls back to this when there's no backup yet, so a fresh
+    // install doesn't get nagged on day one.
+    if (!localStorage.getItem(LS_FIRST_USED_AT)) {
+      localStorage.setItem(LS_FIRST_USED_AT, String(Date.now()));
+    }
   }, [dispatch]);
 
   // Global Shortcuts
@@ -116,6 +177,7 @@ const AppContent = () => {
   return (
     <div className="bg-app min-h-screen text-ink font-sans">
       <div className="flex flex-col h-screen w-full">
+        <BackupReminderBanner />
         <div className="flex flex-1 overflow-hidden">
           <Sidebar />
           <main className="flex-1 bg-app relative z-1 min-w-0">

@@ -1,6 +1,6 @@
-import React, { useContext } from "react";
+import React, { useContext, useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { FaBars, FaArrowLeft, FaSun, FaMoon, FaUserFriends, FaCog, FaSignOutAlt, FaEllipsisV } from "react-icons/fa";
+import { FaBars, FaArrowLeft, FaSun, FaMoon, FaUserFriends, FaCog, FaSignOutAlt, FaEllipsisV, FaQuestionCircle } from "react-icons/fa";
 import { useSidebar } from "../contexts/SidebarContext";
 import { ThemeContext } from "../contexts/ThemeContext";
 import { AuthContext } from "../contexts/AuthContext";
@@ -8,6 +8,7 @@ import { DARK } from "../utils/constants";
 import { cn } from "../utils/cn";
 import { Tooltip } from "./ui/Tooltip";
 import { DropdownMenu, DropdownMenuItem, DropdownMenuSeparator } from "./ui/DropdownMenu";
+import KeyboardShortcutsModal from "./KeyboardShortcutsModal";
 
 // A single header icon action, described once and rendered two ways: as a
 // tooltipped icon button in the desktop row, and as a labeled row in the
@@ -45,11 +46,28 @@ const Header: React.FC<HeaderProps> = ({ title, subtitle, avatar, onBack, action
   const isDark = theme === DARK;
   const isCharacters = location.pathname.startsWith("/characters");
   const isSettings = location.pathname.startsWith("/settings");
+  const [showShortcuts, setShowShortcuts] = useState(false);
+
+  // Global "?" shortcut to open the help overlay - guarded so it doesn't
+  // fire while the user is actually typing "?" into a text field.
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== "?" || e.ctrlKey || e.metaKey || e.altKey) return;
+      const target = e.target as HTMLElement | null;
+      const isEditable = target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable);
+      if (isEditable) return;
+      e.preventDefault();
+      setShowShortcuts(true);
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   // Built-in groups, always appended after any page-specific ones: app-level
   // navigation, then the destructive session action on its own.
   const appGroup: HeaderAction[] = [
     { icon: isDark ? FaSun : FaMoon, label: "Toggle theme", onClick: toggleTheme },
+    { icon: FaQuestionCircle, label: "Keyboard shortcuts", onClick: () => setShowShortcuts(true) },
     { icon: FaUserFriends, label: "Characters", onClick: () => navigate("/characters"), active: isCharacters },
     { icon: FaCog, label: "Settings", onClick: () => navigate("/settings"), active: isSettings },
   ];
@@ -137,6 +155,8 @@ const Header: React.FC<HeaderProps> = ({ title, subtitle, avatar, onBack, action
           ))}
         </DropdownMenu>
       </div>
+
+      <KeyboardShortcutsModal isOpen={showShortcuts} onClose={() => setShowShortcuts(false)} />
     </header>
   );
 };
