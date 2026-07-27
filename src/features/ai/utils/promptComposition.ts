@@ -1,17 +1,17 @@
-import { Content } from "@google/genai";
 import { Character, Message, UserProfile } from "../../../types";
-import { YOU, USER, MODEL, LS_USER_PROFILE } from "../../../utils/constants";
+import { YOU, LS_USER_PROFILE } from "../../../utils/constants";
 import { stripLeakedBase64 } from "./apiUtils";
+import { ChatMessage } from "../types";
 
-// Converts stored DB messages into the Gemini SDK's Content shape, stripping any
-// leaked base64 image data and falling back to a single space since Gemini
-// requires non-empty text parts.
-export const buildChatHistory = (messages: Message[]): Content[] =>
+// Converts stored DB messages into the provider-agnostic ChatMessage shape,
+// stripping any leaked base64 image data and falling back to a single space
+// since every provider's API requires non-empty message text.
+export const buildChatHistory = (messages: Message[]): ChatMessage[] =>
   messages.map((msg) => {
     const text = stripLeakedBase64(msg.txt || "");
     return {
-      role: msg.role === YOU ? USER : MODEL,
-      parts: [{ text: text.trim() || " " }],
+      role: msg.role === YOU ? "user" : "assistant",
+      text: text.trim() || " ",
     };
   });
 
@@ -73,7 +73,7 @@ export const buildSystemInstruction = (
 };
 
 export interface TurnContext {
-  history: Content[];
+  history: ChatMessage[];
   systemInstruction?: string;
   characterImages?: string[];
   characterName?: string;

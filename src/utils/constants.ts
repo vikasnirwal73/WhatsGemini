@@ -61,9 +61,41 @@ export const MODEL_PRICING: Record<string, { input: number; output: number }> = 
   "gemini-3.1-flash-image": { input: 0.50, output: 60.00 },
   "gemini-3-pro-image": { input: 2.00, output: 120.00 },
 };
+// Non-Gemini provider model pricing, namespaced by "providerId:model" so a
+// same-named model from a different vendor can never collide with the bare
+// Gemini keys above. Rough USD-per-1M-token estimates, same caveats as above.
+export const PROVIDER_MODEL_PRICING: Record<string, { input: number; output: number }> = {
+  "openai:gpt-4.1": { input: 2.00, output: 8.00 },
+  "openai:gpt-4.1-mini": { input: 0.40, output: 1.60 },
+  "openai:gpt-4o": { input: 2.50, output: 10.00 },
+  "openai:gpt-4o-mini": { input: 0.15, output: 0.60 },
+  "openai:o4-mini": { input: 1.10, output: 4.40 },
+  "anthropic:claude-opus-4-1": { input: 15.00, output: 75.00 },
+  "anthropic:claude-sonnet-4-5": { input: 3.00, output: 15.00 },
+  "anthropic:claude-haiku-4-5": { input: 1.00, output: 5.00 },
+  "deepseek:deepseek-chat": { input: 0.28, output: 0.42 },
+  "deepseek:deepseek-reasoner": { input: 0.56, output: 1.68 },
+  "qwen:qwen-plus": { input: 0.40, output: 1.20 },
+  "qwen:qwen-turbo": { input: 0.05, output: 0.20 },
+  "qwen:qwen-max": { input: 1.60, output: 6.40 },
+  "kimi:moonshot-v1-8k": { input: 0.20, output: 0.20 },
+  "kimi:moonshot-v1-32k": { input: 0.40, output: 0.40 },
+  "kimi:moonshot-v1-128k": { input: 1.00, output: 1.00 },
+  "openai:gpt-image-1": { input: 5.00, output: 40.00 },
+  "openai:dall-e-3": { input: 0, output: 40.00 },
+};
 // Fallback rate for a custom/unrecognized model string (e.g. hand-entered or from an
 // imported settings file) so the estimate stays in a sane ballpark instead of reading $0.
 export const DEFAULT_MODEL_PRICING = MODEL_PRICING["gemini-2.5-flash-lite"];
+
+// Resolves cost-estimate pricing for any provider/model combination. Ollama is
+// genuinely free/local, so it explicitly reports $0 instead of an arbitrary
+// fallback rate that would misleadingly suggest a cost.
+export const getModelPricing = (providerId: string, model: string): { input: number; output: number } => {
+  if (providerId === "ollama") return { input: 0, output: 0 };
+  if (providerId === "gemini") return MODEL_PRICING[model] || DEFAULT_MODEL_PRICING;
+  return PROVIDER_MODEL_PRICING[`${providerId}:${model}`] || DEFAULT_MODEL_PRICING;
+};
 // How many new messages accumulate in a chat before long-term memory extraction
 // runs again (independent of the compression threshold, which defaults to off).
 export const MEMORY_EXTRACTION_INTERVAL = 12;
@@ -124,6 +156,38 @@ export const DEFAULT_SD_WEBUI_CONTROLNET_MODEL = "ip-adapter_sd15";
 export const LS_SD_WEBUI_MODELS = "sd_webui_models";
 export const LS_SD_WEBUI_MODEL = "sd_webui_model";
 export const DEFAULT_SD_WEBUI_MODEL = "";
+
+// Multi-provider LLM support: which backend serves chat and which serves image
+// generation are independent choices (e.g. Anthropic for chat + OpenAI for images).
+export const LS_CHAT_PROVIDER = "chat_provider";
+export const DEFAULT_CHAT_PROVIDER = "gemini";
+export const LS_IMAGE_PROVIDER = "image_provider";
+export const DEFAULT_IMAGE_PROVIDER = "gemini";
+export const LS_OLLAMA_BASE_URL = "ollama_base_url";
+export const DEFAULT_OLLAMA_BASE_URL = "http://localhost:11434/v1";
+// Namespaced per provider id so each provider keeps its own encrypted-at-rest key,
+// independent of Gemini's existing LS_GOOGLE_API_KEY.
+export const LS_PROVIDER_API_KEY_PREFIX = "provider_api_key_";
+
+// Hardcoded model choices offered per hosted chat provider. Ollama is
+// intentionally omitted - its model list is whatever the user has pulled
+// locally, so that provider gets a free-text field / a "fetch installed
+// models" button instead of a fixed dropdown.
+export const PROVIDER_CHAT_MODELS: Record<string, string[]> = {
+  gemini: models,
+  openai: ["gpt-4.1", "gpt-4.1-mini", "gpt-4o", "gpt-4o-mini", "o4-mini"],
+  anthropic: ["claude-opus-4-1", "claude-sonnet-4-5", "claude-haiku-4-5"],
+  deepseek: ["deepseek-chat", "deepseek-reasoner"],
+  qwen: ["qwen-plus", "qwen-turbo", "qwen-max"],
+  kimi: ["moonshot-v1-8k", "moonshot-v1-32k", "moonshot-v1-128k"],
+};
+
+// Of the requested providers, only Gemini and OpenAI have real image-generation
+// APIs (plus the separately-handled local SD WebUI option) - see registry.ts.
+export const PROVIDER_IMAGE_MODELS: Record<string, string[]> = {
+  gemini: imageModels,
+  openai: ["gpt-image-1", "dall-e-3"],
+};
 
 // Auto-backup reminder: everything lives only in this browser's IndexedDB,
 // so a periodic nudge is the only thing standing between a user and silent

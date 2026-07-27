@@ -1,13 +1,15 @@
-import { GoogleGenAI, Content, Part, GenerateContentConfig, GenerateContentResponseUsageMetadata, SafetySetting } from "@google/genai";
-import { SDImageParams } from "../../../types";
+import { AISafetySettings, SDImageParams } from "../../../types";
 import { appendCharacterImages } from "./imageProcessing";
 import { generateSDImage } from "./sdWebuiUtils";
+import { UsageInfo } from "../types";
+import { ChatProviderAdapter, ImageProviderAdapter, ProviderRuntimeConfig } from "../providers/types";
+import { IMAGE_PROVIDERS } from "../providers/registry";
 
 export interface ImageDerivationResult {
   derivedImagePrompt: string;
   derivedParams: SDImageParams;
   derivedSummary: string;
-  usage?: GenerateContentResponseUsageMetadata;
+  usage?: UsageInfo;
 }
 
 // Step 1 of an image request: ask the text model to turn the user's request (plus
@@ -22,10 +24,11 @@ export interface ImageDerivationResult {
 // own). Conflating them used to make every image reply say "here's the picture you
 // asked for" even when the user's actual text never asked for one.
 export const deriveImagePrompt = async (
-  ai: GoogleGenAI,
+  chatAdapter: ChatProviderAdapter,
+  chatConfig: ProviderRuntimeConfig,
   selectedModel: string,
-  textModelConfig: GenerateContentConfig,
-  historyForSdk: Content[],
+  turnConfig: { temperature?: number; maxOutputTokens?: number; systemInstruction?: string; safetySettings?: AISafetySettings },
+  historyForSdk: import("../types").ChatMessage[],
   prompt: string,
   imageGenPrompt: string,
   sdWebuiModel: string,
@@ -67,15 +70,19 @@ export const deriveImagePrompt = async (
 
   const derivationPrompt = `${requestContext}${useSdWebui ? sdModelInfo : ""}\n\nYou must function as an expert prompt engineer. Prioritize this base style rule:\n${imageGenPrompt}\n\nPlease output EXACTLY ${parseSection}\n\nPROMPT:\n<write a highly detailed, clean, and optimized tag-based SD 1.5 image generation prompt that fits the scene and context. Make sure the subject matches your visual description.>${sdInstruction}\n\nSUMMARY:\n${summaryInstruction} MUST INCLUDE: At the end of your response, append [Image Context: <short visual description of the generated image>] so you can remember what you sent in future turns.>`;
 
-  const derivationChat = ai.chats.create({ model: selectedModel, config: textModelConfig, history: [...historyForSdk] });
-  const derivationPromptParts: Part[] = [{ text: derivationPrompt }];
-
-  // sendMessage's per-call config replaces (rather than merges with) the chat's
-  // config, so textModelConfig has to be spread back in alongside the signal.
-  const derivationResult = await derivationChat.sendMessage({
-    message: derivationPromptParts,
-    config: { ...textModelConfig, abortSignal: signal },
-  });
+  const derivationResult = await chatAdapter.generateChat(
+    {
+      model: selectedModel,
+      systemInstruction: turnConfig.systemInstruction,
+      temperature: turnConfig.temperature,
+      maxOutputTokens: turnConfig.maxOutputTokens,
+      safetySettings: turnConfig.safetySettings,
+      history: historyForSdk,
+      prompt: derivationPrompt,
+      signal,
+    },
+    chatConfig
+  );
   const derivationText = derivationResult.text || "";
 
   const promptMatch = useSdWebui ? derivationText.match(/PROMPT:\s*([\s\S]*?)PARAMS:/i) : derivationText.match(/PROMPT:\s*([\s\S]*?)SUMMARY:/i);
@@ -102,27 +109,29 @@ export const deriveImagePrompt = async (
     derivedSummary = summaryMatch[1].trim();
   }
 
-  return { derivedImagePrompt, derivedParams, derivedSummary, usage: derivationResult.usageMetadata };
+  return { derivedImagePrompt, derivedParams, derivedSummary, usage: derivationResult.usage };
 };
 
 export interface ImageGenerationResult {
   images: string[];
   warning?: string;
-  usage?: GenerateContentResponseUsageMetadata;
+  usage?: UsageInfo;
 }
 
-// Step 2 of an image request: actually render the image, via the local SD WebUI or
-// Gemini's native image output depending on settings. Never throws - generation
-// failures come back as a warning so the text reply can still be saved.
+// Step 2 of an image request: actually render the image, via the local SD WebUI,
+// Gemini's native image output, or another configured image provider (e.g. OpenAI).
+// Never throws - generation failures come back as a warning so the text reply can
+// still be saved.
 export const generateImage = async (
-  ai: GoogleGenAI,
+  imageProvider: string,
+  imageConfig: ProviderRuntimeConfig,
   useSdWebui: boolean,
   imageModelName: string,
   derivedImagePrompt: string,
   derivedParams: SDImageParams,
   characterImages: string[] | undefined,
   characterName: string | undefined,
-  safetySettings: SafetySetting[],
+  safetySettings: AISafetySettings,
   signal?: AbortSignal
 ): Promise<ImageGenerationResult> => {
   try {
@@ -131,25 +140,16 @@ export const generateImage = async (
       return { images };
     }
 
-    const imagePromptParts: Part[] = [{ text: derivedImagePrompt }];
-    if (characterImages && characterImages.length > 0) {
-      await appendCharacterImages(imagePromptParts, characterImages);
-    }
+    const adapter: ImageProviderAdapter = IMAGE_PROVIDERS[imageProvider] || IMAGE_PROVIDERS.gemini;
+    const referenceImages = characterImages && characterImages.length > 0
+      ? await appendCharacterImages(characterImages)
+      : undefined;
 
-    const imageRes = await ai.models.generateContent({
-      model: imageModelName,
-      contents: imagePromptParts,
-      config: { safetySettings, abortSignal: signal }
-    });
-
-    const images: string[] = [];
-    const parts = imageRes.candidates?.[0]?.content?.parts || [];
-    for (const part of parts) {
-      if (part.inlineData) {
-        images.push(`data:${part.inlineData.mimeType};base64,${part.inlineData.data}`);
-      }
-    }
-    return { images, usage: imageRes.usageMetadata };
+    const result = await adapter.generateImage(
+      { model: imageModelName, prompt: derivedImagePrompt, referenceImages, signal, safetySettings },
+      imageConfig
+    );
+    return { images: result.images, usage: result.usage };
   } catch (err) {
     console.error("Image generation failed:", err);
     return { images: [], warning: "\n\n[Warning: Image generation failed due to API error.]" };

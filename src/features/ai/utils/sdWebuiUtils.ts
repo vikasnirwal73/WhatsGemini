@@ -42,10 +42,9 @@ export const generateSDImage = async (
   // Extract character image if reference mode is used
   let refImageBase64 = null;
   if (refMode !== "none" && characterImages && characterImages.length > 0) {
-    const tempParts: any[] = [];
-    await appendCharacterImages(tempParts, characterImages);
-    if (tempParts.length > 0 && tempParts[0].inlineData) {
-      refImageBase64 = tempParts[0].inlineData.data;
+    const resolvedImages = await appendCharacterImages(characterImages);
+    if (resolvedImages.length > 0) {
+      refImageBase64 = resolvedImages[0].data;
     }
   }
 

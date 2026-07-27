@@ -1,7 +1,12 @@
-import { HarmCategory, HarmBlockThreshold, SafetySetting } from "@google/genai";
-import { LS_GOOGLE_API_KEY, LS_INITIAL_MESSAGES } from "../../../utils/constants";
-import { AISafetySettings, InitialMessage } from "../../../types";
-import { decryptApiKey } from "../../../utils/secureApiKeyStorage";
+import {
+  LS_GOOGLE_API_KEY,
+  LS_INITIAL_MESSAGES,
+  LS_PROVIDER_API_KEY_PREFIX,
+  LS_OLLAMA_BASE_URL,
+  DEFAULT_OLLAMA_BASE_URL,
+} from "../../../utils/constants";
+import { InitialMessage } from "../../../types";
+import { decryptApiKey, encryptApiKey } from "../../../utils/secureApiKeyStorage";
 
 // Helper function to get values from localStorage with fallbacks
 export const getStoredValue = <T>(key: string, defaultValue: T, parser: (val: string) => T = (val) => val as unknown as T): T => {
@@ -34,22 +39,32 @@ export const getAPIKey = async (): Promise<string | null> => {
   }
 };
 
-// Format safety settings into the required API format
-export const formatSafetySettings = (settings: AISafetySettings): SafetySetting[] => [
-  {
-    category: HarmCategory.HARM_CATEGORY_HARASSMENT,
-    threshold: (settings.harassment || "BLOCK_NONE") as HarmBlockThreshold,
-  },
-  {
-    category: HarmCategory.HARM_CATEGORY_HATE_SPEECH,
-    threshold: (settings.hate_speech || "BLOCK_NONE") as HarmBlockThreshold,
-  },
-  {
-    category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
-    threshold: (settings.sexual || "BLOCK_NONE") as HarmBlockThreshold,
-  },
-  {
-    category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
-    threshold: (settings.dangerous || "BLOCK_NONE") as HarmBlockThreshold,
-  },
-];
+// Per-provider key storage, namespaced by provider id so OpenAI/Anthropic/DeepSeek/
+// Qwen/Kimi each keep their own encrypted-at-rest slot. Gemini keeps using its
+// original flat LS_GOOGLE_API_KEY (no migration needed for existing users).
+export const getProviderApiKey = async (providerId: string): Promise<string | null> => {
+  if (providerId === "gemini") return getAPIKey();
+  const stored = getStoredValue<string | null>(`${LS_PROVIDER_API_KEY_PREFIX}${providerId}`, null);
+  if (!stored) return null;
+  try {
+    return await decryptApiKey(stored);
+  } catch {
+    return stored;
+  }
+};
+
+export const saveProviderApiKey = async (providerId: string, plaintext: string): Promise<void> => {
+  const key = providerId === "gemini" ? LS_GOOGLE_API_KEY : `${LS_PROVIDER_API_KEY_PREFIX}${providerId}`;
+  const encrypted = await encryptApiKey(plaintext);
+  localStorage.setItem(key, encrypted);
+};
+
+export const clearProviderApiKey = (providerId: string): void => {
+  const key = providerId === "gemini" ? LS_GOOGLE_API_KEY : `${LS_PROVIDER_API_KEY_PREFIX}${providerId}`;
+  localStorage.removeItem(key);
+};
+
+// Only Ollama needs a base URL today (it's the only local/self-hosted provider
+// on offer) - kept as a single flat key rather than per-provider-namespaced
+// since there's only ever one local backend in play at a time.
+export const getOllamaBaseUrl = (): string => getStoredValue(LS_OLLAMA_BASE_URL, DEFAULT_OLLAMA_BASE_URL);

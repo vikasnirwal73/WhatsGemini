@@ -5,10 +5,11 @@ import { RootState } from "../store/store";
 import { useAppDispatch } from "../store/hooks";
 import {
   setUserProfile, setSelectedModel, setImageModel, setImageGenPrompt,
-  setUseSdWebui, setSdWebuiApiUrl, setSdWebuiBatchSize, setSdWebuiRefMode,
+  setSdWebuiApiUrl, setSdWebuiBatchSize, setSdWebuiRefMode,
   setSdWebuiDenoising, setSdWebuiControlnetModel, setSdWebuiModels,
   setSdWebuiModel, setMaxOutputTokens, setCompressThreshold, setMaxChatLength,
-  setTemperature, setSafetySettings, setFontSize, setImageResolution
+  setTemperature, setSafetySettings, setFontSize, setImageResolution,
+  setChatProvider, setImageProvider, setOllamaBaseUrl
 } from "../features/settingsSlice";
 import { FaDownload, FaUpload, FaInfoCircle, FaChevronDown, FaFileArchive, FaUser, FaMicrochip, FaImage, FaComments, FaShieldAlt, FaDatabase } from "react-icons/fa";
 import Header from "../components/Header";
@@ -17,7 +18,8 @@ import { ToastContainer, ToastData } from "../components/Toast";
 import UserProfileSettings from "../components/settings/UserProfileSettings";
 import TextModelSettings from "../components/settings/TextModelSettings";
 import ImageGenerationSettings from "../components/settings/ImageGenerationSettings";
-import { getAPIKey } from "../features/ai/utils/settings";
+import { getAPIKey, getProviderApiKey, saveProviderApiKey } from "../features/ai/utils/settings";
+import { CHAT_PROVIDERS } from "../features/ai/providers/registry";
 import { useModal } from "../contexts/ModalContext";
 import { fetchChats } from "../features/chatSlice";
 import { fetchCharacters } from "../features/characterSlice";
@@ -62,6 +64,8 @@ import {
   LS_COMPRESS_THRESHOLD,
   // DEFAULT_COMPRESS_THRESHOLD,
   LS_LAST_BACKUP_AT,
+  PROVIDER_CHAT_MODELS,
+  PROVIDER_IMAGE_MODELS,
 } from "../utils/constants";
 import { AISafetySettings } from "../types";
 import { dbService } from "../services/dbService";
@@ -169,11 +173,71 @@ const SettingsPage = () => {
   const settings = useSelector((state: RootState) => state.settings);
 
   const {
-    userProfile, selectedModel, imageModel, imageGenPrompt, useSdWebui, sdWebuiApiUrl,
+    userProfile, chatProvider, imageProvider, ollamaBaseUrl, selectedModel, imageModel,
+    imageGenPrompt, sdWebuiApiUrl,
     sdWebuiBatchSize, sdWebuiRefMode, sdWebuiDenoising, sdWebuiControlnetModel, sdWebuiModels,
     sdWebuiModel, maxOutputTokens, compressThreshold, maxChatLength, temperature,
     safetySettings, fontSize, imageResolution
   } = settings;
+
+  const chatProviderCapabilities = CHAT_PROVIDERS[chatProvider]?.capabilities || CHAT_PROVIDERS.gemini.capabilities;
+
+  // The chat provider's key, loaded (and re-loaded on provider switch) via the
+  // same encrypted-at-rest per-provider storage the adapters read from.
+  const [chatApiKey, setChatApiKeyState] = useState("");
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const key = await getProviderApiKey(chatProvider);
+      if (!cancelled) setChatApiKeyState(key || "");
+    })();
+    return () => { cancelled = true; };
+  }, [chatProvider]);
+
+  const handleSetChatApiKey = useCallback((key: string) => {
+    setChatApiKeyState(key);
+    saveProviderApiKey(chatProvider, key);
+  }, [chatProvider]);
+
+  // OpenAI's key is only ever needed on the image side when imageProvider is
+  // "openai" - it shares the same per-provider storage slot the chat side
+  // uses, so picking OpenAI for both doesn't require entering the key twice.
+  const [openaiImageApiKey, setOpenaiImageApiKeyState] = useState("");
+  useEffect(() => {
+    if (imageProvider !== "openai") return;
+    let cancelled = false;
+    (async () => {
+      const key = await getProviderApiKey("openai");
+      if (!cancelled) setOpenaiImageApiKeyState(key || "");
+    })();
+    return () => { cancelled = true; };
+  }, [imageProvider]);
+
+  const handleSetOpenaiImageApiKey = useCallback((key: string) => {
+    setOpenaiImageApiKeyState(key);
+    saveProviderApiKey("openai", key);
+  }, []);
+
+  const [ollamaModelOptions, setOllamaModelOptions] = useState<string[]>([]);
+  const fetchOllamaModels = useCallback(async () => {
+    try {
+      const base = ollamaBaseUrl.replace(/\/v1\/?$/, "").replace(/\/$/, "");
+      const response = await fetch(`${base}/api/tags`);
+      if (!response.ok) throw new Error("Failed to fetch Ollama models");
+      const data = await response.json();
+      const names: string[] = (data.models || []).map((m: any) => m.name);
+      setOllamaModelOptions(names);
+    } catch (e: any) {
+      console.error(e);
+    }
+  }, [ollamaBaseUrl]);
+
+  const currentChatModelList = chatProvider === "gemini"
+    ? modelList
+    : (PROVIDER_CHAT_MODELS[chatProvider] || []).map((m) => ({ value: m, label: m }));
+
+  const currentImageModelList = imageProvider === "gemini" ? imageModelList : [];
+  const openaiImageModelList = (PROVIDER_IMAGE_MODELS.openai || []).map((m) => ({ value: m, label: m }));
 
   const [openSection, setOpenSection] = useState<string>(() => (location.state as { openSection?: string } | null)?.openSection || "profile");
   const [lastBackupAt, setLastBackupAt] = useState<number>(() => Number(localStorage.getItem(LS_LAST_BACKUP_AT) || 0));
@@ -488,12 +552,12 @@ const SettingsPage = () => {
 
   return (
     <div className="w-full h-screen flex flex-col bg-app">
-      <Header title="Settings" subtitle="Gemini connection, chat behavior, and data" onBack={goBackOrHome} />
+      <Header title="Settings" subtitle="Providers, chat behavior, and data" onBack={goBackOrHome} />
       <div className="flex-1 overflow-auto p-4 md:p-8 flex justify-center">
       <div className="w-full max-w-[32rem] bg-transparent">
 
         <div className="mb-6 flex items-center justify-between">
-          <h1 className="text-xl font-semibold tracking-tight text-ink">Gemini Context</h1>
+          <h1 className="text-xl font-semibold tracking-tight text-ink">AI Provider Settings</h1>
           <FaInfoCircle className="text-ink-muted" size={18} />
         </div>
 
@@ -502,18 +566,27 @@ const SettingsPage = () => {
 
         {renderAccordion("profile", <FaUser size={15} />, "User Profile", "Your name and bio",
           <UserProfileSettings
-            userProfile={userProfile} 
-            setUserProfile={(val) => dispatch(setUserProfile(val))} 
+            userProfile={userProfile}
+            setUserProfile={(val) => dispatch(setUserProfile(val))}
           />
         )}
 
-        {renderAccordion("text", <FaMicrochip size={15} />, "Text Generation Model", "Model, temperature, tokens",
+        {renderAccordion("text", <FaMicrochip size={15} />, "Text Generation Model", "Provider, model, temperature, tokens",
           <TextModelSettings
             temperature={temperature}
             setTemperature={(val) => dispatch(setTemperature(val))}
+            chatProvider={chatProvider}
+            setChatProvider={(val) => dispatch(setChatProvider(val))}
+            chatProviderCapabilities={chatProviderCapabilities}
+            providerApiKey={chatApiKey}
+            setProviderApiKey={handleSetChatApiKey}
+            ollamaBaseUrl={ollamaBaseUrl}
+            setOllamaBaseUrl={(val) => dispatch(setOllamaBaseUrl(val))}
+            ollamaModels={ollamaModelOptions}
+            fetchOllamaModels={fetchOllamaModels}
             selectedModel={selectedModel}
             setSelectedModel={(val) => dispatch(setSelectedModel(val))}
-            modelList={modelList}
+            modelList={currentChatModelList}
             maxOutputTokens={maxOutputTokens}
             setMaxOutputTokens={(val) => dispatch(setMaxOutputTokens(val))}
             compressThreshold={compressThreshold}
@@ -521,10 +594,12 @@ const SettingsPage = () => {
           />
         )}
 
-        {renderAccordion("image", <FaImage size={15} />, "Image Generation Settings", "Model, ratio, count",
+        {renderAccordion("image", <FaImage size={15} />, "Image Generation Settings", "Provider, model, ratio, count",
           <ImageGenerationSettings
-            useSdWebui={useSdWebui}
-            setUseSdWebui={(val) => dispatch(setUseSdWebui(val))}
+            imageProvider={imageProvider}
+            setImageProvider={(val) => dispatch(setImageProvider(val))}
+            openaiApiKey={openaiImageApiKey}
+            setOpenaiApiKey={handleSetOpenaiImageApiKey}
             sdWebuiApiUrl={sdWebuiApiUrl}
             setSdWebuiApiUrl={(val) => dispatch(setSdWebuiApiUrl(val))}
             sdWebuiBatchSize={sdWebuiBatchSize}
@@ -541,7 +616,8 @@ const SettingsPage = () => {
             setSdWebuiControlnetModel={(val) => dispatch(setSdWebuiControlnetModel(val))}
             imageModel={imageModel}
             setImageModel={(val) => dispatch(setImageModel(val))}
-            imageModelList={imageModelList}
+            imageModelList={currentImageModelList}
+            openaiImageModelList={openaiImageModelList}
             imageGenPrompt={imageGenPrompt}
             setImageGenPrompt={(val) => dispatch(setImageGenPrompt(val))}
             imageResolution={imageResolution}
@@ -584,14 +660,20 @@ const SettingsPage = () => {
           </>
         )}
 
-        {renderAccordion("safety", <FaShieldAlt size={15} />, "Safety Settings", "Content filtering thresholds",
+        {renderAccordion("safety", <FaShieldAlt size={15} />, "Safety Settings", chatProvider === "gemini" ? "Content filtering thresholds" : "Gemini only - not used by other providers",
           <>
+            {chatProvider !== "gemini" && (
+              <p className="text-sm text-ink-muted mb-4">
+                Safety settings only apply when Google Gemini is the selected chat provider - other providers don't expose an equivalent control.
+              </p>
+            )}
             {safetyCategories.map((category) => (
               <div key={category} className="mb-4">
                 <FieldLabel className="capitalize">Block {category.replace("_", " ")}</FieldLabel>
                 <Select
                   value={safetySettings[category]}
                   onChange={(e) => handleSafetyChange(category, e.target.value)}
+                  disabled={chatProvider !== "gemini"}
                 >
                   {harmThresholds.map(({ label, value }: {label: string, value: string}) => (
                     <option key={value} value={value}>

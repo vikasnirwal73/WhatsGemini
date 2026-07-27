@@ -1,12 +1,13 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
-import { GoogleGenAI, Content, GenerateContentConfig, GenerateContentResponseUsageMetadata } from "@google/genai";
 import { performChatCompression, buildValidHistory, autoCompressHistory, truncateHistory, trimTrailingUserMessages } from "./ai/utils/chatHistoryUtils";
-import { AI, YOU, MODEL_PRICING, DEFAULT_MODEL_PRICING } from "../utils/constants";
-import { getAPIKey, formatSafetySettings } from "./ai/utils/settings";
+import { AI, YOU, getModelPricing } from "../utils/constants";
+import { getProviderApiKey, getOllamaBaseUrl } from "./ai/utils/settings";
 import { extractAndSaveBase64ImagesLocally, stripLeakedBase64 } from "./ai/utils/apiUtils";
 import { deriveImagePrompt, generateImage } from "./ai/utils/imageGeneration";
-import { streamTextResponse } from "./ai/utils/textResponse";
 import { extractMemoryFacts } from "./ai/utils/memoryExtraction";
+import { CHAT_PROVIDERS, IMAGE_PROVIDERS } from "./ai/providers/registry";
+import { ProviderRuntimeConfig } from "./ai/providers/types";
+import { ChatMessage, UsageInfo } from "./ai/types";
 import { RootState } from "../store/store";
 import { SDImageParams, Message } from "../types";
 
@@ -19,54 +20,65 @@ export interface GenerateAIResponseResult {
   images?: string[];
 }
 
+// Resolves the runtime config (API key / base URL) a chat or image provider
+// adapter needs to actually make a call.
+const resolveProviderConfig = async (providerId: string, requiresBaseUrl: boolean): Promise<ProviderRuntimeConfig> => ({
+  apiKey: await getProviderApiKey(providerId),
+  baseUrl: requiresBaseUrl ? getOllamaBaseUrl() : undefined,
+});
+
 // Async Thunk for generating AI response
 
 export const generateAIResponse = createAsyncThunk(
   "ai/generateResponse",
-  async ({ prompt, history = [], systemInstruction, characterImages, characterName, isImageRequest = false, isCharacterInitiated = false, existingImagePrompt, existingImageParams }: { prompt: string; history?: Content[], systemInstruction?: string, characterImages?: string[], characterName?: string, isImageRequest?: boolean, isCharacterInitiated?: boolean, existingImagePrompt?: string, existingImageParams?: SDImageParams }, { getState, rejectWithValue, signal }) => {
+  async ({ prompt, history = [], systemInstruction, characterImages, characterName, isImageRequest = false, isCharacterInitiated = false, existingImagePrompt, existingImageParams }: { prompt: string; history?: ChatMessage[], systemInstruction?: string, characterImages?: string[], characterName?: string, isImageRequest?: boolean, isCharacterInitiated?: boolean, existingImagePrompt?: string, existingImageParams?: SDImageParams }, { getState, rejectWithValue, signal }) => {
     try {
       const state = getState() as RootState;
       const settings = state.settings;
 
-      const apiKey = await getAPIKey();
-      if (!apiKey) throw new Error("API key is missing. Please log in.");
+      const chatProviderId = settings.chatProvider;
+      const chatAdapter = CHAT_PROVIDERS[chatProviderId] || CHAT_PROVIDERS.gemini;
+      const chatConfig = await resolveProviderConfig(chatProviderId, chatAdapter.capabilities.requiresBaseUrl);
+      if (!chatConfig.apiKey && chatAdapter.capabilities.requiresApiKey) {
+        throw new Error("API key is missing. Please log in.");
+      }
+
+      const imageProviderId = settings.imageProvider;
+      const imageAdapter = IMAGE_PROVIDERS[imageProviderId] || IMAGE_PROVIDERS.gemini;
+      const useSdWebui = imageProviderId === "sdwebui";
+      const imageConfig = useSdWebui
+        ? { apiKey: null }
+        : await resolveProviderConfig(imageProviderId, imageAdapter.capabilities.requiresBaseUrl);
 
       const selectedModel = settings.selectedModel;
       const imageModelName = settings.imageModel;
-      const ai = new GoogleGenAI({ apiKey });
 
-      const safetySettings = formatSafetySettings(settings.safetySettings);
-      const textModelConfig: GenerateContentConfig = {
+      const turnConfig = {
         maxOutputTokens: settings.maxOutputTokens,
         temperature: settings.temperature,
-        safetySettings: safetySettings,
+        systemInstruction,
+        safetySettings: settings.safetySettings,
       };
-      if (systemInstruction) {
-        // Already normalized once by buildSystemInstruction - no need to re-clean here.
-        textModelConfig.systemInstruction = systemInstruction;
-      }
 
       let totalTokens = 0;
       let costEstimate = 0;
 
-      // Adds a call's usage to the running totals, priced by whichever model actually
-      // served that call (a turn can span the selected text model and the image model).
-      const trackUsage = (usage: GenerateContentResponseUsageMetadata | undefined, modelName: string) => {
+      // Adds a call's usage to the running totals, priced by whichever provider/model
+      // actually served that call (a turn can span the selected text model and the image model).
+      const trackUsage = (usage: UsageInfo | undefined, providerId: string, modelName: string) => {
         if (!usage) return;
-        const promptTokens = usage.promptTokenCount || 0;
-        const candidateTokens = usage.candidatesTokenCount || 0;
-        totalTokens += usage.totalTokenCount || (promptTokens + candidateTokens);
-        const pricing = MODEL_PRICING[modelName] || DEFAULT_MODEL_PRICING;
-        costEstimate += (promptTokens / 1_000_000) * pricing.input + (candidateTokens / 1_000_000) * pricing.output;
+        totalTokens += usage.totalTokens;
+        const pricing = getModelPricing(providerId, modelName);
+        costEstimate += (usage.inputTokens / 1_000_000) * pricing.input + (usage.outputTokens / 1_000_000) * pricing.output;
       };
 
       // Prepare the context: dedupe, auto-compress if it's grown too long, hard-cap
-      // length, and make sure it ends on a model turn.
+      // length, and make sure it ends on an assistant turn.
       let validHistory = buildValidHistory(history, prompt);
 
-      const compressed = await autoCompressHistory(ai, validHistory, settings.compressThreshold, selectedModel);
+      const compressed = await autoCompressHistory(chatAdapter, chatConfig, validHistory, settings.compressThreshold, selectedModel);
       validHistory = compressed.history;
-      trackUsage(compressed.usage, selectedModel);
+      trackUsage(compressed.usage, chatProviderId, selectedModel);
 
       validHistory = truncateHistory(validHistory, settings.maxChatLength);
       validHistory = trimTrailingUserMessages(validHistory);
@@ -79,29 +91,39 @@ export const generateAIResponse = createAsyncThunk(
       let finalDerivedImageParams: SDImageParams = {};
 
       if (isImageRequest) {
-        const useSdWebui = settings.useSdWebui;
-
         const derivation = await deriveImagePrompt(
-          ai, selectedModel, textModelConfig, historyForSdk, prompt,
+          chatAdapter, chatConfig, selectedModel, turnConfig, historyForSdk, prompt,
           settings.imageGenPrompt, settings.sdWebuiModel, useSdWebui,
           existingImagePrompt, existingImageParams, signal, isCharacterInitiated
         );
-        trackUsage(derivation.usage, selectedModel);
+        trackUsage(derivation.usage, chatProviderId, selectedModel);
 
         finalDerivedImagePrompt = derivation.derivedImagePrompt;
         finalDerivedImageParams = derivation.derivedParams;
         response = derivation.derivedSummary;
 
         const imageResult = await generateImage(
-          ai, useSdWebui, imageModelName, derivation.derivedImagePrompt, derivation.derivedParams,
-          characterImages, characterName, safetySettings, signal
+          imageProviderId, imageConfig, useSdWebui, imageModelName, derivation.derivedImagePrompt, derivation.derivedParams,
+          characterImages, characterName, settings.safetySettings, signal
         );
-        trackUsage(imageResult.usage, imageModelName);
+        trackUsage(imageResult.usage, imageProviderId, imageModelName);
         generatedImages = imageResult.images;
         if (imageResult.warning) response += imageResult.warning;
       } else {
-        const streamed = await streamTextResponse(ai, selectedModel, textModelConfig, historyForSdk, prompt, signal);
-        trackUsage(streamed.usage, selectedModel);
+        const streamed = await chatAdapter.generateChat(
+          {
+            model: selectedModel,
+            systemInstruction: turnConfig.systemInstruction,
+            temperature: turnConfig.temperature,
+            maxOutputTokens: turnConfig.maxOutputTokens,
+            safetySettings: turnConfig.safetySettings,
+            history: historyForSdk,
+            prompt,
+            signal,
+          },
+          chatConfig
+        );
+        trackUsage(streamed.usage, chatProviderId, selectedModel);
         response = streamed.text;
       }
 
@@ -150,7 +172,7 @@ const initialState: AIState = {
 // Async Thunk for compressing chat history
 export const compressChatHistory = createAsyncThunk(
   "ai/compressHistory",
-  async ({ history = [], systemInstruction }: { history: Content[], systemInstruction?: string }, { rejectWithValue }) => {
+  async ({ history = [], systemInstruction }: { history: ChatMessage[], systemInstruction?: string }, { rejectWithValue }) => {
     try {
       return await performChatCompression(history, systemInstruction);
     } catch (error: any) {
@@ -168,18 +190,22 @@ export const extractCharacterMemory = createAsyncThunk(
     { getState, rejectWithValue }
   ) => {
     try {
-      const apiKey = await getAPIKey();
-      if (!apiKey) throw new Error("API key is missing. Please log in.");
-
       const state = getState() as RootState;
-      const selectedModel = state.settings.selectedModel;
-      const ai = new GoogleGenAI({ apiKey });
+      const settings = state.settings;
+      const chatProviderId = settings.chatProvider;
+      const chatAdapter = CHAT_PROVIDERS[chatProviderId] || CHAT_PROVIDERS.gemini;
+      const chatConfig = await resolveProviderConfig(chatProviderId, chatAdapter.capabilities.requiresBaseUrl);
+      if (!chatConfig.apiKey && chatAdapter.capabilities.requiresApiKey) {
+        throw new Error("API key is missing. Please log in.");
+      }
+
+      const selectedModel = settings.selectedModel;
 
       const conversationText = recentMessages
         .map((m) => `${m.role === YOU ? "User" : "AI"}: ${stripLeakedBase64(m.txt || "")}`)
         .join("\n\n");
 
-      const { facts } = await extractMemoryFacts(ai, selectedModel, conversationText, existingMemory);
+      const { facts } = await extractMemoryFacts(chatAdapter, chatConfig, selectedModel, conversationText, existingMemory);
       return facts;
     } catch (error: any) {
       console.error("Memory extraction error:", error);

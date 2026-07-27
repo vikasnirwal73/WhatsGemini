@@ -33,6 +33,12 @@ import {
   DEFAULT_SD_WEBUI_MODEL,
   LS_COMPRESS_THRESHOLD,
   DEFAULT_COMPRESS_THRESHOLD,
+  LS_CHAT_PROVIDER,
+  DEFAULT_CHAT_PROVIDER,
+  LS_IMAGE_PROVIDER,
+  DEFAULT_IMAGE_PROVIDER,
+  LS_OLLAMA_BASE_URL,
+  DEFAULT_OLLAMA_BASE_URL,
   models,
 } from '../utils/constants';
 import { AISafetySettings, UserProfile } from '../types';
@@ -48,6 +54,9 @@ const getStoredValue = <T>(key: string, defaultValue: T): T => {
 
 export interface SettingsState {
   userProfile: UserProfile;
+  chatProvider: string;
+  imageProvider: string;
+  ollamaBaseUrl: string;
   selectedModel: string;
   imageModel: string;
   imageGenPrompt: string;
@@ -70,6 +79,13 @@ export interface SettingsState {
 
 const initialState: SettingsState = {
   userProfile: getStoredValue<UserProfile>(LS_USER_PROFILE, { name: '', bio: '' }),
+  chatProvider: localStorage.getItem(LS_CHAT_PROVIDER) || DEFAULT_CHAT_PROVIDER,
+  // Migrates the old useSdWebui boolean into the new imageProvider choice for
+  // existing users who never saw an explicit provider picker before.
+  imageProvider:
+    localStorage.getItem(LS_IMAGE_PROVIDER) ||
+    (localStorage.getItem(LS_USE_SD_WEBUI) === 'true' ? 'sdwebui' : DEFAULT_IMAGE_PROVIDER),
+  ollamaBaseUrl: localStorage.getItem(LS_OLLAMA_BASE_URL) || DEFAULT_OLLAMA_BASE_URL,
   selectedModel: localStorage.getItem(LS_AI_MODEL) || models[0],
   imageModel: localStorage.getItem(LS_IMAGE_MODEL) || DEFAULT_IMAGE_MODEL,
   imageGenPrompt: localStorage.getItem(LS_IMAGE_GEN_PROMPT) || DEFAULT_IMAGE_GEN_PROMPT,
@@ -96,6 +112,18 @@ const settingsSlice = createSlice({
   reducers: {
     setUserProfile: (state, action: PayloadAction<UserProfile>) => {
       state.userProfile = action.payload;
+    },
+    setChatProvider: (state, action: PayloadAction<string>) => {
+      state.chatProvider = action.payload;
+    },
+    setImageProvider: (state, action: PayloadAction<string>) => {
+      state.imageProvider = action.payload;
+      // Keep the legacy boolean in sync so any remaining reader of it
+      // (imports/exports, older code paths) still sees a consistent value.
+      state.useSdWebui = action.payload === 'sdwebui';
+    },
+    setOllamaBaseUrl: (state, action: PayloadAction<string>) => {
+      state.ollamaBaseUrl = action.payload;
     },
     setSelectedModel: (state, action: PayloadAction<string>) => {
       state.selectedModel = action.payload;
@@ -156,6 +184,9 @@ const settingsSlice = createSlice({
 
 export const {
   setUserProfile,
+  setChatProvider,
+  setImageProvider,
+  setOllamaBaseUrl,
   setSelectedModel,
   setImageModel,
   setImageGenPrompt,

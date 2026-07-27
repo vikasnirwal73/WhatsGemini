@@ -1,17 +1,19 @@
-import { GoogleGenAI, Content, GenerateContentConfig, GenerateContentResponseUsageMetadata } from "@google/genai";
-import { getStoredValue, getAPIKey, getInitialMessages } from "./settings";
-import { LS_AI_MODEL, DEFAULT_AI_MODEL } from "../../../utils/constants";
+import { getStoredValue, getInitialMessages, getProviderApiKey, getOllamaBaseUrl } from "./settings";
+import { LS_CHAT_PROVIDER, DEFAULT_CHAT_PROVIDER, LS_AI_MODEL, DEFAULT_AI_MODEL } from "../../../utils/constants";
+import { ChatMessage, UsageInfo } from "../types";
+import { ChatProviderAdapter, ProviderRuntimeConfig } from "../providers/types";
+import { CHAT_PROVIDERS } from "../providers/registry";
 
-// Clones the raw history into fresh Content objects and drops the trailing user
+// Clones the raw history into fresh objects and drops the trailing user
 // message if it's a duplicate of the prompt about to be sent (the caller's chat
 // state often already contains it).
-export const buildValidHistory = (history: Content[], prompt: string): Content[] => {
-  const validHistory: Content[] = history
-    .filter((msg) => msg?.parts?.[0]?.text && msg.role)
-    .map(msg => ({ ...msg, parts: [...(msg.parts || [])] }));
+export const buildValidHistory = (history: ChatMessage[], prompt: string): ChatMessage[] => {
+  const validHistory: ChatMessage[] = history
+    .filter((msg) => msg?.text && msg.role)
+    .map((msg) => ({ ...msg }));
 
   const last = validHistory[validHistory.length - 1];
-  if (last && last.role === "user" && last.parts?.[0]?.text === prompt) {
+  if (last && last.role === "user" && last.text === prompt) {
     validHistory.pop();
   }
 
@@ -24,13 +26,14 @@ export const buildValidHistory = (history: Content[], prompt: string): Content[]
 // thorough of the two: explicitly retains language/tone/emotional state so
 // the AI can resume seamlessly, not just facts.
 export const summarizeConversation = async (
-  ai: GoogleGenAI,
+  adapter: ChatProviderAdapter,
+  config: ProviderRuntimeConfig,
   selectedModel: string,
-  messages: Content[],
+  messages: ChatMessage[],
   systemInstruction?: string
-): Promise<{ summary: string; usage?: GenerateContentResponseUsageMetadata }> => {
+): Promise<{ summary: string; usage?: UsageInfo }> => {
   const conversationText = messages
-    .map((m) => `${m.role === "user" ? "User" : "AI"}: ${m.parts?.[0]?.text || ""}`)
+    .map((m) => `${m.role === "user" ? "User" : "AI"}: ${m.text || ""}`)
     .join("\n\n");
 
   const prompt = `Please provide a concise but comprehensive summary of the following conversation history.
@@ -40,22 +43,20 @@ Do not act as a conversational partner, just provide the summary directly. Ensur
 Conversation:
 ${conversationText}`;
 
-  const config: GenerateContentConfig = {};
-  if (systemInstruction) config.systemInstruction = systemInstruction;
-
-  const result = await ai.models.generateContent({ model: selectedModel, contents: prompt, config });
-  return { summary: result.text?.trim() || "", usage: result.usageMetadata };
+  const result = await adapter.generateOnce(prompt, selectedModel, config, systemInstruction);
+  return { summary: result.text.trim(), usage: result.usage };
 };
 
 // If history has grown past compressThreshold, summarizes the older half (excluding
 // any seeded initial messages) into a single system-style message via the text model,
 // keeping recent messages verbatim. Falls back to plain truncation if summarization fails.
 export const autoCompressHistory = async (
-  ai: GoogleGenAI,
-  validHistory: Content[],
+  adapter: ChatProviderAdapter,
+  config: ProviderRuntimeConfig,
+  validHistory: ChatMessage[],
   compressThreshold: number,
   selectedModel: string
-): Promise<{ history: Content[]; usage?: GenerateContentResponseUsageMetadata }> => {
+): Promise<{ history: ChatMessage[]; usage?: UsageInfo }> => {
   if (compressThreshold <= 0 || validHistory.length <= compressThreshold) {
     return { history: validHistory };
   }
@@ -72,18 +73,18 @@ export const autoCompressHistory = async (
   if (oldMessagesForSummary.length <= 2) return { history: validHistory };
 
   try {
-    const { summary, usage } = await summarizeConversation(ai, selectedModel, oldMessagesForSummary);
+    const { summary, usage } = await summarizeConversation(adapter, config, selectedModel, oldMessagesForSummary);
     if (!summary) return { history: validHistory };
 
-    const summaryMsg: Content = {
+    const summaryMsg: ChatMessage = {
       role: "user",
-      parts: [{ text: `[SYSTEM: Older chat history has been compressed into this summary to save memory. Summary: ${summary}]` }]
+      text: `[SYSTEM: Older chat history has been compressed into this summary to save memory. Summary: ${summary}]`,
     };
 
     const newHistory = [
       ...validHistory.slice(0, startIndex),
       summaryMsg,
-      ...validHistory.slice(startIndex + messagesToCompress)
+      ...validHistory.slice(startIndex + messagesToCompress),
     ];
     return { history: newHistory, usage };
   } catch (e) {
@@ -96,7 +97,7 @@ export const autoCompressHistory = async (
 
 // Hard-caps history length once it exceeds maxHistoryLength, splicing out the
 // oldest non-seeded messages (used as a backstop alongside/instead of compression).
-export const truncateHistory = (validHistory: Content[], maxHistoryLength: number): Content[] => {
+export const truncateHistory = (validHistory: ChatMessage[], maxHistoryLength: number): ChatMessage[] => {
   if (maxHistoryLength <= 0 || validHistory.length <= maxHistoryLength) return validHistory;
 
   const initialMessages = getInitialMessages();
@@ -111,21 +112,26 @@ export const truncateHistory = (validHistory: Content[], maxHistoryLength: numbe
   return validHistory;
 };
 
-// Gemini requires history to end on a model turn - drop any trailing unanswered
-// user messages before sending it as context.
-export const trimTrailingUserMessages = (validHistory: Content[]): Content[] => {
+// Most providers require (or strongly prefer) history to end on an assistant
+// turn - drop any trailing unanswered user messages before sending it as context.
+export const trimTrailingUserMessages = (validHistory: ChatMessage[]): ChatMessage[] => {
   while (validHistory.length > 0 && validHistory[validHistory.length - 1].role === "user") {
     validHistory.pop();
   }
   return validHistory;
 };
 
-export const performChatCompression = async (history: Content[], systemInstruction?: string): Promise<string> => {
-  const apiKey = await getAPIKey();
-  if (!apiKey) throw new Error("API key is missing. Please log in.");
+export const performChatCompression = async (history: ChatMessage[], systemInstruction?: string): Promise<string> => {
+  const providerId = getStoredValue(LS_CHAT_PROVIDER, DEFAULT_CHAT_PROVIDER);
+  const adapter = CHAT_PROVIDERS[providerId] || CHAT_PROVIDERS[DEFAULT_CHAT_PROVIDER];
+
+  const apiKey = await getProviderApiKey(providerId);
+  if (!apiKey && adapter.capabilities.requiresApiKey) {
+    throw new Error("API key is missing. Please log in.");
+  }
+  const baseUrl = adapter.capabilities.requiresBaseUrl ? getOllamaBaseUrl() : undefined;
   const selectedModel = getStoredValue(LS_AI_MODEL, DEFAULT_AI_MODEL);
 
-  const ai = new GoogleGenAI({ apiKey });
-  const { summary } = await summarizeConversation(ai, selectedModel, history, systemInstruction);
+  const { summary } = await summarizeConversation(adapter, { apiKey, baseUrl }, selectedModel, history, systemInstruction);
   return summary;
 };

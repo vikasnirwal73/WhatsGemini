@@ -1,11 +1,13 @@
 import React from 'react';
 import { IMAGE_RESOLUTIONS } from '../../utils/constants';
 import { TextInput, TextArea, Select, FieldLabel, Slider } from '../ui/FormControls';
-import ToggleSwitch from '../ToggleSwitch';
+import { IMAGE_PROVIDER_META } from '../../features/ai/providers/registry';
 
 interface ImageGenerationSettingsProps {
-  useSdWebui: boolean;
-  setUseSdWebui: (use: boolean) => void;
+  imageProvider: string;
+  setImageProvider: (provider: string) => void;
+  openaiApiKey: string;
+  setOpenaiApiKey: (key: string) => void;
   sdWebuiApiUrl: string;
   setSdWebuiApiUrl: (url: string) => void;
   sdWebuiBatchSize: number;
@@ -23,6 +25,7 @@ interface ImageGenerationSettingsProps {
   imageModel: string;
   setImageModel: (model: string) => void;
   imageModelList: { value: string; label: string }[];
+  openaiImageModelList: { value: string; label: string }[];
   imageGenPrompt: string;
   setImageGenPrompt: (prompt: string) => void;
   imageResolution: string;
@@ -33,8 +36,10 @@ interface ImageGenerationSettingsProps {
 }
 
 const ImageGenerationSettings: React.FC<ImageGenerationSettingsProps> = ({
-  useSdWebui,
-  setUseSdWebui,
+  imageProvider,
+  setImageProvider,
+  openaiApiKey,
+  setOpenaiApiKey,
   sdWebuiApiUrl,
   setSdWebuiApiUrl,
   sdWebuiBatchSize,
@@ -52,6 +57,7 @@ const ImageGenerationSettings: React.FC<ImageGenerationSettingsProps> = ({
   imageModel,
   setImageModel,
   imageModelList,
+  openaiImageModelList,
   imageGenPrompt,
   setImageGenPrompt,
   imageResolution,
@@ -62,15 +68,18 @@ const ImageGenerationSettings: React.FC<ImageGenerationSettingsProps> = ({
 }) => {
   return (
     <>
+      <FieldLabel hint="Chat and image generation providers can be set independently.">Image Provider</FieldLabel>
       <div className="mb-4">
-        <ToggleSwitch
-          checked={useSdWebui}
-          onChange={setUseSdWebui}
-          label="Use Local/Remote SD WebUI Forge"
-        />
+        <Select value={imageProvider} onChange={(e) => setImageProvider(e.target.value)}>
+          {IMAGE_PROVIDER_META.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.label}
+            </option>
+          ))}
+        </Select>
       </div>
 
-      {useSdWebui ? (
+      {imageProvider === 'sdwebui' ? (
         <div className="mb-4">
           <FieldLabel>SD WebUI Forge API URL</FieldLabel>
           <TextInput
@@ -161,6 +170,26 @@ const ImageGenerationSettings: React.FC<ImageGenerationSettingsProps> = ({
               </p>
             </div>
           )}
+        </div>
+      ) : imageProvider === 'openai' ? (
+        <div className="mb-4">
+          <FieldLabel hint="Stored encrypted, only on this device.">OpenAI API Key</FieldLabel>
+          <TextInput
+            type="password"
+            value={openaiApiKey}
+            onChange={(e) => setOpenaiApiKey(e.target.value)}
+            placeholder="Paste your API key here..."
+            className="mb-4"
+          />
+
+          <FieldLabel hint="Used when &quot;send pic&quot; or similar is queried.">Image Generation Model</FieldLabel>
+          <Select value={imageModel} onChange={(e) => setImageModel(e.target.value)} className="mb-4">
+            {openaiImageModelList.map((model) => (
+              <option key={model.value} value={model.value}>
+                {model.label}
+              </option>
+            ))}
+          </Select>
         </div>
       ) : (
         <>

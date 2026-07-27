@@ -106,7 +106,7 @@ const EmptyChatState = () => {
 };
 
 const AppContent = () => {
-  const { apiKey, authChecked } = useContext(AuthContext);
+  const { isConfigured, authChecked } = useContext(AuthContext);
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
   const [error, setError] = useState<string | null>(null);
@@ -162,7 +162,7 @@ const AppContent = () => {
     return <PageLoader />;
   }
 
-  if (!apiKey) {
+  if (!isConfigured) {
     return <Navigate to="/login" />;
   }
 

@@ -1,16 +1,18 @@
-import { GoogleGenAI, GenerateContentResponseUsageMetadata } from "@google/genai";
 import { MAX_MEMORY_ENTRIES } from "../../../utils/constants";
+import { UsageInfo } from "../types";
+import { ChatProviderAdapter, ProviderRuntimeConfig } from "../providers/types";
 
 export interface MemoryExtractionResult {
   facts: string[];
-  usage?: GenerateContentResponseUsageMetadata;
+  usage?: UsageInfo;
 }
 
 // One non-streaming call that asks the model to distill new, durable facts
 // worth remembering long-term from a slice of recent conversation - fed the
 // facts already known so it naturally avoids re-extracting duplicates.
 export const extractMemoryFacts = async (
-  ai: GoogleGenAI,
+  adapter: ChatProviderAdapter,
+  config: ProviderRuntimeConfig,
   selectedModel: string,
   conversationText: string,
   existingMemory: string[]
@@ -31,11 +33,11 @@ From the recent conversation only, extract any NEW durable facts about the user 
 
 Reply with only the new facts, one per line, each starting with "- ". If nothing new, reply with exactly NONE.`;
 
-  const result = await ai.models.generateContent({ model: selectedModel, contents: prompt });
-  const text = result.text?.trim() || "";
+  const result = await adapter.generateOnce(prompt, selectedModel, config);
+  const text = result.text.trim();
 
   if (!text || text.toUpperCase() === "NONE") {
-    return { facts: [], usage: result.usageMetadata };
+    return { facts: [], usage: result.usage };
   }
 
   const facts = text
@@ -43,7 +45,7 @@ Reply with only the new facts, one per line, each starting with "- ". If nothing
     .map((line) => line.replace(/^[-*]\s*/, "").trim())
     .filter(Boolean);
 
-  return { facts, usage: result.usageMetadata };
+  return { facts, usage: result.usage };
 };
 
 // Appends new facts (skipping exact duplicates), trimming the oldest entries

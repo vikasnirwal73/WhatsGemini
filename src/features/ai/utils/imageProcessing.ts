@@ -1,5 +1,5 @@
-import { Part } from "@google/genai";
 import { dbService } from "../../../services/dbService";
+import { NormalizedImage } from "../types";
 
 export const downscaleImageBase64 = async (base64Str: string, mimeType: string): Promise<string> => {
   try {
@@ -42,7 +42,8 @@ export const downscaleImageBase64 = async (base64Str: string, mimeType: string):
   }
 };
 
-export const appendCharacterImages = async (targetArray: Part[], images: string[] | undefined) => {
+export const appendCharacterImages = async (images: string[] | undefined): Promise<NormalizedImage[]> => {
+  const result: NormalizedImage[] = [];
   if (images && images.length > 0) {
     for (const imgRef of images) {
       if (imgRef.startsWith('local:')) {
@@ -60,14 +61,12 @@ export const appendCharacterImages = async (targetArray: Part[], images: string[
             let mimeType = 'image/png';
             if (ext === 'jpg' || ext === 'jpeg') mimeType = 'image/jpeg';
             else if (ext === 'webp') mimeType = 'image/webp';
-            
+
             const downscaledBase64 = await downscaleImageBase64(base64d, mimeType);
-            
-            targetArray.push({
-              inlineData: {
-                mimeType: "image/jpeg", // downscaled toDataURL gives jpeg
-                data: downscaledBase64
-              }
+
+            result.push({
+              mimeType: "image/jpeg", // downscaled toDataURL gives jpeg
+              data: downscaledBase64
             });
           }
         } catch (e) {
@@ -79,15 +78,14 @@ export const appendCharacterImages = async (targetArray: Part[], images: string[
           const mimeType = mimeMatch[1];
           const rawBase64 = imgRef.split(',')[1];
           const downscaledBase64 = await downscaleImageBase64(rawBase64, mimeType);
-          
-          targetArray.push({
-            inlineData: {
-              mimeType: "image/jpeg", // downscaled gives jpeg
-              data: downscaledBase64
-            }
+
+          result.push({
+            mimeType: "image/jpeg", // downscaled gives jpeg
+            data: downscaledBase64
           });
         }
       }
     }
   }
+  return result;
 };

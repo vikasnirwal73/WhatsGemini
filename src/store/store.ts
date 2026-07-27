@@ -23,6 +23,9 @@ import {
   LS_SD_WEBUI_MODELS,
   LS_SD_WEBUI_MODEL,
   LS_COMPRESS_THRESHOLD,
+  LS_CHAT_PROVIDER,
+  LS_IMAGE_PROVIDER,
+  LS_OLLAMA_BASE_URL,
 } from "../utils/constants";
 
 // Configure Redux Store
@@ -44,6 +47,9 @@ export type AppDispatch = typeof store.dispatch;
 store.subscribe(() => {
   const state = store.getState().settings;
   localStorage.setItem(LS_USER_PROFILE, JSON.stringify(state.userProfile));
+  localStorage.setItem(LS_CHAT_PROVIDER, state.chatProvider);
+  localStorage.setItem(LS_IMAGE_PROVIDER, state.imageProvider);
+  localStorage.setItem(LS_OLLAMA_BASE_URL, state.ollamaBaseUrl);
   localStorage.setItem(LS_AI_MODEL, state.selectedModel);
   localStorage.setItem(LS_IMAGE_MODEL, state.imageModel);
   localStorage.setItem(LS_IMAGE_GEN_PROMPT, state.imageGenPrompt);

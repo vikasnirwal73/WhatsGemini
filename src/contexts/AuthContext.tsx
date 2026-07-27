@@ -1,44 +1,52 @@
 import React, { createContext, useState, useEffect, useCallback, ReactNode } from "react";
-import { LS_GOOGLE_API_KEY } from "../utils/constants";
-import { encryptApiKey, decryptApiKey } from "../utils/secureApiKeyStorage";
+import { useSelector } from "react-redux";
+import { RootState } from "../store/store";
+import { getProviderApiKey, saveProviderApiKey, clearProviderApiKey } from "../features/ai/utils/settings";
+import { CHAT_PROVIDERS } from "../features/ai/providers/registry";
 
 interface AuthContextType {
-  apiKey: string | null;
+  // Whether the currently selected chat provider is ready to use - true
+  // immediately for keyless providers (Ollama), otherwise once a key is on file.
+  isConfigured: boolean;
   authChecked: boolean;
+  chatProvider: string;
   saveApiKey: (key: string) => Promise<void>;
   logout: () => void;
 }
 
 export const AuthContext = createContext<AuthContextType>({
-  apiKey: null,
+  isConfigured: false,
   authChecked: false,
+  chatProvider: "gemini",
   saveApiKey: async () => {},
   logout: () => {},
 });
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [apiKey, setApiKey] = useState<string | null>(null);
+  const chatProvider = useSelector((state: RootState) => state.settings.chatProvider);
+  const [isConfigured, setIsConfigured] = useState(false);
   const [authChecked, setAuthChecked] = useState(false);
 
-  // Decrypt the stored key once on mount. A value that fails to decrypt is
-  // treated as a legacy plaintext key from before encryption-at-rest was
-  // added, and is transparently re-saved in encrypted form.
+  // Re-checks whenever the selected chat provider changes - a keyless provider
+  // (Ollama) is always "configured", everything else needs a key on file.
   useEffect(() => {
     let cancelled = false;
+    setAuthChecked(false);
     (async () => {
-      try {
-        const stored = localStorage.getItem(LS_GOOGLE_API_KEY);
-        if (!stored) return;
-        try {
-          const decrypted = await decryptApiKey(stored);
-          if (!cancelled) setApiKey(decrypted);
-        } catch {
-          const encrypted = await encryptApiKey(stored);
-          localStorage.setItem(LS_GOOGLE_API_KEY, encrypted);
-          if (!cancelled) setApiKey(stored);
+      const capabilities = CHAT_PROVIDERS[chatProvider]?.capabilities;
+      if (capabilities && !capabilities.requiresApiKey) {
+        if (!cancelled) {
+          setIsConfigured(true);
+          setAuthChecked(true);
         }
+        return;
+      }
+      try {
+        const key = await getProviderApiKey(chatProvider);
+        if (!cancelled) setIsConfigured(!!key);
       } catch (error) {
-        console.error("Error accessing localStorage:", error);
+        console.error("Error checking provider API key:", error);
+        if (!cancelled) setIsConfigured(false);
       } finally {
         if (!cancelled) setAuthChecked(true);
       }
@@ -46,31 +54,28 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [chatProvider]);
 
-  // Memoized function to save API key
   const saveApiKey = useCallback(async (key: string) => {
     try {
-      const encrypted = await encryptApiKey(key);
-      localStorage.setItem(LS_GOOGLE_API_KEY, encrypted);
-      setApiKey(key);
+      await saveProviderApiKey(chatProvider, key);
+      setIsConfigured(true);
     } catch (error) {
       console.error("Error saving API key:", error);
     }
-  }, []);
+  }, [chatProvider]);
 
-  // Logout function to clear API key
   const logout = useCallback(() => {
     try {
-      localStorage.removeItem(LS_GOOGLE_API_KEY);
-      setApiKey(null);
+      clearProviderApiKey(chatProvider);
+      setIsConfigured(false);
     } catch (error) {
       console.error("Error clearing API key:", error);
     }
-  }, []);
+  }, [chatProvider]);
 
   return (
-    <AuthContext.Provider value={{ apiKey, authChecked, saveApiKey, logout }}>
+    <AuthContext.Provider value={{ isConfigured, authChecked, chatProvider, saveApiKey, logout }}>
       {children}
     </AuthContext.Provider>
   );
