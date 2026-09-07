@@ -7,6 +7,8 @@ import {
   LS_AI_MODEL,
   LS_MAX_CHAT_LENGTH,
   LS_MAX_OUTPUT_TOKENS,
+  LS_REPLY_LENGTH_LIMIT,
+  DEFAULT_REPLY_LENGTH_LIMIT,
   LS_SAFETY_SETTINGS,
   LS_TEMPRATURE,
   LS_FONT_SIZE,
@@ -69,6 +71,7 @@ export interface SettingsState {
   sdWebuiModels: { title: string; model_name: string }[];
   sdWebuiModel: string;
   maxOutputTokens: number;
+  replyLengthLimit: number;
   compressThreshold: number;
   maxChatLength: number;
   temperature: number;
@@ -98,6 +101,7 @@ const initialState: SettingsState = {
   sdWebuiModels: getStoredValue(LS_SD_WEBUI_MODELS, []),
   sdWebuiModel: localStorage.getItem(LS_SD_WEBUI_MODEL) || DEFAULT_SD_WEBUI_MODEL,
   maxOutputTokens: getStoredValue(LS_MAX_OUTPUT_TOKENS, DEFAULT_OUTPUT_TOKENS),
+  replyLengthLimit: getStoredValue(LS_REPLY_LENGTH_LIMIT, DEFAULT_REPLY_LENGTH_LIMIT),
   compressThreshold: getStoredValue(LS_COMPRESS_THRESHOLD, DEFAULT_COMPRESS_THRESHOLD),
   maxChatLength: getStoredValue(LS_MAX_CHAT_LENGTH, DEFAULT_CHAT_LENGTH),
   temperature: getStoredValue(LS_TEMPRATURE, DEFAULT_TEMPRATURE),
@@ -161,6 +165,9 @@ const settingsSlice = createSlice({
     setMaxOutputTokens: (state, action: PayloadAction<number>) => {
       state.maxOutputTokens = action.payload;
     },
+    setReplyLengthLimit: (state, action: PayloadAction<number>) => {
+      state.replyLengthLimit = action.payload;
+    },
     setCompressThreshold: (state, action: PayloadAction<number>) => {
       state.compressThreshold = action.payload;
     },
@@ -199,6 +206,7 @@ export const {
   setSdWebuiModels,
   setSdWebuiModel,
   setMaxOutputTokens,
+  setReplyLengthLimit,
   setCompressThreshold,
   setMaxChatLength,
   setTemperature,

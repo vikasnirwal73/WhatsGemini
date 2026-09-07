@@ -28,7 +28,8 @@ export interface SystemInstructionResult {
 // the caller.
 export const buildSystemInstruction = (
   character: Character | undefined,
-  extraDirectives?: string[]
+  extraDirectives?: string[],
+  replyLengthLimit?: number
 ): SystemInstructionResult => {
   if (!character) return { text: undefined, images: undefined, characterName: undefined };
 
@@ -62,6 +63,11 @@ export const buildSystemInstruction = (
   if (extraDirectives && extraDirectives.length > 0) {
     sections.push(...extraDirectives);
   }
+  if (replyLengthLimit && replyLengthLimit > 0) {
+    sections.push(
+      `Reply length: keep your messages to roughly ${replyLengthLimit} characters or less. Pace your reply so it naturally wraps up within that budget - never stop abruptly mid-sentence or mid-word. If a thought needs more room, wrap it up a little early or continue it in a natural follow-up message instead of overrunning the limit.`
+    );
+  }
 
   const text = sections
     .join("\n\n")
@@ -85,9 +91,10 @@ export interface TurnContext {
 export const buildTurnContext = (
   messages: Message[],
   character: Character | undefined,
-  extraDirectives?: string[]
+  extraDirectives?: string[],
+  replyLengthLimit?: number
 ): TurnContext => {
   const history = buildChatHistory(messages);
-  const { text, images, characterName } = buildSystemInstruction(character, extraDirectives);
+  const { text, images, characterName } = buildSystemInstruction(character, extraDirectives, replyLengthLimit);
   return { history, systemInstruction: text, characterImages: images, characterName };
 };

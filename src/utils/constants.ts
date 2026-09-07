@@ -9,6 +9,7 @@ export const DEFAULT_OUTPUT_TOKENS = 1000;
 export const DEFAULT_CHAT_LENGTH = 0;
 export const DEFAULT_AI_MODEL = "gemini-2.5-flash";
 export const DEFAULT_COMPRESS_THRESHOLD = 0; // 0 means do not compress automatically
+export const DEFAULT_REPLY_LENGTH_LIMIT = 0; // 0 means no target length
 export const harmThresholds = [
     { label: "None", value: "BLOCK_NONE" },
     { label: "Low", value: "BLOCK_LOW_AND_ABOVE" },
@@ -124,6 +125,7 @@ export const DEFAULT_IMAGE_MODEL = "gemini-2.5-flash-image";
 export const LS_IMAGE_GEN_PROMPT = "image_gen_prompt";
 export const DEFAULT_IMAGE_GEN_PROMPT = "Create a high quality, detailed image.";
 export const LS_MAX_OUTPUT_TOKENS = "max_output_tokens";
+export const LS_REPLY_LENGTH_LIMIT = "reply_length_limit";
 export const LS_MAX_CHAT_LENGTH = "max_chat_length";
 export const LS_TEMPRATURE = "temperature";
 export const LS_SAFETY_SETTINGS = "safety_settings";

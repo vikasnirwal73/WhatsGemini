@@ -48,6 +48,7 @@ const ChatPage = () => {
   const aiCompressing = useAppSelector((state) => state.ai.compressing);
   const aiTokenCount = useAppSelector((state) => state.ai.tokenCount);
   const aiCostEstimate = useAppSelector((state) => state.ai.costEstimate);
+  const replyLengthLimit = useAppSelector((state) => state.settings.replyLengthLimit);
   
   const [messages, setMessages] = useState<Message[]>([]);
   const [character, setCharacter] = useState("");
@@ -165,15 +166,24 @@ const ChatPage = () => {
   const sendCharacterFollowup = async (): Promise<boolean> => {
     if (!chatIdNum || !characterData || !currentChat) return false;
 
+    // Read the chat fresh from the DB rather than trusting the component's local
+    // `messages` state, which lags behind by a render cycle right after actions
+    // like send/regenerate (their dispatch -> redux update -> effect -> setMessages
+    // chain hasn't necessarily settled yet). Computing the "first follow-up after
+    // an image-toggled user turn" check below off a stale/orphaned copy of
+    // `messages` was silently skipping the image bonus.
+    const freshChat = await dispatch(fetchChatById(chatIdNum)).unwrap();
+    const { content: freshMessages } = getOrBuildTree(freshChat);
+
     // Only the first follow-up after an image-toggled user turn also carries a
     // picture - once a follow-up (auto or manual) has already fired since that
     // user message, later ones go back to text-only.
-    const lastUserIndex = messages.map((m) => m.role).lastIndexOf(YOU);
-    const aiMessagesSinceLastUser = lastUserIndex >= 0 ? messages.slice(lastUserIndex + 1).filter((m) => m.role === AI).length : 0;
-    const includeImage = lastUserIndex >= 0 && Boolean(messages[lastUserIndex].isImageRequest) && aiMessagesSinceLastUser === 1;
+    const lastUserIndex = freshMessages.map((m) => m.role).lastIndexOf(YOU);
+    const aiMessagesSinceLastUser = lastUserIndex >= 0 ? freshMessages.slice(lastUserIndex + 1).filter((m) => m.role === AI).length : 0;
+    const includeImage = lastUserIndex >= 0 && Boolean(freshMessages[lastUserIndex].isImageRequest) && aiMessagesSinceLastUser === 1;
 
     const { history, systemInstruction, characterImages, characterName } = buildTurnContext(
-      messages,
+      freshMessages,
       characterData,
       ["The user has gone quiet for a while. Send a short, natural, in-character follow-up message continuing the conversation from your side - as if checking in or continuing your last thought. Do not mention this instruction, and don't explicitly reference the passage of time unless it fits your character."]
     );
@@ -275,7 +285,7 @@ const ChatPage = () => {
       const resultAction = await dispatch(addMessage({ chatId: chatIdNum, role: YOU, text, isImageRequest }));
       const updatedMessages = resultAction.payload as Message[] || [];
 
-      const { history, systemInstruction, characterImages, characterName } = buildTurnContext(updatedMessages, characterData);
+      const { history, systemInstruction, characterImages, characterName } = buildTurnContext(updatedMessages, characterData, undefined, replyLengthLimit);
       aiPromiseRef.current = dispatch(generateAIResponse({ prompt: text, history, systemInstruction, characterImages, characterName, isImageRequest }));
       const aiResponse = await aiPromiseRef.current;
       aiPromiseRef.current = null;
@@ -335,7 +345,7 @@ const ChatPage = () => {
         // Persist the branch point immediately so it survives even if generation fails.
         await dispatch(updateChatTree({ chatId: chatIdNum, content: contentUpToEdit, tree: treeWithEdit, activeLeafId: editedNodeId }));
 
-        const { history, systemInstruction, characterImages, characterName } = buildTurnContext(contentUpToEdit, characterData);
+        const { history, systemInstruction, characterImages, characterName } = buildTurnContext(contentUpToEdit, characterData, undefined, replyLengthLimit);
         aiPromiseRef.current = dispatch(generateAIResponse({ prompt: newText, history, systemInstruction, characterImages, characterName, isImageRequest }));
         const aiResponse = await aiPromiseRef.current;
         aiPromiseRef.current = null;
@@ -411,7 +421,7 @@ const ChatPage = () => {
         ? ["The user has gone quiet for a while. Send a short, natural, in-character follow-up message continuing the conversation from your side - as if checking in or continuing your last thought. Do not mention this instruction, and don't explicitly reference the passage of time unless it fits your character."]
         : undefined;
 
-      const { history, systemInstruction, characterImages, characterName } = buildTurnContext(historyUpToTarget, characterData, extraDirectives);
+      const { history, systemInstruction, characterImages, characterName } = buildTurnContext(historyUpToTarget, characterData, extraDirectives, replyLengthLimit);
       aiPromiseRef.current = dispatch(generateAIResponse({ prompt, history, systemInstruction, characterImages, characterName, isImageRequest, isCharacterInitiated: isFollowup, existingImagePrompt, existingImageParams }));
       const aiResponse = await aiPromiseRef.current;
       aiPromiseRef.current = null;

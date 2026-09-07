@@ -7,7 +7,7 @@ import {
   setUserProfile, setSelectedModel, setImageModel, setImageGenPrompt,
   setSdWebuiApiUrl, setSdWebuiBatchSize, setSdWebuiRefMode,
   setSdWebuiDenoising, setSdWebuiControlnetModel, setSdWebuiModels,
-  setSdWebuiModel, setMaxOutputTokens, setCompressThreshold, setMaxChatLength,
+  setSdWebuiModel, setMaxOutputTokens, setReplyLengthLimit, setCompressThreshold, setMaxChatLength,
   setTemperature, setSafetySettings, setFontSize, setImageResolution,
   setChatProvider, setImageProvider, setOllamaBaseUrl
 } from "../features/settingsSlice";
@@ -34,6 +34,7 @@ import {
   LS_INITIAL_MESSAGES,
   LS_MAX_CHAT_LENGTH,
   LS_MAX_OUTPUT_TOKENS,
+  LS_REPLY_LENGTH_LIMIT,
   LS_SAFETY_SETTINGS,
   LS_TEMPRATURE,
   LS_FONT_SIZE,
@@ -176,7 +177,7 @@ const SettingsPage = () => {
     userProfile, chatProvider, imageProvider, ollamaBaseUrl, selectedModel, imageModel,
     imageGenPrompt, sdWebuiApiUrl,
     sdWebuiBatchSize, sdWebuiRefMode, sdWebuiDenoising, sdWebuiControlnetModel, sdWebuiModels,
-    sdWebuiModel, maxOutputTokens, compressThreshold, maxChatLength, temperature,
+    sdWebuiModel, maxOutputTokens, replyLengthLimit, compressThreshold, maxChatLength, temperature,
     safetySettings, fontSize, imageResolution
   } = settings;
 
@@ -350,6 +351,7 @@ const SettingsPage = () => {
   const buildSettingsExport = useCallback(() => ({
     [LS_AI_MODEL]: selectedModel,
     [LS_MAX_OUTPUT_TOKENS]: maxOutputTokens,
+    [LS_REPLY_LENGTH_LIMIT]: replyLengthLimit,
     [LS_COMPRESS_THRESHOLD]: compressThreshold,
     [LS_TEMPRATURE]: temperature,
     [LS_SAFETY_SETTINGS]: safetySettings,
@@ -358,7 +360,7 @@ const SettingsPage = () => {
     [LS_IMAGE_RESOLUTION]: imageResolution,
     [LS_USER_PROFILE]: userProfile,
     [LS_INITIAL_MESSAGES]: JSON.parse(localStorage.getItem(LS_INITIAL_MESSAGES) || "[]"),
-  }), [selectedModel, maxOutputTokens, compressThreshold, temperature, safetySettings, maxChatLength, fontSize, imageResolution, userProfile]);
+  }), [selectedModel, maxOutputTokens, replyLengthLimit, compressThreshold, temperature, safetySettings, maxChatLength, fontSize, imageResolution, userProfile]);
 
   const downloadJson = (data: unknown, filename: string) => {
     const jsonString = JSON.stringify(data, null, 2);
@@ -412,6 +414,7 @@ const SettingsPage = () => {
         }
     }
     if (settings[LS_MAX_OUTPUT_TOKENS]) dispatch(setMaxOutputTokens(settings[LS_MAX_OUTPUT_TOKENS]));
+    if (settings[LS_REPLY_LENGTH_LIMIT] !== undefined) dispatch(setReplyLengthLimit(settings[LS_REPLY_LENGTH_LIMIT]));
     if (settings[LS_COMPRESS_THRESHOLD]) dispatch(setCompressThreshold(settings[LS_COMPRESS_THRESHOLD]));
     if (settings[LS_TEMPRATURE]) dispatch(setTemperature(settings[LS_TEMPRATURE]));
     if (settings[LS_SAFETY_SETTINGS]) dispatch(setSafetySettings(settings[LS_SAFETY_SETTINGS]));
@@ -589,6 +592,8 @@ const SettingsPage = () => {
             modelList={currentChatModelList}
             maxOutputTokens={maxOutputTokens}
             setMaxOutputTokens={(val) => dispatch(setMaxOutputTokens(val))}
+            replyLengthLimit={replyLengthLimit}
+            setReplyLengthLimit={(val) => dispatch(setReplyLengthLimit(val))}
             compressThreshold={compressThreshold}
             setCompressThreshold={(val) => dispatch(setCompressThreshold(val))}
           />

@@ -7,6 +7,7 @@ import {
   LS_AI_MODEL,
   LS_MAX_CHAT_LENGTH,
   LS_MAX_OUTPUT_TOKENS,
+  LS_REPLY_LENGTH_LIMIT,
   LS_SAFETY_SETTINGS,
   LS_TEMPRATURE,
   LS_FONT_SIZE,
@@ -62,6 +63,7 @@ store.subscribe(() => {
   localStorage.setItem(LS_SD_WEBUI_MODELS, JSON.stringify(state.sdWebuiModels));
   localStorage.setItem(LS_SD_WEBUI_MODEL, state.sdWebuiModel);
   localStorage.setItem(LS_MAX_OUTPUT_TOKENS, JSON.stringify(state.maxOutputTokens));
+  localStorage.setItem(LS_REPLY_LENGTH_LIMIT, JSON.stringify(state.replyLengthLimit));
   localStorage.setItem(LS_COMPRESS_THRESHOLD, JSON.stringify(state.compressThreshold));
   localStorage.setItem(LS_MAX_CHAT_LENGTH, JSON.stringify(state.maxChatLength));
   localStorage.setItem(LS_TEMPRATURE, JSON.stringify(state.temperature));
