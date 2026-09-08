@@ -2,7 +2,7 @@ import React, { useEffect, useState, useMemo, useRef } from "react";
 import { useParams } from "react-router-dom";
 import { fetchChatById, fetchChats, addMessage, updateMessages, updateChatTree, updateChatAutoReply } from "../features/chatSlice";
 import { fetchCharacterById, updateCharacter } from "../features/characterSlice";
-import { generateAIResponse, compressChatHistory, extractCharacterMemory } from "../features/aiSlice";
+import { generateAIResponse, compressChatHistory, extractCharacterMemory, autoCompressChat } from "../features/aiSlice";
 import ChatWindow from "../components/ChatWindow";
 import MessageInput from "../components/MessageInput";
 import Header, { HeaderAction } from "../components/Header";
@@ -182,8 +182,10 @@ const ChatPage = () => {
     const aiMessagesSinceLastUser = lastUserIndex >= 0 ? freshMessages.slice(lastUserIndex + 1).filter((m) => m.role === AI).length : 0;
     const includeImage = lastUserIndex >= 0 && Boolean(freshMessages[lastUserIndex].isImageRequest) && aiMessagesSinceLastUser === 1;
 
+    const compressedFreshMessages = await dispatch(autoCompressChat({ chatId: chatIdNum, messages: freshMessages })).unwrap();
+
     const { history, systemInstruction, characterImages, characterName } = buildTurnContext(
-      freshMessages,
+      compressedFreshMessages,
       characterData,
       ["The user has gone quiet for a while. Send a short, natural, in-character follow-up message continuing the conversation from your side - as if checking in or continuing your last thought. Do not mention this instruction, and don't explicitly reference the passage of time unless it fits your character."]
     );
@@ -284,8 +286,9 @@ const ChatPage = () => {
     try {
       const resultAction = await dispatch(addMessage({ chatId: chatIdNum, role: YOU, text, isImageRequest }));
       const updatedMessages = resultAction.payload as Message[] || [];
+      const contextMessages = await dispatch(autoCompressChat({ chatId: chatIdNum, messages: updatedMessages })).unwrap();
 
-      const { history, systemInstruction, characterImages, characterName } = buildTurnContext(updatedMessages, characterData, undefined, replyLengthLimit);
+      const { history, systemInstruction, characterImages, characterName } = buildTurnContext(contextMessages, characterData, undefined, replyLengthLimit);
       aiPromiseRef.current = dispatch(generateAIResponse({ prompt: text, history, systemInstruction, characterImages, characterName, isImageRequest }));
       const aiResponse = await aiPromiseRef.current;
       aiPromiseRef.current = null;

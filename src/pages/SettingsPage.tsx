@@ -590,8 +590,6 @@ const SettingsPage = () => {
             selectedModel={selectedModel}
             setSelectedModel={(val) => dispatch(setSelectedModel(val))}
             modelList={currentChatModelList}
-            maxOutputTokens={maxOutputTokens}
-            setMaxOutputTokens={(val) => dispatch(setMaxOutputTokens(val))}
             replyLengthLimit={replyLengthLimit}
             setReplyLengthLimit={(val) => dispatch(setReplyLengthLimit(val))}
             compressThreshold={compressThreshold}

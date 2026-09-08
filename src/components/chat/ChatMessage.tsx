@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo } from "react";
-import { FaCopy, FaRedo, FaEdit, FaEllipsisV, FaChevronLeft, FaChevronRight, FaTrash, FaVolumeUp, FaStop } from "react-icons/fa";
+import { FaCopy, FaRedo, FaEdit, FaEllipsisV, FaChevronLeft, FaChevronRight, FaTrash, FaVolumeUp, FaStop, FaCompressArrowsAlt } from "react-icons/fa";
 import { motion } from "framer-motion";
 import { cn } from "../../utils/cn";
 import { Message } from "../../types";
@@ -55,6 +55,25 @@ const ChatMessage = React.memo(({
   const handleEdit = useCallback(() => onStartEdit(msg), [onStartEdit, msg]);
   const handleDeleteBranch = useCallback(() => msg.id && onDeleteBranch?.(msg.id), [onDeleteBranch, msg.id]);
   const handleToggleSpeak = useCallback(() => onToggleSpeak?.(msg), [onToggleSpeak, msg]);
+
+  if (msg.isCompressionSummary) {
+    return (
+      <motion.div
+        className="flex w-full mb-6 justify-center"
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.2, ease: "easeOut" }}
+      >
+        <div className="max-w-[90%] md:max-w-[70%] rounded-2xl border border-line bg-panel2 px-4 py-3 text-center">
+          <div className="flex items-center justify-center gap-2 text-xs font-semibold text-ink-muted mb-1.5">
+            <FaCompressArrowsAlt size={11} />
+            Compressed history
+          </div>
+          <p className="text-xs text-ink-faint whitespace-pre-wrap text-left">{msg.txt}</p>
+        </div>
+      </motion.div>
+    );
+  }
 
   return (
     <motion.div

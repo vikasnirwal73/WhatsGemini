@@ -1,5 +1,5 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
-import { performChatCompression, buildValidHistory, autoCompressHistory, truncateHistory, trimTrailingUserMessages } from "./ai/utils/chatHistoryUtils";
+import { performChatCompression, buildValidHistory, buildAutoCompressedMessages, truncateHistory, trimTrailingUserMessages } from "./ai/utils/chatHistoryUtils";
 import { AI, YOU, getModelPricing } from "../utils/constants";
 import { getProviderApiKey, getOllamaBaseUrl } from "./ai/utils/settings";
 import { extractAndSaveBase64ImagesLocally, stripLeakedBase64 } from "./ai/utils/apiUtils";
@@ -10,6 +10,7 @@ import { ProviderRuntimeConfig } from "./ai/providers/types";
 import { ChatMessage, UsageInfo } from "./ai/types";
 import { RootState } from "../store/store";
 import { SDImageParams, Message } from "../types";
+import { updateMessages, fetchChats } from "./chatSlice";
 
 export interface GenerateAIResponseResult {
   text: string;
@@ -72,14 +73,10 @@ export const generateAIResponse = createAsyncThunk(
         costEstimate += (usage.inputTokens / 1_000_000) * pricing.input + (usage.outputTokens / 1_000_000) * pricing.output;
       };
 
-      // Prepare the context: dedupe, auto-compress if it's grown too long, hard-cap
-      // length, and make sure it ends on an assistant turn.
+      // Prepare the context: dedupe, hard-cap length, and make sure it ends on an
+      // assistant turn. (Auto-compression already happened, if needed, before this
+      // thunk was dispatched - see autoCompressChat.)
       let validHistory = buildValidHistory(history, prompt);
-
-      const compressed = await autoCompressHistory(chatAdapter, chatConfig, validHistory, settings.compressThreshold, selectedModel);
-      validHistory = compressed.history;
-      trackUsage(compressed.usage, chatProviderId, selectedModel);
-
       validHistory = truncateHistory(validHistory, settings.maxChatLength);
       validHistory = trimTrailingUserMessages(validHistory);
 
@@ -168,6 +165,34 @@ const initialState: AIState = {
 };
 
 
+
+// If the chat has grown past settings.compressThreshold, summarizes the aged-out
+// portion into one persisted, visible message and returns the resulting (shorter)
+// message list; otherwise returns `messages` unchanged. Called from ChatPage before
+// building turn context for a new send, so the compression - and its cost - happens
+// once, up front, rather than being silently redone on every subsequent turn.
+export const autoCompressChat = createAsyncThunk(
+  "ai/autoCompressChat",
+  async ({ chatId, messages }: { chatId: number; messages: Message[] }, { getState, dispatch }) => {
+    try {
+      const state = getState() as RootState;
+      const settings = state.settings;
+      const chatAdapter = CHAT_PROVIDERS[settings.chatProvider] || CHAT_PROVIDERS.gemini;
+      const chatConfig = await resolveProviderConfig(settings.chatProvider, chatAdapter.capabilities.requiresBaseUrl);
+      if (!chatConfig.apiKey && chatAdapter.capabilities.requiresApiKey) return messages;
+
+      const result = await buildAutoCompressedMessages(chatAdapter, chatConfig, settings.selectedModel, messages, settings.compressThreshold);
+      if (!result.compressed) return messages;
+
+      await dispatch(updateMessages({ chatId, newMessages: result.messages }));
+      dispatch(fetchChats());
+      return result.messages;
+    } catch (error) {
+      console.warn("Auto-compression failed, continuing with full history.", error);
+      return messages;
+    }
+  }
+);
 
 // Async Thunk for compressing chat history
 export const compressChatHistory = createAsyncThunk(

@@ -23,6 +23,7 @@ export interface Message {
   images?: string[]; // Array of local paths or object URLs
   characterId?: number;
   isSystem?: boolean;
+  isCompressionSummary?: boolean; // true for the persisted auto-compress summary message
   isImageRequest?: boolean; // True if it triggered image generation
   imagePrompt?: string; // The derived SD prompt used to generate this image
   imageParams?: SDImageParams; // The derived SD params

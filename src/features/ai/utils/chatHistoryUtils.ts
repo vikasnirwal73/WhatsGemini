@@ -1,8 +1,10 @@
 import { getStoredValue, getInitialMessages, getProviderApiKey, getOllamaBaseUrl } from "./settings";
-import { LS_CHAT_PROVIDER, DEFAULT_CHAT_PROVIDER, LS_AI_MODEL, DEFAULT_AI_MODEL } from "../../../utils/constants";
+import { LS_CHAT_PROVIDER, DEFAULT_CHAT_PROVIDER, LS_AI_MODEL, DEFAULT_AI_MODEL, YOU, AI } from "../../../utils/constants";
 import { ChatMessage, UsageInfo } from "../types";
 import { ChatProviderAdapter, ProviderRuntimeConfig } from "../providers/types";
 import { CHAT_PROVIDERS } from "../providers/registry";
+import { Message } from "../../../types";
+import { buildChatHistory } from "./promptComposition";
 
 // Clones the raw history into fresh objects and drops the trailing user
 // message if it's a duplicate of the prompt about to be sent (the caller's chat
@@ -47,51 +49,61 @@ ${conversationText}`;
   return { summary: result.text.trim(), usage: result.usage };
 };
 
-// If history has grown past compressThreshold, summarizes the older half (excluding
-// any seeded initial messages) into a single system-style message via the text model,
-// keeping recent messages verbatim. Falls back to plain truncation if summarization fails.
-export const autoCompressHistory = async (
+// If the chat has grown past compressThreshold, summarizes the aged-out portion
+// (excluding any seeded initial messages) into a single persisted message pair,
+// keeping just under `compressThreshold` recent messages verbatim so the result
+// stays pinned near the configured length instead of collapsing to half of it.
+// If the oldest surviving message is already a prior compression summary, it's
+// folded into the new one (via the plain-text summarization input) rather than
+// re-summarized alongside it - so there's only ever one live summary message.
+export const buildAutoCompressedMessages = async (
   adapter: ChatProviderAdapter,
   config: ProviderRuntimeConfig,
-  validHistory: ChatMessage[],
-  compressThreshold: number,
-  selectedModel: string
-): Promise<{ history: ChatMessage[]; usage?: UsageInfo }> => {
-  if (compressThreshold <= 0 || validHistory.length <= compressThreshold) {
-    return { history: validHistory };
-  }
-
-  const messagesToCompress = validHistory.length - Math.floor(compressThreshold / 2);
-  if (messagesToCompress <= 0) return { history: validHistory };
+  selectedModel: string,
+  messages: Message[],
+  compressThreshold: number
+): Promise<{ messages: Message[]; compressed: boolean; usage?: UsageInfo }> => {
+  if (compressThreshold <= 0) return { messages, compressed: false };
 
   const initialMessages = getInitialMessages();
-  const initialLen = initialMessages.length || 0;
-  const startIndex = initialLen > 0 ? initialLen : 0;
-  if (startIndex >= validHistory.length) return { history: validHistory };
+  const startIndex = initialMessages.length || 0;
+  const compressible = messages.slice(startIndex);
+  if (compressible.length <= compressThreshold) return { messages, compressed: false };
 
-  const oldMessagesForSummary = validHistory.slice(startIndex, startIndex + messagesToCompress);
-  if (oldMessagesForSummary.length <= 2) return { history: validHistory };
+  const messagesToCompress = compressible.length - (compressThreshold - 1);
+  if (messagesToCompress <= 1) return { messages, compressed: false };
+
+  const oldChunk = compressible.slice(0, messagesToCompress);
+  const tail = compressible.slice(messagesToCompress);
 
   try {
-    const { summary, usage } = await summarizeConversation(adapter, config, selectedModel, oldMessagesForSummary);
-    if (!summary) return { history: validHistory };
+    const summarizable = oldChunk.filter((m) => !m.isSystem);
+    if (summarizable.length === 0) return { messages, compressed: false };
 
-    const summaryMsg: ChatMessage = {
-      role: "user",
-      text: `[SYSTEM: Older chat history has been compressed into this summary to save memory. Summary: ${summary}]`,
+    const { summary, usage } = await summarizeConversation(adapter, config, selectedModel, buildChatHistory(summarizable));
+    if (!summary) return { messages, compressed: false };
+
+    const summaryMsg: Message = {
+      role: YOU,
+      txt: `Earlier conversation summary (treat as established context, continue naturally):\n\n${summary}`,
+      isCompressionSummary: true,
+      timestamp: Date.now(),
+    };
+    const ackMsg: Message = {
+      role: AI,
+      txt: "Understood, continuing from that context.",
+      isSystem: true,
+      timestamp: Date.now(),
     };
 
-    const newHistory = [
-      ...validHistory.slice(0, startIndex),
-      summaryMsg,
-      ...validHistory.slice(startIndex + messagesToCompress),
-    ];
-    return { history: newHistory, usage };
+    return {
+      messages: [...messages.slice(0, startIndex), summaryMsg, ackMsg, ...tail],
+      compressed: true,
+      usage,
+    };
   } catch (e) {
-    console.warn("Auto-compression failed, falling back to truncation.", e);
-    const fallback = [...validHistory];
-    fallback.splice(startIndex, messagesToCompress);
-    return { history: fallback };
+    console.warn("Auto-compression failed, continuing with full history.", e);
+    return { messages, compressed: false };
   }
 };
 

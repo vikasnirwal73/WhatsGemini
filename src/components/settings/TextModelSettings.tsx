@@ -18,8 +18,6 @@ interface TextModelSettingsProps {
   selectedModel: string;
   setSelectedModel: (model: string) => void;
   modelList: { value: string; label: string }[];
-  maxOutputTokens: number;
-  setMaxOutputTokens: (tokens: number) => void;
   replyLengthLimit: number;
   setReplyLengthLimit: (chars: number) => void;
   compressThreshold: number;
@@ -41,8 +39,6 @@ const TextModelSettings: React.FC<TextModelSettingsProps> = ({
   selectedModel,
   setSelectedModel,
   modelList,
-  maxOutputTokens,
-  setMaxOutputTokens,
   replyLengthLimit,
   setReplyLengthLimit,
   compressThreshold,
@@ -140,15 +136,6 @@ const TextModelSettings: React.FC<TextModelSettingsProps> = ({
         </>
       )}
 
-      <FieldLabel>Max Output Tokens</FieldLabel>
-      <TextInput
-        type="number"
-        value={maxOutputTokens}
-        onChange={(e) => setMaxOutputTokens(Number(e.target.value))}
-        className="mb-6"
-        min="1"
-      />
-
       <FieldLabel hint="Guides how long replies are, in characters. The AI paces itself to finish its thought within this budget instead of being cut off mid-sentence. (0 means no target length)">
         Reply Length Target
       </FieldLabel>
@@ -162,7 +149,7 @@ const TextModelSettings: React.FC<TextModelSettingsProps> = ({
         className="mb-6"
       />
 
-      <FieldLabel hint="If history length exceeds this, older messages will be summarized to save tokens. (0 means disabled)">
+      <FieldLabel hint="Once the chat passes this many messages, older ones are summarized into one pinned message you can scroll up to see - keeps the chat near this length instead of growing forever. (0 means disabled)">
         Auto-Compress History Threshold
       </FieldLabel>
       <TextInput
