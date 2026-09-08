@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { cn } from "../../utils/cn";
 import { Message } from "../../types";
 import { AI, YOU } from "../../utils/constants";
+import { stripImageContextTag } from "../../features/ai/utils/imageGeneration";
 import MarkdownRenderer from "./MarkdownRenderer";
 import { DropdownMenu, DropdownMenuItem } from "../ui/DropdownMenu";
 import { DisplayImage } from "../DisplayImage";
@@ -50,7 +51,7 @@ const ChatMessage = React.memo(({
   const isUser = msg.role === YOU;
   const speechSupported = useMemo(() => isSpeechSynthesisSupported(), []);
 
-  const handleCopy = useCallback(() => onCopy(msg.txt || ""), [onCopy, msg.txt]);
+  const handleCopy = useCallback(() => onCopy(stripImageContextTag(msg.txt || "")), [onCopy, msg.txt]);
   const handleRegenerate = useCallback(() => onRegenerate(msg), [onRegenerate, msg]);
   const handleEdit = useCallback(() => onStartEdit(msg), [onStartEdit, msg]);
   const handleDeleteBranch = useCallback(() => msg.id && onDeleteBranch?.(msg.id), [onDeleteBranch, msg.id]);
@@ -96,7 +97,7 @@ const ChatMessage = React.memo(({
         )}
         style={{ fontSize: "var(--chat-font-size, 16px)" }}
       >
-        <MarkdownRenderer msgText={msg.txt || ""} isUser={isUser} />
+        <MarkdownRenderer msgText={stripImageContextTag(msg.txt || "")} isUser={isUser} />
 
         {msg.images && msg.images.map((imgSrc, idx) => (
           <DisplayImage

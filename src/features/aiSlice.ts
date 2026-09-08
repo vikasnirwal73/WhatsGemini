@@ -32,7 +32,7 @@ const resolveProviderConfig = async (providerId: string, requiresBaseUrl: boolea
 
 export const generateAIResponse = createAsyncThunk(
   "ai/generateResponse",
-  async ({ prompt, history = [], systemInstruction, characterImages, characterName, isImageRequest = false, isCharacterInitiated = false, existingImagePrompt, existingImageParams }: { prompt: string; history?: ChatMessage[], systemInstruction?: string, characterImages?: string[], characterName?: string, isImageRequest?: boolean, isCharacterInitiated?: boolean, existingImagePrompt?: string, existingImageParams?: SDImageParams }, { getState, rejectWithValue, signal }) => {
+  async ({ prompt, history = [], systemInstruction, characterImages, characterName, isImageRequest = false, isCharacterInitiated = false, isAutoSelfie = false, existingImagePrompt, existingImageParams }: { prompt: string; history?: ChatMessage[], systemInstruction?: string, characterImages?: string[], characterName?: string, isImageRequest?: boolean, isCharacterInitiated?: boolean, isAutoSelfie?: boolean, existingImagePrompt?: string, existingImageParams?: SDImageParams }, { getState, rejectWithValue, signal }) => {
     try {
       const state = getState() as RootState;
       const settings = state.settings;
@@ -91,7 +91,7 @@ export const generateAIResponse = createAsyncThunk(
         const derivation = await deriveImagePrompt(
           chatAdapter, chatConfig, selectedModel, turnConfig, historyForSdk, prompt,
           settings.imageGenPrompt, settings.sdWebuiModel, useSdWebui,
-          existingImagePrompt, existingImageParams, signal, isCharacterInitiated
+          existingImagePrompt, existingImageParams, signal, isCharacterInitiated, isAutoSelfie
         );
         trackUsage(derivation.usage, chatProviderId, selectedModel);
 

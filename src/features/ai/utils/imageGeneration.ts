@@ -5,6 +5,16 @@ import { UsageInfo } from "../types";
 import { ChatProviderAdapter, ImageProviderAdapter, ProviderRuntimeConfig } from "../providers/types";
 import { IMAGE_PROVIDERS } from "../providers/registry";
 
+// The derivation prompt below instructs the model to append a trailing
+// [Image Context: ...] tag to its reply so it can recall what it sent in later
+// turns - that tag needs to stay in the persisted message text (it's fed back
+// as history), but isn't meant for the user to actually see, hear via
+// text-to-speech, or get when copying the message. Callers that render/copy/
+// speak message text should run it through this first; the DB/history copy
+// stays untouched.
+export const stripImageContextTag = (text: string): string =>
+  text.replace(/\n*\[Image Context:[\s\S]*?\]\s*$/i, "").trimEnd();
+
 export interface ImageDerivationResult {
   derivedImagePrompt: string;
   derivedParams: SDImageParams;
@@ -36,10 +46,11 @@ export const deriveImagePrompt = async (
   existingImagePrompt: string | undefined,
   existingImageParams: SDImageParams | undefined,
   signal?: AbortSignal,
-  isCharacterInitiated = false
+  isCharacterInitiated = false,
+  isAutoSelfie = false
 ): Promise<ImageDerivationResult> => {
   if (existingImagePrompt) {
-    const regenSummary = isCharacterInitiated
+    const regenSummary = isCharacterInitiated || isAutoSelfie
       ? "Here's another look at that same moment.\n[Image Context: Retrying generation of the previous scene]"
       : "Here is the regenerated image you requested.\n[Image Context: Retrying generation of the previous scene]";
     return {
@@ -62,13 +73,19 @@ export const deriveImagePrompt = async (
 
   const requestContext = isCharacterInitiated
     ? `(INTERNAL DIRECTIVE) You are sending a follow-up message and have decided, entirely on your own initiative, to share a picture as part of it. There was no request from the user for this - you're choosing to send it because it fits the moment.`
-    : `(INTERNAL DIRECTIVE) The user's message: "${prompt}"\nAn image will be generated to accompany your reply. Base it on the user's message and the surrounding context - do not assume the message itself explicitly asked for a picture unless it actually did.`;
+    : isAutoSelfie
+      ? `(INTERNAL DIRECTIVE) You are replying to the user's message: "${prompt}" as usual, but you've also decided, entirely on your own initiative, to attach a selfie of yourself to your reply. There was no request for this picture - you just felt like sharing one that fits the moment.`
+      : `(INTERNAL DIRECTIVE) The user's message: "${prompt}"\nAn image will be generated to accompany your reply. Base it on the user's message and the surrounding context - do not assume the message itself explicitly asked for a picture unless it actually did.`;
 
-  const summaryInstruction = isCharacterInitiated
-    ? `<Respond IN CHARACTER, maintaining your exact persona, personality, and tone, as a natural follow-up message. Naturally mention that you're sharing a picture, framed as your own idea - never imply the user asked for it.`
+  const summaryInstruction = isCharacterInitiated || isAutoSelfie
+    ? `<Respond IN CHARACTER, maintaining your exact persona, personality, and tone, as a natural message. Naturally mention that you're sharing a picture, framed as your own idea - never imply the user asked for it.`
     : `<Respond IN CHARACTER to the user's message above, maintaining your exact persona, personality, and tone. Only say you're "sending/showing the picture they asked for" if their message literally asked for one - otherwise just reply naturally to what they actually said, and let the picture accompany your reply without claiming they requested it.`;
 
-  const derivationPrompt = `${requestContext}${useSdWebui ? sdModelInfo : ""}\n\nYou must function as an expert prompt engineer. Prioritize this base style rule:\n${imageGenPrompt}\n\nPlease output EXACTLY ${parseSection}\n\nPROMPT:\n<write a highly detailed, clean, and optimized tag-based SD 1.5 image generation prompt that fits the scene and context. Make sure the subject matches your visual description.>${sdInstruction}\n\nSUMMARY:\n${summaryInstruction} MUST INCLUDE: At the end of your response, append [Image Context: <short visual description of the generated image>] so you can remember what you sent in future turns.>`;
+  const selfieStyleHint = isAutoSelfie
+    ? " This should read as a casual selfie-style self-portrait (close/medium shot, as if you took it yourself) - but you have full creative freedom over your pose, expression, outfit, setting, and mood to fit the moment."
+    : "";
+
+  const derivationPrompt = `${requestContext}${useSdWebui ? sdModelInfo : ""}\n\nYou must function as an expert prompt engineer. Prioritize this base style rule:\n${imageGenPrompt}\n\nPlease output EXACTLY ${parseSection}\n\nPROMPT:\n<write a highly detailed, clean, and optimized tag-based SD 1.5 image generation prompt that fits the scene and context. Make sure the subject matches your visual description.${selfieStyleHint}>${sdInstruction}\n\nSUMMARY:\n${summaryInstruction} MUST INCLUDE: At the end of your response, append [Image Context: <short visual description of the generated image>] so you can remember what you sent in future turns.>`;
 
   const derivationResult = await chatAdapter.generateChat(
     {

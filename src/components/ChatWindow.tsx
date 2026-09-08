@@ -5,6 +5,7 @@ import { YOU, LS_INITIAL_MESSAGES } from "../utils/constants";
 import { Message, Character, ConversationTree } from "../types";
 import { getSiblingInfo } from "../features/chat/messageTree";
 import { speak, stopSpeaking } from "../utils/speech";
+import { stripImageContextTag } from "../features/ai/utils/imageGeneration";
 import { DisplayImage } from "./DisplayImage";
 import ToggleSwitch from "./ToggleSwitch";
 import ChatMessage from "./chat/ChatMessage";
@@ -199,7 +200,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ messages = [], tree, onSwitchBr
       return;
     }
     const id = msg.id;
-    speak(msg.txt || "", character?.voiceURI, () => {
+    speak(stripImageContextTag(msg.txt || ""), character?.voiceURI, () => {
       setSpeakingMessageId((current) => (current === id ? null : current));
     });
     setSpeakingMessageId(id);

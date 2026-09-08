@@ -9,10 +9,11 @@ import { Character, Chat } from "../types";
 import { useModal } from "../contexts/ModalContext";
 import { dbService } from "../services/dbService";
 import { DisplayImage } from "../components/DisplayImage";
-import { TextInput, TextArea, Select, FieldLabel } from "../components/ui/FormControls";
+import { TextInput, TextArea, Select, FieldLabel, Slider } from "../components/ui/FormControls";
 import { CharacterAvatar } from "../components/ui/CharacterAvatar";
+import ToggleSwitch from "../components/ToggleSwitch";
 import Header from "../components/Header";
-import { CHARACTER_SWATCHES, MEMORY_EXTRACTION_INTERVAL, SAMPLE_CHARACTER } from "../utils/constants";
+import { CHARACTER_SWATCHES, MEMORY_EXTRACTION_INTERVAL, SAMPLE_CHARACTER, DEFAULT_AUTO_SELFIE_FREQUENCY } from "../utils/constants";
 import { isSpeechSynthesisSupported, getVoices, speak } from "../utils/speech";
 
 const CharacterPage = () => {
@@ -35,6 +36,8 @@ const CharacterPage = () => {
   const [accentIndex, setAccentIndex] = useState(0);
   const [voiceURI, setVoiceURI] = useState("");
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
+  const [autoSelfieEnabled, setAutoSelfieEnabled] = useState(false);
+  const [autoSelfieFrequency, setAutoSelfieFrequency] = useState(DEFAULT_AUTO_SELFIE_FREQUENCY);
   const [editCharacter, setEditCharacter] = useState<Character | null>(null);
 
   useEffect(() => {
@@ -57,6 +60,8 @@ const CharacterPage = () => {
     setAvatar("");
     setAccentIndex(0);
     setVoiceURI("");
+    setAutoSelfieEnabled(false);
+    setAutoSelfieFrequency(DEFAULT_AUTO_SELFIE_FREQUENCY);
   }
 
   const handleCreateCharacter = () => {
@@ -65,7 +70,7 @@ const CharacterPage = () => {
       return;
     }
 
-    dispatch(addCharacter({ name, description, prompt, relationship, appearance, appearanceImages, avatar, accent: CHARACTER_SWATCHES[accentIndex], voiceURI: voiceURI || undefined }));
+    dispatch(addCharacter({ name, description, prompt, relationship, appearance, appearanceImages, avatar, accent: CHARACTER_SWATCHES[accentIndex], voiceURI: voiceURI || undefined, autoSelfie: { enabled: autoSelfieEnabled, frequency: autoSelfieFrequency } }));
     resetForm();
   };
 
@@ -97,6 +102,8 @@ const CharacterPage = () => {
     setAppearanceImages(char.appearanceImages || []);
     setAccentIndex(findSwatchIndex(char.accent));
     setVoiceURI(char.voiceURI || "");
+    setAutoSelfieEnabled(char.autoSelfie?.enabled || false);
+    setAutoSelfieFrequency(char.autoSelfie?.frequency ?? DEFAULT_AUTO_SELFIE_FREQUENCY);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -110,6 +117,8 @@ const CharacterPage = () => {
     setAppearanceImages(char.appearanceImages || []);
     setAccentIndex(findSwatchIndex(char.accent));
     setVoiceURI(char.voiceURI || "");
+    setAutoSelfieEnabled(char.autoSelfie?.enabled || false);
+    setAutoSelfieFrequency(char.autoSelfie?.frequency ?? DEFAULT_AUTO_SELFIE_FREQUENCY);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -119,7 +128,7 @@ const CharacterPage = () => {
       return;
     }
 
-    dispatch(updateCharacter({ id: editCharacter.id, name, description, prompt, relationship, appearance, appearanceImages, avatar, accent: CHARACTER_SWATCHES[accentIndex], voiceURI: voiceURI || undefined, gallery: editCharacter.gallery }));
+    dispatch(updateCharacter({ id: editCharacter.id, name, description, prompt, relationship, appearance, appearanceImages, avatar, accent: CHARACTER_SWATCHES[accentIndex], voiceURI: voiceURI || undefined, gallery: editCharacter.gallery, autoSelfie: { enabled: autoSelfieEnabled, frequency: autoSelfieFrequency } }));
     resetForm();
   };
 
@@ -145,6 +154,7 @@ const CharacterPage = () => {
       appearanceImages: char.appearanceImages || [],
       accent: char.accent,
       voiceURI: char.voiceURI,
+      autoSelfie: char.autoSelfie,
     };
 
     const jsonString = JSON.stringify(dataToExport, null, 2);
@@ -189,6 +199,7 @@ const CharacterPage = () => {
             appearanceImages: parsed.appearanceImages || [],
             accent: parsed.accent,
             voiceURI: parsed.voiceURI,
+            autoSelfie: parsed.autoSelfie,
           })
         );
 
@@ -336,6 +347,25 @@ const CharacterPage = () => {
                   </div>
                 </div>
               )}
+
+              <div>
+                <ToggleSwitch
+                  checked={autoSelfieEnabled}
+                  onChange={setAutoSelfieEnabled}
+                  label="Sends selfies on their own"
+                  title="Let this character spontaneously attach a selfie-style picture to their replies, without you asking for one."
+                />
+                {autoSelfieEnabled && (
+                  <div className="mt-3">
+                    <div className="flex justify-between text-xs text-ink-muted mb-2">
+                      <span>Frequency</span>
+                      <span className="font-mono">{autoSelfieFrequency}%</span>
+                    </div>
+                    <Slider value={autoSelfieFrequency} min={5} max={100} step={5} onChange={setAutoSelfieFrequency} />
+                    <p className="text-xs text-ink-faint mt-1.5">Chance each of their replies includes a spontaneous selfie - lower saves AI credits.</p>
+                  </div>
+                )}
+              </div>
 
               <TextInput
                 type="text"

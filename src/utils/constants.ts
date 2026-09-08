@@ -10,6 +10,7 @@ export const DEFAULT_CHAT_LENGTH = 0;
 export const DEFAULT_AI_MODEL = "gemini-2.5-flash";
 export const DEFAULT_COMPRESS_THRESHOLD = 0; // 0 means do not compress automatically
 export const DEFAULT_REPLY_LENGTH_LIMIT = 0; // 0 means no target length
+export const DEFAULT_AUTO_SELFIE_FREQUENCY = 15; // % chance, once a character's auto-selfie is enabled
 export const harmThresholds = [
     { label: "None", value: "BLOCK_NONE" },
     { label: "Low", value: "BLOCK_LOW_AND_ABOVE" },

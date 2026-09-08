@@ -10,7 +10,7 @@ import Modal from "../components/Modal";
 import ToggleSwitch from "../components/ToggleSwitch";
 import { TextInput, FieldLabel } from "../components/ui/FormControls";
 import { FaCompressArrowsAlt, FaDownload, FaClock, FaBolt } from "react-icons/fa";
-import { AI, YOU, MEMORY_EXTRACTION_INTERVAL } from "../utils/constants";
+import { AI, YOU, MEMORY_EXTRACTION_INTERVAL, DEFAULT_AUTO_SELFIE_FREQUENCY } from "../utils/constants";
 import { useAppDispatch, useAppSelector } from "../store/hooks";
 import { Message, Chat } from "../types";
 import { stripLeakedBase64 } from "../features/ai/utils/apiUtils";
@@ -180,7 +180,12 @@ const ChatPage = () => {
     // user message, later ones go back to text-only.
     const lastUserIndex = freshMessages.map((m) => m.role).lastIndexOf(YOU);
     const aiMessagesSinceLastUser = lastUserIndex >= 0 ? freshMessages.slice(lastUserIndex + 1).filter((m) => m.role === AI).length : 0;
-    const includeImage = lastUserIndex >= 0 && Boolean(freshMessages[lastUserIndex].isImageRequest) && aiMessagesSinceLastUser === 1;
+    const echoesUserImage = lastUserIndex >= 0 && Boolean(freshMessages[lastUserIndex].isImageRequest) && aiMessagesSinceLastUser === 1;
+
+    const autoSelfieCfg = characterData?.autoSelfie;
+    const shouldAutoSelfie = !echoesUserImage && !!autoSelfieCfg?.enabled &&
+      Math.random() * 100 < (autoSelfieCfg.frequency ?? DEFAULT_AUTO_SELFIE_FREQUENCY);
+    const includeImage = echoesUserImage || shouldAutoSelfie;
 
     const compressedFreshMessages = await dispatch(autoCompressChat({ chatId: chatIdNum, messages: freshMessages })).unwrap();
 
@@ -192,7 +197,7 @@ const ChatPage = () => {
     const aiResponse = await dispatch(generateAIResponse({
       prompt: "Please continue the conversation naturally, as if reaching out again.",
       history, systemInstruction, characterImages, characterName,
-      isImageRequest: includeImage, isCharacterInitiated: true,
+      isImageRequest: includeImage, isCharacterInitiated: true, isAutoSelfie: shouldAutoSelfie,
     }));
 
     if (!aiResponse.payload) return false;
@@ -288,8 +293,12 @@ const ChatPage = () => {
       const updatedMessages = resultAction.payload as Message[] || [];
       const contextMessages = await dispatch(autoCompressChat({ chatId: chatIdNum, messages: updatedMessages })).unwrap();
 
+      const autoSelfieCfg = characterData?.autoSelfie;
+      const shouldAutoSelfie = !isImageRequest && !!autoSelfieCfg?.enabled &&
+        Math.random() * 100 < (autoSelfieCfg.frequency ?? DEFAULT_AUTO_SELFIE_FREQUENCY);
+
       const { history, systemInstruction, characterImages, characterName } = buildTurnContext(contextMessages, characterData, undefined, replyLengthLimit);
-      aiPromiseRef.current = dispatch(generateAIResponse({ prompt: text, history, systemInstruction, characterImages, characterName, isImageRequest }));
+      aiPromiseRef.current = dispatch(generateAIResponse({ prompt: text, history, systemInstruction, characterImages, characterName, isImageRequest: isImageRequest || shouldAutoSelfie, isAutoSelfie: shouldAutoSelfie }));
       const aiResponse = await aiPromiseRef.current;
       aiPromiseRef.current = null;
 
