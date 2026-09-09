@@ -26,7 +26,12 @@ const AccordionTrigger = React.forwardRef<
     <AccordionPrimitive.Trigger
       ref={ref}
       className={cn(
-        "flex flex-1 items-center justify-between py-4 text-sm font-medium transition-all hover:underline [&[data-state=open]>svg]:rotate-180",
+        // Stock shadcn adds `hover:underline` here, meant for a plain
+        // single-line text trigger. This app's only trigger content is a
+        // compound icon+title+subtitle row (see SettingsPage's
+        // renderAccordion), where an inherited underline bleeds onto both
+        // lines of text - so it's dropped rather than kept literally stock.
+        "flex flex-1 items-center justify-between py-4 text-sm font-medium transition-all [&[data-state=open]>svg]:rotate-180",
         className
       )}
       {...props}

@@ -4,6 +4,17 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Radix portals (Dialog, AlertDialog, DropdownMenu, etc.) mount as direct
+   children of <body>, outside App.tsx's own `text-foreground` wrapper div -
+   so any portaled content that doesn't set its own text color needs to
+   inherit a real color from here instead of the browser's black default,
+   which is invisible against a dark theme's background. */
+@layer base {
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
 ::selection {
   background: rgba(16, 185, 129, 0.3);
 }
