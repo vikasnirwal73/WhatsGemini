@@ -376,18 +376,47 @@ code, not just reshuffling" bar):
   cosmetic, not urgent" - by its own stated bar this is exactly the "just reshuffling"
   case to skip.
 
-## Phase 7 — Cleanup and optional full token rename
+## Phase 7 — Cleanup and optional full token rename 🟡 Mandatory items done, optional rename pending a decision
 
-1. Remove any now-dead code in the replaced hand-rolled components/files.
-2. Re-run `npx tsc --noEmit` and `npm run build`, do a full click-through of every page
-   in both light and dark theme.
-3. **Optional, only if desired for long-term consistency:** now that the app has lived
-   with both naming schemes for a while and every shadcn component is in, do a single
-   mechanical rename pass (`bg-panel` → `bg-card`, `text-ink` → `text-foreground`,
-   `border-line` → `border-border`, etc.) across the whole codebase and delete the
-   bridge-alias layer from Phase 2. This is purely cosmetic/consistency cleanup with no
-   functional benefit, so it's fine to leave the bridge layer in place indefinitely
-   instead.
+**Note:** Phases 0-6 had never actually been committed on this branch before this
+session started (`ui/to-shadcn-ui` was sitting at the same commit as `main`, with all
+of that work as uncommitted changes) — committed as one commit at the start of this
+session, since splitting it into after-the-fact phase-by-phase commits from a single
+working tree diff would've been artificial.
+
+What shipped:
+1. **Dead-code sweep**: checked `FormControls.tsx`/`ToggleSwitch.tsx` (the two files
+   most rewritten in Phase 4) for leftover pre-migration code — clean, nothing left
+   over. Confirmed via a `CI=true npm run build`, which fails/warns on unused
+   vars/imports under CRA's built-in ESLint config — zero warnings.
+2. Re-ran `npx tsc --noEmit` and a cold-cache `npm run build` — both clean.
+3. **Full click-through**, both themes, via the Chrome extension against the local dev
+   server: Sidebar/Header/theme toggle, ChatWindow + MessageInput (incl. the image/
+   settings toggle buttons' active state), Settings (all 6 accordion sections expanded
+   — Text Generation Model's Slider/Select, Chat Interface Settings' textarea/delete
+   buttons, Safety Settings' selects, Data & Import/Export's default/panel/secondary
+   Button variants), Character page (accent swatches, Add Image dropzone, gradient
+   Create Character button, character cards), and ImageSettingsModal (Switch/Select/
+   Textarea, close button). The dark-mode-only theme-toggle concern noted at the end of
+   Phase 5 didn't reproduce — toggling flipped the whole app correctly in both
+   directions this session, so that was a one-off testing artifact as suspected, not a
+   real bug.
+4. **Found and fixed one real bug** during the click-through (unrelated to the
+   migration itself, same class as the one fixed in Phase 5): `ImageSettingsModal.tsx`'s
+   effect that merges a custom image model from `localStorage` into `imageModelList`
+   checked `imageModelList.find(...)` against a closured value in its dependency array;
+   React 18 StrictMode's double-invoked mount effect appended the same stored model
+   twice, producing a duplicate `<option key>` and a console error. Fixed by switching
+   to a functional `setState` update (`prev.some(...)` check) with an empty dependency
+   array, confirmed clean via console after a full reload.
+
+**Not yet decided — optional full token rename:** now that the app has lived with both
+naming schemes for a while and every shadcn component is in, a single mechanical rename
+pass (`bg-panel` → `bg-card`, `text-ink` → `text-foreground`, `border-line` →
+`border-border`, etc.) across the whole codebase, deleting the bridge-alias layer from
+Phase 2, is still available. This is purely cosmetic/consistency cleanup with no
+functional benefit, so it's fine to leave the bridge layer in place indefinitely
+instead — pending user decision on whether it's worth the ~29-file diff.
 
 ---
 
@@ -404,10 +433,9 @@ Each phase above is meant to be its own session/PR. Rough sizing:
 | 4 - Swap FormControls/ToggleSwitch/Slider | Medium | Medium | ✅ Done, visually verified |
 | 5 - Button sweep | Low risk per-page, high total effort | Large (split by page) | ✅ Done, visually verified |
 | 6 - Accordion/Toast/Avatar/Card | Low, optional | Medium | ✅ Done (Accordion only - Toast/Avatar/Card deliberately skipped, see Phase 6) |
-| 7 - Cleanup + optional rename | Low, optional | Small–Large depending on rename | Not started |
+| 7 - Cleanup + optional rename | Low, optional | Small–Large depending on rename | 🟡 Mandatory items done, optional rename pending decision |
 
-Next up: **Phase 7** - the only remaining phase, and entirely optional per its own
-description (dead-code cleanup pass + an optional full rename of the app's own token
-names to shadcn's canonical ones, which was always framed as cosmetic/long-term
-consistency work with no functional benefit, not something the migration depends on).
-The migration's functional goals are otherwise complete as of Phase 6.
+The migration's functional goals are complete: all mandatory work through Phase 7 is
+done and committed. The only thing left on the table is the fully optional full token
+rename described in Phase 7 above — cosmetic/consistency-only, no functional benefit,
+safe to defer indefinitely.
