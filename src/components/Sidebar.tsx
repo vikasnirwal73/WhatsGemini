@@ -2,8 +2,8 @@ import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { fetchChats, deleteChat, addChat, importChat, updateChatPinned } from "../features/chatSlice";
 import { fetchCharacters } from "../features/characterSlice";
-import { Link, useNavigate } from "react-router-dom";
-import { FaTrash, FaFileImport, FaPlus, FaSearch, FaThumbtack, FaUser, FaPencilAlt } from "react-icons/fa";
+import { Link, useNavigate, useLocation } from "react-router-dom";
+import { FaTrash, FaFileImport, FaPlus, FaSearch, FaThumbtack, FaUser, FaPencilAlt, FaChevronRight } from "react-icons/fa";
 import { useAppDispatch, useAppSelector } from "../store/hooks";
 import { useModal } from "../contexts/ModalContext";
 import { useSidebar } from "../contexts/SidebarContext";
@@ -70,8 +70,14 @@ const findMessageSnippet = (chat: Chat, query: string): string | undefined => {
 const Sidebar = () => {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
+  const location = useLocation();
   const { showConfirm } = useModal();
   const { isOpen, close } = useSidebar();
+
+  const activeChatId = useMemo(() => {
+    const match = location.pathname.match(/^\/chat\/(\d+)/);
+    return match ? Number(match[1]) : null;
+  }, [location.pathname]);
 
   const chats = useAppSelector((state) => state.chat.chats);
   const characters = useAppSelector((state) => state.character.characters);
@@ -224,7 +230,7 @@ const Sidebar = () => {
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search chats and messages"
               aria-label="Search chats and messages"
-              className="pl-8 text-[12.5px] rounded-lg bg-background"
+              className="pl-8 text-[12.5px] rounded-lg bg-background border-border/10 shadow-none"
             />
           </div>
         </div>
@@ -240,7 +246,7 @@ const Sidebar = () => {
                   <div className="text-[10.5px] font-semibold tracking-[0.09em] uppercase text-subtle px-3 pt-2 pb-1.5">
                     Pinned
                   </div>
-                  <ChatList items={pinnedItems} characters={characters} onDeleteChat={handleDeleteChat} onTogglePin={handleTogglePin} onNavigate={close} query={search.trim()} />
+                  <ChatList items={pinnedItems} characters={characters} onDeleteChat={handleDeleteChat} onTogglePin={handleTogglePin} onNavigate={close} query={search.trim()} activeChatId={activeChatId} />
                 </>
               )}
               {unpinnedItems.length > 0 && (
@@ -248,7 +254,7 @@ const Sidebar = () => {
                   <div className="text-[10.5px] font-semibold tracking-[0.09em] uppercase text-subtle px-3 pt-2 pb-1.5">
                     {pinnedItems.length > 0 ? "Other chats" : "Recent"}
                   </div>
-                  <ChatList items={unpinnedItems} characters={characters} onDeleteChat={handleDeleteChat} onTogglePin={handleTogglePin} onNavigate={close} query={search.trim()} />
+                  <ChatList items={unpinnedItems} characters={characters} onDeleteChat={handleDeleteChat} onTogglePin={handleTogglePin} onNavigate={close} query={search.trim()} activeChatId={activeChatId} />
                 </>
               )}
             </>
@@ -299,6 +305,7 @@ const Sidebar = () => {
           setCharacterSearch("");
         }}
         title="Who do you want to talk to?"
+        subtitle="Pick a character to start a new chat."
       >
         {characters.length === 0 ? (
           <div className="text-center py-4">
@@ -306,7 +313,7 @@ const Sidebar = () => {
             <Button
               onClick={() => {
                 setIsNewChatModalOpen(false);
-                navigate("/characters");
+                navigate("/characters/new");
               }}
               variant="default"
               size="sm"
@@ -324,7 +331,7 @@ const Sidebar = () => {
                 onChange={(e) => setCharacterSearch(e.target.value)}
                 placeholder="Search your cast"
                 aria-label="Search your cast"
-                className="pl-8 text-[13px] bg-background"
+                className="pl-8 text-[13px] bg-background border-border/10 shadow-none"
                 autoFocus
               />
             </div>
@@ -343,15 +350,41 @@ const Sidebar = () => {
                   className="w-full h-auto justify-start gap-3 p-3 rounded-lg text-left font-normal"
                 >
                   <CharacterAvatar name={char.name} accent={char.accent} size={40} />
-                  <div className="min-w-0">
-                    <h3 className="font-medium text-foreground">{char.name}</h3>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-semibold text-[14.5px] text-foreground truncate">{char.name}</h3>
+                      {char.relationship && (
+                        <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-primary/10 text-primary flex-shrink-0">
+                          {char.relationship}
+                        </span>
+                      )}
+                    </div>
                     {char.description && (
-                      <p className="text-xs text-muted-foreground line-clamp-1">{char.description}</p>
+                      <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">{char.description}</p>
                     )}
                   </div>
+                  <FaChevronRight size={13} className="text-subtle flex-shrink-0" />
                 </Button>
               ))
             )}
+          </div>
+        )}
+        {characters.length > 0 && (
+          <div className="flex items-center gap-2 pt-3 mt-1 border-t border-border/40 text-[13px] text-muted-foreground">
+            <FaPlus size={12} className="text-primary flex-shrink-0" />
+            <span>
+              Someone new?{" "}
+              <button
+                type="button"
+                onClick={() => {
+                  setIsNewChatModalOpen(false);
+                  navigate("/characters/new");
+                }}
+                className="font-medium text-primary hover:underline"
+              >
+                Create a character
+              </button>
+            </span>
           </div>
         )}
       </Modal>
@@ -359,19 +392,26 @@ const Sidebar = () => {
   );
 };
 
-const ChatList = ({ items, characters, onDeleteChat, onTogglePin, onNavigate, query }: { items: { chat: Chat; snippet?: string }[], characters: Character[], onDeleteChat: (id: number) => void, onTogglePin: (id: number, pinned: boolean) => void, onNavigate: () => void, query: string }) => {
+const ChatList = ({ items, characters, onDeleteChat, onTogglePin, onNavigate, query, activeChatId }: { items: { chat: Chat; snippet?: string }[], characters: Character[], onDeleteChat: (id: number) => void, onTogglePin: (id: number, pinned: boolean) => void, onNavigate: () => void, query: string, activeChatId: number | null }) => {
   return (
     <div className="flex-1 flex flex-col gap-0.5">
       {items.map(({ chat, snippet }) => {
         const character = characters.find((c) => c.id === chat.characterId);
+        const isActive = chat.id === activeChatId;
 
         return (
           <Link
             to={`/chat/${chat.id}`}
             key={chat.id}
             onClick={onNavigate}
-            className="flex items-center gap-3 p-2.5 rounded-lg cursor-pointer group hover:bg-hover transition"
+            className={cn(
+              "relative flex items-center gap-3 p-2.5 rounded-lg cursor-pointer group transition",
+              isActive ? "bg-secondary" : "hover:bg-hover"
+            )}
           >
+            {isActive && (
+              <span className="absolute left-[-8px] top-[14%] bottom-[14%] w-[3px] rounded-full bg-primary" />
+            )}
             <CharacterAvatar name={character?.name || chat.title} accent={character?.accent} size={34} />
             <div className="flex-1 flex flex-col overflow-hidden min-w-0">
               <div className="flex items-center gap-1.5">

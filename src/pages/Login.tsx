@@ -70,7 +70,7 @@ const Login = () => {
           Chat with characters powered by your choice of AI provider.
         </p>
 
-        <label className="block text-sm font-medium text-foreground mb-1.5">AI Provider</label>
+        <label className="block text-xs text-muted-foreground mb-1.5">AI provider</label>
         <Select
           value={chatProvider}
           onChange={(e) => dispatch(setChatProvider(e.target.value))}
@@ -83,23 +83,11 @@ const Login = () => {
           ))}
         </Select>
 
-        {chatProvider === "gemini" && (
-          <a
-            href="https://aistudio.google.com/apikey"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center justify-center gap-1.5 text-[13px] text-primary font-medium hover:underline mb-4"
-          >
-            Get a free API key from Google AI Studio
-            <FaExternalLinkAlt size={10} />
-          </a>
-        )}
-
         {error && <p className="text-red-500 text-sm text-center mb-4">{error}</p>}
 
         {capabilities?.requiresBaseUrl ? (
           <>
-            <label className="block text-sm font-medium text-foreground mb-1.5">Ollama Server URL</label>
+            <label className="block text-xs text-muted-foreground mb-1.5">Ollama server URL</label>
             <TextInput
               type="text"
               value={ollamaBaseUrl}
@@ -113,6 +101,19 @@ const Login = () => {
           </>
         ) : (
           <>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="text-xs text-muted-foreground">API key</label>
+              {chatProvider === "gemini" && (
+                <a
+                  href="https://aistudio.google.com/apikey"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+                >
+                  Get a free key <FaExternalLinkAlt size={9} />
+                </a>
+              )}
+            </div>
             <TextInput
               type="text"
               value={key}

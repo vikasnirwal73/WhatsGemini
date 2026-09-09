@@ -29,7 +29,7 @@ interface KeyboardShortcutsModalProps {
 }
 
 const KeyboardShortcutsModal: React.FC<KeyboardShortcutsModalProps> = ({ isOpen, onClose }) => (
-  <Modal isOpen={isOpen} onClose={onClose} title="Keyboard Shortcuts">
+  <Modal isOpen={isOpen} onClose={onClose} title="Keyboard shortcuts">
     <div className="flex flex-col">
       {SHORTCUTS.map((shortcut, i) => (
         <div

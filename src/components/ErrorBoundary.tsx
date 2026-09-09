@@ -41,17 +41,26 @@ class ErrorBoundary extends Component<Props, State> {
                 <FaExclamationCircle className="text-destructive" size={20} />
               </div>
               <div className="flex-1 min-w-0">
-                <h2 className="text-lg font-bold text-foreground mb-1.5">Something went wrong</h2>
-                <p className="text-sm text-muted-foreground mb-4 whitespace-pre-wrap">
-                  {this.state.error?.message || "An unexpected error occurred."}
+                <h2 className="text-lg font-bold text-foreground mb-1.5">Something broke on this screen</h2>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Your chats and characters are safe in this browser. Reload to try again, or copy the error for a bug report.
                 </p>
-                <Button
-                  variant="destructive"
-                  onClick={() => window.location.reload()}
-                  className="w-full"
-                >
-                  Refresh Page
-                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    variant="destructive"
+                    onClick={() => window.location.reload()}
+                    className="flex-1"
+                  >
+                    Reload
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => navigator.clipboard.writeText(this.state.error?.stack || this.state.error?.message || "Unknown error")}
+                    className="flex-1"
+                  >
+                    Copy error
+                  </Button>
+                </div>
               </div>
             </CardContent>
           </Card>

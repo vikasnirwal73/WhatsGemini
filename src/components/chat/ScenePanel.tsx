@@ -62,6 +62,14 @@ const ScenePanel: React.FC<ScenePanelProps> = ({ chatId, character, authorNote, 
     dispatch(updateChatWorldTags({ chatId, worldTags: tags.filter((_, i) => i !== index) }));
   };
 
+  // World tags pick up the character's own accent color, like their avatar
+  // gradient and gallery card glow - falls back to the brand primary when
+  // there's no character (shouldn't normally happen, Scene panel is always
+  // opened from within a character's chat).
+  const tagColor = character?.accent?.[0];
+  const tagBg = tagColor ? `${tagColor}26` : "rgb(var(--primary) / 0.14)";
+  const tagFg = tagColor || "rgb(var(--primary))";
+
   return (
     <aside className="w-[300px] flex-none border-l border-border/40 bg-card/70 backdrop-blur-md flex flex-col overflow-hidden">
       <div className="h-[52px] flex-shrink-0 flex items-center justify-between px-[18px] border-b border-border/40">
@@ -133,7 +141,8 @@ const ScenePanel: React.FC<ScenePanelProps> = ({ chatId, character, authorNote, 
             {tags.map((tag, idx) => (
               <span
                 key={idx}
-                className="inline-flex items-center gap-1.5 pl-2.5 pr-1.5 py-1 rounded-full bg-primary/[0.14] text-primary text-xs font-medium whitespace-nowrap"
+                className="inline-flex items-center gap-1.5 pl-2.5 pr-1.5 py-1 rounded-full text-xs font-medium whitespace-nowrap"
+                style={{ background: tagBg, color: tagFg }}
               >
                 {tag}
                 <button

@@ -7,17 +7,21 @@ interface ModalProps {
   isOpen: boolean;
   onClose: () => void;
   title: string;
+  subtitle?: string;
   children: ReactNode;
 }
 
-const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }) => {
+const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, subtitle, children }) => {
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent size="default">
-        <DialogHeader className="flex-row items-center justify-between space-y-0">
-          <DialogTitle>{title}</DialogTitle>
+        <DialogHeader className="flex-row items-start justify-between space-y-0">
+          <div>
+            <DialogTitle>{title}</DialogTitle>
+            {subtitle && <p className="text-[13.5px] text-muted-foreground mt-1">{subtitle}</p>}
+          </div>
           <DialogClose asChild>
-            <Button variant="ghost" size="icon" className="h-auto w-auto p-1 -m-1 rounded-full text-muted-foreground hover:text-foreground" aria-label="Close">
+            <Button variant="ghost" size="icon" className="h-auto w-auto p-1 -m-1 rounded-full text-muted-foreground hover:text-foreground flex-shrink-0" aria-label="Close">
               <FaTimes />
             </Button>
           </DialogClose>

@@ -162,7 +162,7 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSend, disabled = false, o
         </div>
       )}
 
-      <div className="flex items-end gap-2">
+      <div className="flex items-center gap-1 h-14 px-2 rounded-xl bg-card/[0.85] backdrop-blur-md border border-border/10 shadow-soft">
         <Button
           onClick={() => setIsImageRequest((v) => !v)}
           disabled={disabled}
@@ -171,13 +171,13 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSend, disabled = false, o
           aria-label="Request an image with this message"
           aria-pressed={isImageRequest}
           className={cn(
-            "h-11 w-11 flex-shrink-0 rounded-xl border",
+            "h-10 w-10 flex-shrink-0 rounded-lg",
             isImageRequest
-              ? "border-primary bg-primary/10 text-primary hover:bg-primary/10"
-              : "border-border bg-muted text-ink-faint hover:border-primary hover:bg-muted hover:text-foreground"
+              ? "bg-primary/[0.14] text-primary hover:bg-primary/[0.2]"
+              : "text-muted-foreground hover:bg-secondary hover:text-foreground"
           )}
         >
-          <FaImage size={15} />
+          <FaImage size={16} />
         </Button>
 
         {micSupported && (
@@ -189,13 +189,13 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSend, disabled = false, o
             aria-label={isListening ? "Stop dictation" : "Dictate a message"}
             aria-pressed={isListening}
             className={cn(
-              "h-11 w-11 flex-shrink-0 rounded-xl border",
+              "h-10 w-10 flex-shrink-0 rounded-lg",
               isListening
-                ? "border-destructive bg-destructive/10 text-destructive hover:bg-destructive/10"
-                : "border-border bg-muted text-ink-faint hover:border-primary hover:bg-muted hover:text-foreground"
+                ? "bg-destructive/10 text-destructive hover:bg-destructive/10"
+                : "text-muted-foreground hover:bg-secondary hover:text-foreground"
             )}
           >
-            <FaMicrophone size={15} />
+            <FaMicrophone size={16} />
           </Button>
         )}
 
@@ -204,62 +204,55 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSend, disabled = false, o
           variant="ghost"
           title="Image Generation Settings"
           aria-label="Image Generation Settings"
-          className="h-11 w-11 flex-shrink-0 rounded-xl border border-border bg-muted text-ink-faint hover:border-primary hover:bg-muted hover:text-foreground"
+          className="h-10 w-10 flex-shrink-0 rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground"
         >
-          <FaCog size={14} />
+          <FaCog size={16} />
         </Button>
 
-        <div className="flex-1 flex items-center gap-2 bg-muted border border-border rounded-2xl min-h-[44px] pl-4 pr-1.5 py-0.5 shadow-sm">
-          <textarea
-            ref={inputRef}
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            rows={1}
-            placeholder={disabled ? "Waiting for response..." : characterName ? `Message ${characterName}…` : "Type a message..."}
-            className="flex-1 px-0 py-1 leading-[22px] bg-transparent text-foreground placeholder-ink-faint outline-none transition-colors resize-none disabled:opacity-50"
-            style={{ fontSize: 'var(--chat-font-size, 16px)', maxHeight: MAX_TEXTAREA_HEIGHT }}
-            disabled={disabled}
-            onFocus={handleFocus}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                handleSend();
-              }
-            }}
-            aria-label="Message input"
-            aria-busy={disabled}
-          />
+        <textarea
+          ref={inputRef}
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          rows={1}
+          placeholder={disabled ? "Waiting for response..." : characterName ? `Message ${characterName}…` : "Type a message..."}
+          className="flex-1 min-w-0 px-2.5 py-1 leading-[22px] bg-transparent text-foreground placeholder-subtle outline-none transition-colors resize-none disabled:opacity-50"
+          style={{ fontSize: 'var(--chat-font-size, 16px)', maxHeight: MAX_TEXTAREA_HEIGHT }}
+          disabled={disabled}
+          onFocus={handleFocus}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault();
+              handleSend();
+            }
+          }}
+          aria-label="Message input"
+          aria-busy={disabled}
+        />
 
-          {disabled && onStop ? (
-            <Button
-              onClick={onStop}
-              variant="destructive"
-              size="icon"
-              className="h-9 w-9 flex-shrink-0 shadow-md hover:scale-105"
-              title="Stop Generating"
-              aria-label="Stop Generating"
-            >
-              <FaStop size={13} />
-            </Button>
-          ) : (
-            <Button
-              onClick={handleSend}
-              variant="ghost"
-              size="icon"
-              className={cn(
-                "h-9 w-9 flex-shrink-0 shadow-md",
-                canSend
-                  ? "bg-gemini-logo text-onAccent hover:scale-105 hover:brightness-105"
-                  : "bg-accent text-ink-faint cursor-not-allowed hover:bg-accent"
-              )}
-              disabled={!canSend}
-              title="Send Message"
-              aria-label="Send Message"
-            >
-              <FaPaperPlane size={14} className={canSend ? "ml-0.5" : ""} />
-            </Button>
-          )}
-        </div>
+        {disabled && onStop ? (
+          <Button
+            onClick={onStop}
+            variant="destructive"
+            className="h-10 flex-shrink-0 rounded-lg font-semibold"
+            title="Stop Generating"
+            aria-label="Stop Generating"
+          >
+            <FaStop size={13} /> Stop
+          </Button>
+        ) : (
+          <Button
+            onClick={handleSend}
+            className={cn(
+              "h-10 flex-shrink-0 rounded-lg font-semibold shadow-none",
+              !canSend && "bg-accent text-muted-foreground cursor-not-allowed hover:bg-accent"
+            )}
+            disabled={!canSend}
+            title="Send Message"
+            aria-label="Send Message"
+          >
+            Send <FaPaperPlane size={14} />
+          </Button>
+        )}
       </div>
 
       <ImageSettingsModal

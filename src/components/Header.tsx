@@ -100,7 +100,12 @@ const Header: React.FC<HeaderProps> = ({ title, subtitle, avatar, onBack, action
         {avatar}
         <div className="min-w-0 leading-tight">
           <div className={cn("text-[15px] font-semibold truncate text-foreground", avatar ? "font-serif" : "font-sans")}>{title}</div>
-          {subtitle && <div className="text-[11.5px] text-muted-foreground truncate">{subtitle}</div>}
+          {subtitle && (
+            <div className="text-[11.5px] text-muted-foreground truncate flex items-center gap-1.5">
+              {avatar && <span className="w-[6px] h-[6px] rounded-full bg-success flex-shrink-0" />}
+              {subtitle}
+            </div>
+          )}
         </div>
       </div>
 

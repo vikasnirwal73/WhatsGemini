@@ -37,7 +37,7 @@ interface ChatWindowProps {
 const TypingIndicator = ({ charInitials, accent }: { charInitials: string; accent?: [string, string] }) => (
   <div className="flex items-end gap-3 mb-6">
     <CharacterAvatar name={charInitials} accent={accent} size={32} className="mt-1" />
-    <div className="flex items-center gap-1 px-4 py-3.5 bg-card/[0.88] border border-border/40 shadow-soft rounded-2xl rounded-bl-[5px]">
+    <div className="flex items-center gap-1 px-4 py-3.5 bg-card/[0.88] border border-border/40 shadow-soft rounded-2xl rounded-tl-[5px]">
       {[0, 1, 2].map((i) => (
         <motion.span
           key={i}

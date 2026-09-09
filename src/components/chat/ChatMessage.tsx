@@ -97,7 +97,7 @@ const ChatMessage = React.memo(({
           "relative p-4 rounded-2xl max-w-[85%] md:max-w-[70%] min-w-0 group",
           isUser
             ? "bg-primary/[0.16] border border-primary/[0.28] text-foreground rounded-br-[5px]"
-            : "bg-card/[0.88] border border-border/40 shadow-soft text-foreground rounded-bl-[5px]"
+            : "bg-card/[0.88] border border-border/40 shadow-soft text-foreground rounded-tl-[5px]"
         )}
         style={{ fontSize: "var(--chat-font-size, 16px)" }}
       >
@@ -141,8 +141,9 @@ const ChatMessage = React.memo(({
           />
         ))}
 
-        {siblingInfo && (
-          <div className={cn("flex items-center gap-1.5 mt-2 font-sans", isUser ? "justify-end" : "justify-start")}>
+        {/* User messages: dropdown is the only action surface (always visible so it's reachable on touch devices) */}
+        {isUser && siblingInfo && (
+          <div className="flex items-center justify-end gap-1.5 mt-2 font-sans">
             <span
               className="text-[11px] font-mono font-semibold text-subtle tabular-nums"
               title={`${siblingInfo.total} variants of this message`}
@@ -165,7 +166,6 @@ const ChatMessage = React.memo(({
           </div>
         )}
 
-        {/* User messages: dropdown is the only action surface (always visible so it's reachable on touch devices) */}
         {isUser && (
           <div className="absolute top-2 right-2">
             <DropdownMenu>
@@ -197,10 +197,10 @@ const ChatMessage = React.memo(({
         {/* AI messages: one inline action row, no duplicate dropdown */}
         {!isUser && (
           <div className="flex items-center gap-1 mt-3 pt-2.5 border-t border-border/30 font-sans">
-            <Button variant="ghost" onClick={handleCopy} className="h-auto w-auto px-2 py-1 gap-1.5 rounded-full text-xs font-normal text-muted-foreground hover:bg-secondary hover:text-foreground">
+            <Button variant="ghost" onClick={handleCopy} className="h-auto w-auto px-2 py-1 gap-1.5 rounded-md text-xs font-normal text-muted-foreground hover:bg-secondary hover:text-foreground">
               <FaCopy size={12} /> Copy
             </Button>
-            <Button variant="ghost" onClick={handleRegenerate} className="h-auto w-auto px-2 py-1 gap-1.5 rounded-full text-xs font-normal text-muted-foreground hover:bg-secondary hover:text-foreground">
+            <Button variant="ghost" onClick={handleRegenerate} className="h-auto w-auto px-2 py-1 gap-1.5 rounded-md text-xs font-normal text-muted-foreground hover:bg-secondary hover:text-foreground">
               <FaRedo size={12} /> Regenerate
             </Button>
             {speechSupported && (
@@ -208,16 +208,40 @@ const ChatMessage = React.memo(({
                 variant="ghost"
                 onClick={handleToggleSpeak}
                 className={cn(
-                  "h-auto w-auto px-2 py-1 gap-1.5 rounded-full text-xs font-normal hover:bg-secondary",
+                  "h-auto w-auto px-2 py-1 gap-1.5 rounded-md text-xs font-normal hover:bg-secondary",
                   isSpeaking ? "text-primary hover:text-primary" : "text-muted-foreground hover:text-foreground"
                 )}
               >
                 {isSpeaking ? <FaStop size={12} /> : <FaVolumeUp size={12} />} {isSpeaking ? "Stop" : "Speak"}
               </Button>
             )}
-            <Button variant="ghost" onClick={handleEdit} className="h-auto w-auto px-2 py-1 gap-1.5 rounded-full text-xs font-normal text-muted-foreground hover:bg-secondary hover:text-foreground">
+            <Button variant="ghost" onClick={handleEdit} className="h-auto w-auto px-2 py-1 gap-1.5 rounded-md text-xs font-normal text-muted-foreground hover:bg-secondary hover:text-foreground">
               <FaEdit size={12} /> Edit
             </Button>
+            {siblingInfo && (
+              <>
+                <div className="flex-1" />
+                <span
+                  className="text-[11px] font-mono font-semibold text-subtle tabular-nums"
+                  title={`${siblingInfo.total} variants of this message`}
+                >
+                  {siblingInfo.index + 1}/{siblingInfo.total}
+                </span>
+                {onDeleteBranch && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={handleDeleteBranch}
+                    disabled={aiLoading}
+                    className="h-auto w-auto p-1.5 rounded-md text-subtle hover:bg-destructive/15 hover:text-destructive"
+                    aria-label="Delete this variant"
+                    title="Delete this variant"
+                  >
+                    <FaTrash size={10} />
+                  </Button>
+                )}
+              </>
+            )}
           </div>
         )}
       </div>
