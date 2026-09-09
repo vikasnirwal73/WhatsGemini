@@ -67,12 +67,12 @@ export const DisplayImage: React.FC<DisplayImageProps> = ({ srcContext, classNam
   }, [srcContext]);
 
   if (error || !srcContext) {
-    return <div className={`bg-panel2 flex items-center justify-center text-ink-muted text-xs p-2 rounded ${className}`}>Failed to load image</div>;
+    return <div className={`bg-muted flex items-center justify-center text-muted-foreground text-xs p-2 rounded ${className}`}>Failed to load image</div>;
   }
 
   return objectUrl ? (
     <img src={objectUrl} alt={alt || "Image"} className={className} {...props} />
   ) : (
-    <div className={`animate-pulse bg-panel2 rounded ${className}`} />
+    <div className={`animate-pulse bg-muted rounded ${className}`} />
   );
 };

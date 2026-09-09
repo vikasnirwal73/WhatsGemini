@@ -27,7 +27,7 @@ export const DropdownMenu = ({ trigger, children, align = "end", open: openProp,
           <RadixDropdownMenu.Portal forceMount>
             <RadixDropdownMenu.Content asChild align={align} sideOffset={6} forceMount>
               <motion.div
-                className="z-[70] min-w-[170px] py-1.5 rounded-xl shadow-xl border border-line bg-panel focus:outline-none"
+                className="z-[70] min-w-[170px] py-1.5 rounded-xl shadow-xl border border-border bg-card focus:outline-none"
                 initial={{ opacity: 0, scale: 0.96, y: -4 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.96, y: -4 }}
@@ -58,8 +58,8 @@ export const DropdownMenuItem = ({ icon: Icon, label, onClick, disabled, danger,
     disabled={disabled}
     className={cn(
       "flex items-center gap-3 mx-1.5 px-3 py-2 text-sm rounded-lg outline-none select-none",
-      disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer data-[highlighted]:bg-app",
-      danger ? "text-red-500" : active ? "text-primary" : "text-ink"
+      disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer data-[highlighted]:bg-background",
+      danger ? "text-red-500" : active ? "text-primary" : "text-foreground"
     )}
   >
     <Icon size={14} />
@@ -71,5 +71,5 @@ export const DropdownMenuItem = ({ icon: Icon, label, onClick, disabled, danger,
 // session) inside a dropdown - mirrors the vertical dividers used between the
 // same groups in Header's desktop icon row.
 export const DropdownMenuSeparator = () => (
-  <RadixDropdownMenu.Separator className="h-px bg-line my-1.5 mx-1.5" />
+  <RadixDropdownMenu.Separator className="h-px bg-border my-1.5 mx-1.5" />
 );

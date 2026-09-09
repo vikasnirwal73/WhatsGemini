@@ -6,7 +6,7 @@ import { Textarea } from "./textarea";
 import { Label } from "./label";
 import { Slider as ShadcnSlider } from "./slider";
 
-const fieldBase = "w-full p-3 bg-panel2 text-ink placeholder-ink-faint rounded-xl border border-line focus:border-primary outline-none transition-all disabled:opacity-50";
+const fieldBase = "w-full p-3 bg-muted text-foreground placeholder-ink-faint rounded-xl border border-border focus:border-primary outline-none transition-all disabled:opacity-50";
 
 export const TextInput = Input;
 
@@ -19,7 +19,7 @@ export const Select = React.forwardRef<HTMLSelectElement, React.SelectHTMLAttrib
         {children}
       </select>
       <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-4">
-        <FaChevronDown size={12} className="text-ink-muted" />
+        <FaChevronDown size={12} className="text-muted-foreground" />
       </div>
     </div>
   )
@@ -36,7 +36,7 @@ interface FieldLabelProps {
 export const FieldLabel: React.FC<FieldLabelProps> = ({ children, hint, className, htmlFor }) => (
   <div className={cn("mb-1.5", className)}>
     <Label htmlFor={htmlFor}>{children}</Label>
-    {hint && <p className="text-xs text-ink-muted mt-0.5">{hint}</p>}
+    {hint && <p className="text-xs text-muted-foreground mt-0.5">{hint}</p>}
   </div>
 );
 

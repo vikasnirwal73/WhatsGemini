@@ -29,9 +29,9 @@ const ServiceWorkerUpdater: React.FC = () => {
   if (!waitingWorker) return null;
 
   return (
-    <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[300] flex items-center gap-3 px-4 py-3 rounded-xl shadow-2xl bg-panel border border-line">
+    <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[300] flex items-center gap-3 px-4 py-3 rounded-xl shadow-2xl bg-card border border-border">
       <FaSyncAlt size={14} className="text-primary flex-shrink-0" />
-      <span className="text-sm text-ink">A new version is available.</span>
+      <span className="text-sm text-foreground">A new version is available.</span>
       <button
         onClick={applyUpdate}
         className="px-3 py-1.5 rounded-lg bg-primary text-onAccent text-sm font-semibold hover:bg-primary-hover transition flex-shrink-0"

@@ -41,7 +41,7 @@ const HighlightedText = ({ text, query }: { text: string; query: string }) => {
     <>
       {parts.map((part, i) =>
         part.toLowerCase() === query.toLowerCase() ? (
-          <mark key={i} className="bg-primary/25 text-ink rounded-sm">{part}</mark>
+          <mark key={i} className="bg-primary/25 text-foreground rounded-sm">{part}</mark>
         ) : (
           <React.Fragment key={i}>{part}</React.Fragment>
         )
@@ -161,16 +161,16 @@ const Sidebar = () => {
       {/* Sidebar */}
       <aside
         className={cn(
-          "fixed z-50 top-0 left-0 w-[300px] h-full bg-panel border-r border-line flex flex-col transition-transform transform md:relative md:translate-x-0",
+          "fixed z-50 top-0 left-0 w-[300px] h-full bg-card border-r border-border flex flex-col transition-transform transform md:relative md:translate-x-0",
           isOpen ? "translate-x-0" : "-translate-x-full"
         )}
         aria-label="Sidebar"
       >
         {/* Logo header - h-[60px] to match Header.tsx so the border-b seam lines up */}
-        <div className="h-[60px] px-4 flex items-center gap-[11px] border-b border-line flex-shrink-0">
+        <div className="h-[60px] px-4 flex items-center gap-[11px] border-b border-border flex-shrink-0">
           <Logo size={36} className="shadow-lg shadow-primary/30 rounded-[11px] flex-shrink-0" />
           <div className="leading-tight flex-1 min-w-0">
-            <div className="font-bold text-[15.5px] tracking-tight text-ink">WhatsGemini</div>
+            <div className="font-bold text-[15.5px] tracking-tight text-foreground">WhatsGemini</div>
             <div className="text-[11px] text-ink-faint font-medium">Gemini characters</div>
           </div>
         </div>
@@ -188,7 +188,7 @@ const Sidebar = () => {
           <Button
             onClick={handleImportClick}
             variant="panel"
-            className="w-full h-auto py-2.5 rounded-[11px] border border-line text-ink-muted text-[13px] font-medium hover:border-primary hover:text-ink"
+            className="w-full h-auto py-2.5 rounded-[11px] border border-border text-muted-foreground text-[13px] font-medium hover:border-primary hover:text-foreground"
           >
             <FaFileImport size={13} />
             <span>Import chat</span>
@@ -204,14 +204,14 @@ const Sidebar = () => {
 
         {/* Search */}
         <div className="px-3.5 pb-2.5 flex-shrink-0">
-          <div className="flex items-center gap-2 bg-panel2 border border-line rounded-[10px] px-[11px] py-[9px]">
+          <div className="flex items-center gap-2 bg-muted border border-border rounded-[10px] px-[11px] py-[9px]">
             <FaSearch size={12} className="text-ink-faint flex-shrink-0" />
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search chats and messages"
               aria-label="Search chats and messages"
-              className="flex-1 min-w-0 bg-transparent text-[12.5px] text-ink placeholder-ink-faint outline-none"
+              className="flex-1 min-w-0 bg-transparent text-[12.5px] text-foreground placeholder-ink-faint outline-none"
             />
           </div>
         </div>
@@ -264,7 +264,7 @@ const Sidebar = () => {
         title="Select a Character"
       >
         {characters.length === 0 ? (
-          <p className="text-ink-muted text-center py-4">No characters available.</p>
+          <p className="text-muted-foreground text-center py-4">No characters available.</p>
         ) : (
           characters.map((char: Character) => (
             <Button
@@ -278,9 +278,9 @@ const Sidebar = () => {
             >
               <CharacterAvatar name={char.name} accent={char.accent} size={40} />
               <div>
-                <h3 className="font-medium text-ink">{char.name}</h3>
+                <h3 className="font-medium text-foreground">{char.name}</h3>
                 {char.description && (
-                  <p className="text-xs text-ink-muted line-clamp-1">{char.description}</p>
+                  <p className="text-xs text-muted-foreground line-clamp-1">{char.description}</p>
                 )}
               </div>
             </Button>
@@ -307,17 +307,17 @@ const ChatList = ({ items, characters, onDeleteChat, onTogglePin, onNavigate, qu
             <CharacterAvatar name={character?.name || chat.title} accent={character?.accent} size={34} />
             <div className="flex-1 flex flex-col overflow-hidden min-w-0">
               <div className="flex items-center gap-1.5">
-                <span className="flex-1 min-w-0 text-ink font-semibold text-[13.5px] truncate">
+                <span className="flex-1 min-w-0 text-foreground font-semibold text-[13.5px] truncate">
                   <HighlightedText text={chat.title} query={query} />
                 </span>
                 <span className="text-[10.5px] text-ink-faint flex-shrink-0">{formatChatTime(chat.timestamp)}</span>
               </div>
               {snippet ? (
-                <span className="text-xs text-ink-muted truncate">
+                <span className="text-xs text-muted-foreground truncate">
                   <HighlightedText text={snippet} query={query} />
                 </span>
               ) : character?.description ? (
-                <span className="text-xs text-ink-muted truncate">{character.description}</span>
+                <span className="text-xs text-muted-foreground truncate">{character.description}</span>
               ) : null}
             </div>
             <Button

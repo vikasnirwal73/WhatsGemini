@@ -536,11 +536,11 @@ const SettingsPage = () => {
   const renderAccordion = (id: string, icon: React.ReactNode, title: string, subtitle: string, children: React.ReactNode) => (
     <AccordionItem value={id}>
       <AccordionTrigger>
-        <span className="w-[34px] h-[34px] rounded-[10px] bg-panel3 flex items-center justify-center text-primary flex-shrink-0">
+        <span className="w-[34px] h-[34px] rounded-[10px] bg-accent flex items-center justify-center text-primary flex-shrink-0">
           {icon}
         </span>
         <span className="flex-1 min-w-0">
-          <span className="block text-[14px] font-semibold text-ink">{title}</span>
+          <span className="block text-[14px] font-semibold text-foreground">{title}</span>
           <span className="block text-xs text-ink-faint mt-0.5">{subtitle}</span>
         </span>
       </AccordionTrigger>
@@ -549,14 +549,14 @@ const SettingsPage = () => {
   );
 
   return (
-    <div className="w-full h-screen flex flex-col bg-app">
+    <div className="w-full h-screen flex flex-col bg-background">
       <Header title="Settings" subtitle="Providers, chat behavior, and data" onBack={goBackOrHome} />
       <div className="flex-1 overflow-auto p-4 md:p-8 flex justify-center">
       <div className="w-full max-w-[32rem] bg-transparent">
 
         <div className="mb-6 flex items-center justify-between">
-          <h1 className="text-xl font-semibold tracking-tight text-ink">AI Provider Settings</h1>
-          <FaInfoCircle className="text-ink-muted" size={18} />
+          <h1 className="text-xl font-semibold tracking-tight text-foreground">AI Provider Settings</h1>
+          <FaInfoCircle className="text-muted-foreground" size={18} />
         </div>
 
         {/* Toast Notifications */}
@@ -650,7 +650,7 @@ const SettingsPage = () => {
               <option value="20px">Extra Large</option>
             </Select>
 
-            <div className="border-t border-line pt-4">
+            <div className="border-t border-border pt-4">
               <InitialMessages
                 key={initialMessagesKey}
                 onSave={handleInitialMessagesSave}
@@ -662,7 +662,7 @@ const SettingsPage = () => {
         {renderAccordion("safety", <FaShieldAlt size={15} />, "Safety Settings", chatProvider === "gemini" ? "Content filtering thresholds" : "Gemini only - not used by other providers",
           <>
             {chatProvider !== "gemini" && (
-              <p className="text-sm text-ink-muted mb-4">
+              <p className="text-sm text-muted-foreground mb-4">
                 Safety settings only apply when Google Gemini is the selected chat provider - other providers don't expose an equivalent control.
               </p>
             )}
@@ -687,8 +687,8 @@ const SettingsPage = () => {
 
         {renderAccordion("data", <FaDatabase size={15} />, "Data & Import/Export", "Import / export conversations",
           <>
-            <p className="text-sm font-medium text-ink mb-1">Full Backup</p>
-            <p className="text-xs text-ink-muted mb-1">
+            <p className="text-sm font-medium text-foreground mb-1">Full Backup</p>
+            <p className="text-xs text-muted-foreground mb-1">
               All chats, characters, settings, and locally-saved images (if you've picked a save folder) in one zip - everything lives only in this browser, so it's worth keeping a copy. Restoring always adds to your existing library, never overwrites it.
             </p>
             <p className="text-xs text-ink-faint mb-3">
@@ -710,8 +710,8 @@ const SettingsPage = () => {
                />
             </div>
 
-            <p className="text-sm font-medium text-ink mb-1">Settings Only</p>
-            <p className="text-xs text-ink-muted mb-3">
+            <p className="text-sm font-medium text-foreground mb-1">Settings Only</p>
+            <p className="text-xs text-muted-foreground mb-3">
               Just your model/generation preferences - no chats or characters.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 mb-2">

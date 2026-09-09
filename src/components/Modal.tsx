@@ -14,12 +14,12 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }) => {
   return (
     <DialogRoot open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent size="sm">
-        <div className="p-4 border-b border-line flex justify-between items-center flex-shrink-0">
+        <div className="p-4 border-b border-border flex justify-between items-center flex-shrink-0">
           <DialogTitle asChild>
-            <h2 className="text-lg font-bold text-ink">{title}</h2>
+            <h2 className="text-lg font-bold text-foreground">{title}</h2>
           </DialogTitle>
           <DialogClose asChild>
-            <Button variant="ghost" size="icon" className="h-auto w-auto p-1 -m-1 rounded-full text-ink-muted hover:text-ink" aria-label="Close">
+            <Button variant="ghost" size="icon" className="h-auto w-auto p-1 -m-1 rounded-full text-muted-foreground hover:text-foreground" aria-label="Close">
               <FaTimes />
             </Button>
           </DialogClose>

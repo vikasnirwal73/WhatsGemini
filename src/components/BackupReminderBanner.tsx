@@ -46,7 +46,7 @@ const BackupReminderBanner = () => {
   return (
     <div className="flex items-center gap-3 px-4 py-2.5 bg-primary/10 border-b border-primary/30 text-[13px] flex-shrink-0">
       <FaFileArchive className="text-primary flex-shrink-0" size={14} />
-      <span className="flex-1 text-ink font-medium min-w-0">
+      <span className="flex-1 text-foreground font-medium min-w-0">
         {lastBackupAt
           ? "It's been a while since your last backup - everything here only lives in this browser."
           : "You haven't backed up yet - everything here only lives in this browser."}
@@ -59,7 +59,7 @@ const BackupReminderBanner = () => {
       </button>
       <button
         onClick={handleDismiss}
-        className="p-1.5 rounded-md text-ink-muted hover:bg-panel3 hover:text-ink transition flex-shrink-0"
+        className="p-1.5 rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition flex-shrink-0"
         aria-label="Dismiss, remind me later"
         title="Remind me later"
       >

@@ -76,13 +76,13 @@ const InitialMessages: React.FC<InitialMessagesProps> = ({ onSave }) => {
 
   return (
     <div>
-      <label className="block font-semibold text-ink mb-5">
+      <label className="block font-semibold text-foreground mb-5">
         {initialMessages.length === 0 ? "Add a predefined system message" : "Predefined System Messages"}
       </label>
       {initialMessages.map((msg, idx) => (
         <div
           key={idx}
-          className="mb-5 p-3 shadow-sm rounded-2xl bg-panel border border-line flex flex-col gap-2 relative"
+          className="mb-5 p-3 shadow-sm rounded-2xl bg-card border border-border flex flex-col gap-2 relative"
         >
           <Select
             value={msg.role}
@@ -99,7 +99,7 @@ const InitialMessages: React.FC<InitialMessagesProps> = ({ onSave }) => {
           {initialMessages.length > 1 && (
             <button
               onClick={() => handleDeleteMessage(idx)}
-              className="absolute -top-4 right-2 flex items-center justify-center bg-red-500 text-white hover:bg-red-600 w-8 h-8 rounded-full shadow-md transition hover:opacity-100 opacity-90 border-2 border-panel"
+              className="absolute -top-4 right-2 flex items-center justify-center bg-red-500 text-white hover:bg-red-600 w-8 h-8 rounded-full shadow-md transition hover:opacity-100 opacity-90 border-2 border-card"
             >
               <FaTrash size={14} />
             </button>

@@ -61,7 +61,7 @@ export const DialogContent = React.forwardRef<HTMLDivElement, DialogContentProps
         <motion.div
           ref={ref}
           className={cn(
-            "w-full bg-panel rounded-2xl shadow-2xl border border-line overflow-hidden flex flex-col focus:outline-none",
+            "w-full bg-card rounded-2xl shadow-2xl border border-border overflow-hidden flex flex-col focus:outline-none",
             sizeClasses[size],
             className
           )}

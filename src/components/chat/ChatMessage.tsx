@@ -65,8 +65,8 @@ const ChatMessage = React.memo(({
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.2, ease: "easeOut" }}
       >
-        <div className="max-w-[90%] md:max-w-[70%] rounded-2xl border border-line bg-panel2 px-4 py-3 text-center">
-          <div className="flex items-center justify-center gap-2 text-xs font-semibold text-ink-muted mb-1.5">
+        <div className="max-w-[90%] md:max-w-[70%] rounded-2xl border border-border bg-muted px-4 py-3 text-center">
+          <div className="flex items-center justify-center gap-2 text-xs font-semibold text-muted-foreground mb-1.5">
             <FaCompressArrowsAlt size={11} />
             Compressed history
           </div>
@@ -93,7 +93,7 @@ const ChatMessage = React.memo(({
           "relative p-4 rounded-2xl max-w-[85%] md:max-w-[70%] shadow-sm min-w-0 group",
           isUser
             ? "bg-bubble-sent text-bubble-sentFg rounded-br-[5px]"
-            : "bg-bubble-received text-bubble-receivedFg rounded-bl-[5px] border border-line"
+            : "bg-bubble-received text-bubble-receivedFg rounded-bl-[5px] border border-border"
         )}
         style={{ fontSize: "var(--chat-font-size, 16px)" }}
       >
@@ -105,7 +105,7 @@ const ChatMessage = React.memo(({
             srcContext={imgSrc}
             alt="Generated"
             onClick={() => setFullscreenImage(imgSrc)}
-            className="mt-2 max-w-full rounded-lg shadow-sm border border-line cursor-zoom-in hover:opacity-90 transition-opacity"
+            className="mt-2 max-w-full rounded-lg shadow-sm border border-border cursor-zoom-in hover:opacity-90 transition-opacity"
           />
         ))}
 
@@ -114,7 +114,7 @@ const ChatMessage = React.memo(({
             <div
               className={cn(
                 "flex items-center gap-0.5 rounded-full text-[11px] font-mono font-semibold pl-1.5 pr-1 py-1",
-                isUser ? "bg-black/10 text-bubble-sentFg" : "bg-panel2 border border-line text-ink-muted"
+                isUser ? "bg-black/10 text-bubble-sentFg" : "bg-muted border border-border text-muted-foreground"
               )}
               title={`${siblingInfo.total} variants of this message`}
             >
@@ -164,7 +164,7 @@ const ChatMessage = React.memo(({
                   "p-1.5 rounded-full transition",
                   isUser
                     ? "text-bubble-sentFg/70 hover:text-bubble-sentFg hover:bg-black/10"
-                    : "text-ink-muted hover:text-ink hover:bg-app"
+                    : "text-muted-foreground hover:text-foreground hover:bg-background"
                 )}
                 title="More options"
                 aria-label="Message options"
@@ -186,19 +186,19 @@ const ChatMessage = React.memo(({
 
         {/* Action Row for AI Messages */}
         {!isUser && (
-          <div className="flex items-center gap-4 mt-3 pt-2 text-xs text-ink-muted">
-            <button onClick={handleCopy} className="flex items-center gap-1.5 hover:text-ink transition">
+          <div className="flex items-center gap-4 mt-3 pt-2 text-xs text-muted-foreground">
+            <button onClick={handleCopy} className="flex items-center gap-1.5 hover:text-foreground transition">
               <FaCopy size={12} /> Copy
             </button>
-            <button onClick={handleRegenerate} className="flex items-center gap-1.5 hover:text-ink transition">
+            <button onClick={handleRegenerate} className="flex items-center gap-1.5 hover:text-foreground transition">
               <FaRedo size={12} /> Regenerate
             </button>
             {speechSupported && (
-              <button onClick={handleToggleSpeak} className={cn("flex items-center gap-1.5 transition", isSpeaking ? "text-primary" : "hover:text-ink")}>
+              <button onClick={handleToggleSpeak} className={cn("flex items-center gap-1.5 transition", isSpeaking ? "text-primary" : "hover:text-foreground")}>
                 {isSpeaking ? <FaStop size={12} /> : <FaVolumeUp size={12} />} {isSpeaking ? "Stop" : "Speak"}
               </button>
             )}
-            <button onClick={handleEdit} className="flex items-center gap-1.5 hover:text-ink transition">
+            <button onClick={handleEdit} className="flex items-center gap-1.5 hover:text-foreground transition">
               <FaEdit size={12} /> Edit
             </button>
           </div>

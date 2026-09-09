@@ -160,7 +160,7 @@ const ImageSettingsModal: React.FC<ImageSettingsModalProps> = ({ isOpen, onClose
 
             <div>
               <div className="flex justify-between items-center mb-1.5">
-                <label className="block text-sm font-medium text-ink">SD Model</label>
+                <label className="block text-sm font-medium text-foreground">SD Model</label>
                 <Button type="button" variant="link" onClick={fetchSdModels} className="h-auto p-0 text-xs text-primary hover:text-primary-hover no-underline hover:no-underline">
                   Refresh Models
                 </Button>
@@ -194,7 +194,7 @@ const ImageSettingsModal: React.FC<ImageSettingsModalProps> = ({ isOpen, onClose
 
             {sdWebuiRefMode === "img2img" && (
               <div>
-                <div className="flex justify-between text-sm text-ink-muted mb-2">
+                <div className="flex justify-between text-sm text-muted-foreground mb-2">
                   <span>Denoising Strength</span>
                   <span className="font-mono text-xs">{sdWebuiDenoising}</span>
                 </div>

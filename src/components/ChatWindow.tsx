@@ -29,7 +29,7 @@ interface ChatWindowProps {
 const TypingIndicator = ({ charInitials, accent }: { charInitials: string; accent?: [string, string] }) => (
   <div className="flex items-end gap-3 mb-6">
     <CharacterAvatar name={charInitials} accent={accent} size={32} className="mt-1" />
-    <div className="flex items-center gap-1 px-4 py-3.5 bg-bubble-received border border-line rounded-2xl rounded-bl-[5px]">
+    <div className="flex items-center gap-1 px-4 py-3.5 bg-bubble-received border border-border rounded-2xl rounded-bl-[5px]">
       {[0, 1, 2].map((i) => (
         <motion.span
           key={i}
@@ -236,15 +236,15 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ messages = [], tree, onSwitchBr
     >
       {filteredMessages.length === 0 ? (
         <div className="flex flex-col items-center h-full w-full px-4 pt-10">
-          <div className="flex flex-col items-center text-center gap-3 w-full max-w-[440px] px-5 py-8 bg-panel border border-line rounded-2xl shadow-sm">
+          <div className="flex flex-col items-center text-center gap-3 w-full max-w-[440px] px-5 py-8 bg-card border border-border rounded-2xl shadow-sm">
             <CharacterAvatar name={charInitials} accent={character?.accent} size={64} className="text-2xl" />
             <div>
-              <div className="text-[19px] font-bold tracking-tight text-ink">{characterName || "New Conversation"}</div>
+              <div className="text-[19px] font-bold tracking-tight text-foreground">{characterName || "New Conversation"}</div>
               {character?.relationship && (
                 <div className="text-[13px] text-primary font-medium mt-0.5">{character.relationship}</div>
               )}
             </div>
-            <p className="text-[13.5px] leading-relaxed text-ink-muted">
+            <p className="text-[13.5px] leading-relaxed text-muted-foreground">
               {character?.description || "Send a message to get started."}
             </p>
           </div>
@@ -292,12 +292,12 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ messages = [], tree, onSwitchBr
       {/* Full Screen Edit Modal */}
       <DialogRoot open={editingIndex !== null} onOpenChange={(open) => !open && cancelEdit()}>
         <DialogContent size="lg" className="h-[80vh] md:h-[70vh]">
-          <div className="flex items-center justify-between p-4 border-b border-line flex-shrink-0">
+          <div className="flex items-center justify-between p-4 border-b border-border flex-shrink-0">
             <DialogTitle asChild>
-              <h3 className="text-lg font-semibold text-ink">Edit Message</h3>
+              <h3 className="text-lg font-semibold text-foreground">Edit Message</h3>
             </DialogTitle>
             <DialogClose asChild>
-              <Button variant="ghost" size="icon" className="h-auto w-auto p-2 -m-2 rounded-full text-ink-muted hover:bg-app hover:text-ink">
+              <Button variant="ghost" size="icon" className="h-auto w-auto p-2 -m-2 rounded-full text-muted-foreground hover:bg-background hover:text-foreground">
                 <FaTimes size={18} />
               </Button>
             </DialogClose>
@@ -308,7 +308,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ messages = [], tree, onSwitchBr
               ref={(el) => { if (el) el.focus() }}
               value={editText}
               onChange={(e) => setEditText(e.target.value)}
-              className="flex-1 w-full p-4 rounded-xl border border-line bg-app text-ink focus:ring-2 focus:ring-primary focus:border-transparent outline-none resize-none text-base disabled:opacity-50"
+              className="flex-1 w-full p-4 rounded-xl border border-border bg-background text-foreground focus:ring-2 focus:ring-primary focus:border-transparent outline-none resize-none text-base disabled:opacity-50"
               placeholder="Type your message here..."
               onKeyDown={(e) => {
                 if (e.key === "Enter" && !e.shiftKey) {
@@ -317,13 +317,13 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ messages = [], tree, onSwitchBr
                 }
               }}
             />
-            <div className="mt-2 text-xs text-ink-muted flex flex-col sm:flex-row sm:justify-between gap-1">
+            <div className="mt-2 text-xs text-muted-foreground flex flex-col sm:flex-row sm:justify-between gap-1">
               <span>Markdown is supported.</span>
-              <span className="hidden sm:inline"><kbd className="bg-panel2 px-1.5 py-0.5 rounded">Enter</kbd> to save, <kbd className="bg-panel2 px-1.5 py-0.5 rounded">Shift+Enter</kbd> for new line, <kbd className="bg-panel2 px-1.5 py-0.5 rounded">Esc</kbd> to cancel</span>
+              <span className="hidden sm:inline"><kbd className="bg-muted px-1.5 py-0.5 rounded">Enter</kbd> to save, <kbd className="bg-muted px-1.5 py-0.5 rounded">Shift+Enter</kbd> for new line, <kbd className="bg-muted px-1.5 py-0.5 rounded">Esc</kbd> to cancel</span>
             </div>
           </div>
 
-          <div className="p-4 border-t border-line flex flex-col sm:flex-row justify-between gap-3 bg-app items-stretch sm:items-center flex-shrink-0">
+          <div className="p-4 border-t border-border flex flex-col sm:flex-row justify-between gap-3 bg-background items-stretch sm:items-center flex-shrink-0">
             <ToggleSwitch
               checked={editIsImageRequest}
               onChange={setEditIsImageRequest}
@@ -335,7 +335,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ messages = [], tree, onSwitchBr
               <Button
                 onClick={cancelEdit}
                 variant="ghost"
-                className="flex-1 sm:flex-none h-auto px-5 py-2.5 rounded-xl font-medium text-ink-muted hover:bg-panel2"
+                className="flex-1 sm:flex-none h-auto px-5 py-2.5 rounded-xl font-medium text-muted-foreground hover:bg-muted"
               >
                 Cancel
               </Button>

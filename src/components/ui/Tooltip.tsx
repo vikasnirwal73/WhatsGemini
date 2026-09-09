@@ -19,10 +19,10 @@ export const Tooltip: React.FC<TooltipProps> = ({ label, children, side = "botto
       <RadixTooltip.Content
         side={side}
         sideOffset={6}
-        className="z-[80] px-2.5 py-1.5 rounded-lg bg-ink text-app text-[12px] font-medium shadow-lg select-none"
+        className="z-[80] px-2.5 py-1.5 rounded-lg bg-foreground text-background text-[12px] font-medium shadow-lg select-none"
       >
         {label}
-        <RadixTooltip.Arrow className="fill-ink" width={8} height={4} />
+        <RadixTooltip.Arrow className="fill-foreground" width={8} height={4} />
       </RadixTooltip.Content>
     </RadixTooltip.Portal>
   </RadixTooltip.Root>

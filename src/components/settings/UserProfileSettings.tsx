@@ -28,7 +28,7 @@ const UserProfileSettings: React.FC<UserProfileSettingsProps> = ({ userProfile, 
           onChange={(e) => setUserProfile({ ...userProfile, bio: e.target.value })}
         />
       </div>
-      <p className="text-xs text-ink-muted">
+      <p className="text-xs text-muted-foreground">
         This information is shared with characters to personalize conversations.
       </p>
     </>

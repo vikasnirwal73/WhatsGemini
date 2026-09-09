@@ -28,12 +28,10 @@ module.exports = {
         },
         // Note: this app's own --color-accent has historically meant "same brand
         // color as primary" (see tokens.css), which collides with shadcn/ui's meaning
-        // of "accent" (a neutral hover/highlight surface). Since no existing class in
-        // this codebase uses bg-accent/text-accent (verified via grep - accent-2 is
-        // only referenced directly by the gemini-gradient), it's safe to point the
-        // `accent` key at the shadcn-meaning bridge variable instead; the raw brand
-        // color is still available via --color-accent directly (see gemini-gradient
-        // in backgroundImage below) for anything that wants it.
+        // of "accent" (a neutral hover/highlight surface, bridged from --color-panel3-bg).
+        // bg-accent below is that shadcn meaning (former bg-panel3 usages, renamed in the
+        // Phase 7 token rename); the raw brand color is still available via --color-accent
+        // directly (see gemini-gradient in backgroundImage below) for anything that wants it.
         accent: {
           DEFAULT: 'rgb(var(--accent) / <alpha-value>)',
           foreground: 'rgb(var(--accent-foreground) / <alpha-value>)',
@@ -65,29 +63,19 @@ module.exports = {
         input: 'rgb(var(--input) / <alpha-value>)',
         ring: 'rgb(var(--ring) / <alpha-value>)',
 
-        // Text
+        // Text tier with no shadcn-canonical equivalent (shadcn only has
+        // foreground/muted-foreground - this app has a third, fainter tier).
+        // text-ink/text-ink-muted were renamed to text-foreground/
+        // text-muted-foreground; text-ink-faint has no bridge counterpart.
         ink: {
-          DEFAULT: 'rgb(var(--color-text-main) / <alpha-value>)',
-          muted: 'rgb(var(--color-text-muted) / <alpha-value>)',
           faint: 'rgb(var(--color-text-faint) / <alpha-value>)',
         },
-        // Borders
-        line: 'rgb(var(--color-border-main) / <alpha-value>)',
+        // Hover surface distinct from --accent (shadcn's hover/highlight
+        // meaning) - no bridge counterpart, kept as its own token.
         hover: 'rgb(var(--color-hover-bg) / <alpha-value>)',
 
-        // Backgrounds
-        app: {
-          DEFAULT: 'rgb(var(--color-app-bg) / <alpha-value>)',
-          light: 'rgb(var(--color-app-bg) / <alpha-value>)', // dynamically mapped, light/dark suffixes kept for backwards compat but not strictly needed
-          dark: 'rgb(var(--color-app-bg) / <alpha-value>)',
-        },
-        panel: {
-          DEFAULT: 'rgb(var(--color-panel-bg) / <alpha-value>)',
-          light: 'rgb(var(--color-panel-bg) / <alpha-value>)',
-          dark: 'rgb(var(--color-panel-bg) / <alpha-value>)',
-        },
-        panel2: 'rgb(var(--color-panel2-bg) / <alpha-value>)',
-        panel3: 'rgb(var(--color-panel3-bg) / <alpha-value>)',
+        // Chat area background, distinct from --background - no bridge
+        // counterpart, kept as its own token.
         chat: 'rgb(var(--color-chat-bg) / <alpha-value>)',
 
         // Chat Bubbles

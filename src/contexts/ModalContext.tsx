@@ -81,7 +81,7 @@ export const ModalProvider = ({ children }: { children: ReactNode }) => {
           <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${modalState.isConfirm ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400' : 'bg-secondary/15 text-secondary'}`}>
             {modalState.isConfirm ? <FaExclamationTriangle size={18} /> : <FaInfoCircle size={18} />}
           </div>
-          <p className="text-ink-muted text-sm flex-1">
+          <p className="text-muted-foreground text-sm flex-1">
             {modalState.message}
           </p>
         </div>
@@ -90,7 +90,7 @@ export const ModalProvider = ({ children }: { children: ReactNode }) => {
           {modalState.isConfirm && (
             <button
               onClick={modalState.onCancel}
-              className="px-4 py-2 text-sm font-medium text-ink-muted bg-app rounded-lg hover:bg-panel2 transition"
+              className="px-4 py-2 text-sm font-medium text-muted-foreground bg-background rounded-lg hover:bg-muted transition"
             >
               Cancel
             </button>

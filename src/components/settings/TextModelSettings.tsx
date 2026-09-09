@@ -84,12 +84,12 @@ const TextModelSettings: React.FC<TextModelSettingsProps> = ({
       )}
 
       <div className="mb-6">
-        <div className="flex justify-between text-sm text-ink-muted mb-2">
+        <div className="flex justify-between text-sm text-muted-foreground mb-2">
           <span>Creativity</span>
           <span className="font-mono text-xs">{temperature.toFixed(1)}</span>
         </div>
         <Slider value={temperature} min={0} max={1} step={0.1} onChange={setTemperature} />
-        <div className="flex justify-between text-xs text-ink-muted mt-2">
+        <div className="flex justify-between text-xs text-muted-foreground mt-2">
           <span>Precise</span>
           <span>Creative</span>
         </div>
@@ -98,7 +98,7 @@ const TextModelSettings: React.FC<TextModelSettingsProps> = ({
       {isOllama ? (
         <>
           <div className="flex justify-between items-center mb-1.5">
-            <label className="block text-sm font-medium text-ink">Text Generation Model</label>
+            <label className="block text-sm font-medium text-foreground">Text Generation Model</label>
             <button
               type="button"
               onClick={fetchOllamaModels}

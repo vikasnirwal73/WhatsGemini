@@ -578,7 +578,7 @@ const ChatPage = () => {
   ];
 
   return (
-    <div className="flex flex-col w-full h-screen bg-app relative">
+    <div className="flex flex-col w-full h-screen bg-background relative">
       <Header
         title={character || "Chat"}
         subtitle={characterData?.relationship || characterData?.description}

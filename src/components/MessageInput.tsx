@@ -126,14 +126,14 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSend, disabled = false, o
       {isImageRequest && (
         <div className="flex items-center gap-2.5 px-3 py-2 bg-primary/10 border border-primary rounded-xl">
           <span className="text-primary flex-shrink-0 flex"><FaImage size={13} /></span>
-          <span className="flex-1 text-[12.5px] text-ink font-medium">
+          <span className="flex-1 text-[12.5px] text-foreground font-medium">
             Image generation on — a picture will be created alongside the reply.
           </span>
           <Button
             onClick={() => setIsImageRequest(false)}
             variant="ghost"
             size="icon"
-            className="h-6 w-6 rounded-md text-ink-muted hover:bg-panel3 hover:text-ink flex-shrink-0"
+            className="h-6 w-6 rounded-md text-muted-foreground hover:bg-accent hover:text-foreground flex-shrink-0"
             aria-label="Turn off image generation"
           >
             <FaTimes size={11} />
@@ -147,14 +147,14 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSend, disabled = false, o
             <span className="absolute inset-0 rounded-full bg-red-500 animate-ping opacity-75" />
             <span className="absolute inset-0 rounded-full bg-red-500" />
           </span>
-          <span className="flex-1 text-[12.5px] text-ink font-medium">
+          <span className="flex-1 text-[12.5px] text-foreground font-medium">
             Listening… speak, then tap the mic to stop.
           </span>
           <Button
             onClick={stopListening}
             variant="ghost"
             size="icon"
-            className="h-6 w-6 rounded-md text-ink-muted hover:bg-panel3 hover:text-ink flex-shrink-0"
+            className="h-6 w-6 rounded-md text-muted-foreground hover:bg-accent hover:text-foreground flex-shrink-0"
             aria-label="Stop listening"
           >
             <FaTimes size={11} />
@@ -174,7 +174,7 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSend, disabled = false, o
             "h-11 w-11 flex-shrink-0 rounded-[13px] border",
             isImageRequest
               ? "border-primary bg-primary/10 text-primary hover:bg-primary/10"
-              : "border-line bg-panel2 text-ink-faint hover:border-primary hover:bg-panel2 hover:text-ink"
+              : "border-border bg-muted text-ink-faint hover:border-primary hover:bg-muted hover:text-foreground"
           )}
         >
           <FaImage size={15} />
@@ -192,7 +192,7 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSend, disabled = false, o
               "h-11 w-11 flex-shrink-0 rounded-[13px] border",
               isListening
                 ? "border-red-500 bg-red-500/10 text-red-500 hover:bg-red-500/10"
-                : "border-line bg-panel2 text-ink-faint hover:border-primary hover:bg-panel2 hover:text-ink"
+                : "border-border bg-muted text-ink-faint hover:border-primary hover:bg-muted hover:text-foreground"
             )}
           >
             <FaMicrophone size={15} />
@@ -204,19 +204,19 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSend, disabled = false, o
           variant="ghost"
           title="Image Generation Settings"
           aria-label="Image Generation Settings"
-          className="h-11 w-11 flex-shrink-0 rounded-[13px] border border-line bg-panel2 text-ink-faint hover:border-primary hover:bg-panel2 hover:text-ink"
+          className="h-11 w-11 flex-shrink-0 rounded-[13px] border border-border bg-muted text-ink-faint hover:border-primary hover:bg-muted hover:text-foreground"
         >
           <FaCog size={14} />
         </Button>
 
-        <div className="flex-1 flex items-center gap-2 bg-panel2 border border-line rounded-[18px] min-h-[44px] pl-4 pr-1.5 py-0.5 shadow-sm">
+        <div className="flex-1 flex items-center gap-2 bg-muted border border-border rounded-[18px] min-h-[44px] pl-4 pr-1.5 py-0.5 shadow-sm">
           <textarea
             ref={inputRef}
             value={text}
             onChange={(e) => setText(e.target.value)}
             rows={1}
             placeholder={disabled ? "Waiting for response..." : characterName ? `Message ${characterName}…` : "Type a message..."}
-            className="flex-1 px-0 py-1 leading-[22px] bg-transparent text-ink placeholder-ink-faint outline-none transition-colors resize-none disabled:opacity-50"
+            className="flex-1 px-0 py-1 leading-[22px] bg-transparent text-foreground placeholder-ink-faint outline-none transition-colors resize-none disabled:opacity-50"
             style={{ fontSize: 'var(--chat-font-size, 16px)', maxHeight: MAX_TEXTAREA_HEIGHT }}
             disabled={disabled}
             onFocus={handleFocus}
@@ -250,7 +250,7 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSend, disabled = false, o
                 "h-9 w-9 flex-shrink-0 rounded-xl shadow-md",
                 canSend
                   ? "bg-gemini-logo text-onAccent hover:scale-105 hover:brightness-105"
-                  : "bg-panel3 text-ink-faint cursor-not-allowed hover:bg-panel3"
+                  : "bg-accent text-ink-faint cursor-not-allowed hover:bg-accent"
               )}
               disabled={!canSend}
               title="Send Message"

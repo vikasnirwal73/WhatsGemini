@@ -19,7 +19,7 @@ const buttonVariants = cva(
         // this app's most common "less prominent than primary" button, distinct
         // from the brand-colored `secondary` variant above.
         panel:
-          "bg-panel2 text-ink shadow-sm hover:bg-line",
+          "bg-muted text-foreground shadow-sm hover:bg-border",
         // The recurring gemini-gradient CTA (Sidebar's "New Chat", CharacterPage's
         // "Create Character") - doesn't fit any shadcn stock variant.
         gradient:

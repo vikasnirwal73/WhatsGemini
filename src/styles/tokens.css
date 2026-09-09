@@ -7,9 +7,17 @@
  *                                 Unchanged from before this file was split out
  *                                 of index.css. Consumed via
  *                                 rgb(var(--color-x) / <alpha-value>) through
- *                                 the app-specific Tailwind color keys (ink,
- *                                 panel, line, app, bubble, etc. - see
- *                                 tailwind.config.js).
+ *                                 the app-specific Tailwind color keys that have
+ *                                 no shadcn-canonical equivalent (ink.faint,
+ *                                 hover, chat, bubble, etc. - see
+ *                                 tailwind.config.js). Tokens that DO have a
+ *                                 shadcn equivalent (panel/panel2/panel3/ink/
+ *                                 ink-muted/line/app) were mechanically renamed
+ *                                 to their canonical names (card/muted/accent/
+ *                                 foreground/muted-foreground/border/background)
+ *                                 across the codebase in Phase 7 - the bridge
+ *                                 variables below are what makes that rename
+ *                                 value-identical to before.
  *
  *   2. --background, --foreground, --card, --popover, --primary,
  *      --secondary, --muted, --accent, --destructive, --border, --input,

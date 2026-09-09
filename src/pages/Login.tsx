@@ -49,17 +49,17 @@ const Login = () => {
   }
 
   return (
-    <div className="flex items-center justify-center h-screen bg-app">
-      <div className="bg-panel border border-line p-8 rounded-2xl shadow-xl w-96 max-w-[calc(100%-30px)]">
+    <div className="flex items-center justify-center h-screen bg-background">
+      <div className="bg-card border border-border p-8 rounded-2xl shadow-xl w-96 max-w-[calc(100%-30px)]">
         <Logo size={48} className="shadow-lg shadow-primary/30 rounded-[13px] mx-auto mb-5 block" />
-        <h2 className="text-xl font-bold text-center text-ink mb-1.5">
+        <h2 className="text-xl font-bold text-center text-foreground mb-1.5">
           Welcome to WhatsGemini
         </h2>
-        <p className="text-sm text-ink-muted text-center mb-4">
+        <p className="text-sm text-muted-foreground text-center mb-4">
           Chat with characters powered by your choice of AI provider.
         </p>
 
-        <label className="block text-sm font-medium text-ink mb-1.5">AI Provider</label>
+        <label className="block text-sm font-medium text-foreground mb-1.5">AI Provider</label>
         <Select
           value={chatProvider}
           onChange={(e) => dispatch(setChatProvider(e.target.value))}
@@ -88,7 +88,7 @@ const Login = () => {
 
         {capabilities?.requiresBaseUrl ? (
           <>
-            <label className="block text-sm font-medium text-ink mb-1.5">Ollama Server URL</label>
+            <label className="block text-sm font-medium text-foreground mb-1.5">Ollama Server URL</label>
             <TextInput
               type="text"
               value={ollamaBaseUrl}

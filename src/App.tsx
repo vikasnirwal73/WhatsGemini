@@ -61,14 +61,14 @@ const EmptyChatState = () => {
   };
 
   return (
-    <div className="flex flex-col w-full h-screen bg-app">
+    <div className="flex flex-col w-full h-screen bg-background">
       <Header title="WhatsGemini" subtitle={isFirstRun ? "Welcome!" : "Select a chat to get started"} />
-      <div className="flex-1 flex flex-col items-center justify-center gap-4 text-ink-muted px-6 text-center">
+      <div className="flex-1 flex flex-col items-center justify-center gap-4 text-muted-foreground px-6 text-center">
         {isFirstRun ? (
           <>
             <Logo size={48} className="shadow-lg shadow-primary/30 rounded-[13px] mb-1" />
             <div>
-              <h2 className="text-lg font-bold text-ink mb-1.5">Welcome to WhatsGemini</h2>
+              <h2 className="text-lg font-bold text-foreground mb-1.5">Welcome to WhatsGemini</h2>
               <p className="text-sm max-w-[360px]">
                 Create a character - a persona for Gemini to embody - then start chatting. Not sure where to start?
               </p>
@@ -83,7 +83,7 @@ const EmptyChatState = () => {
               </button>
               <button
                 onClick={() => navigate("/characters")}
-                className="px-4 py-2.5 rounded-xl border border-line bg-panel2 text-ink font-medium text-sm hover:border-primary hover:text-primary transition"
+                className="px-4 py-2.5 rounded-xl border border-border bg-muted text-foreground font-medium text-sm hover:border-primary hover:text-primary transition"
               >
                 Create your own
               </button>
@@ -175,12 +175,12 @@ const AppContent = () => {
   }
 
   return (
-    <div className="bg-app min-h-screen text-ink font-sans">
+    <div className="bg-background min-h-screen text-foreground font-sans">
       <div className="flex flex-col h-screen w-full">
         <BackupReminderBanner />
         <div className="flex flex-1 overflow-hidden">
           <Sidebar />
-          <main className="flex-1 bg-app relative z-1 min-w-0">
+          <main className="flex-1 bg-background relative z-1 min-w-0">
             <Suspense fallback={<PageLoader />}>
               <Routes>
                 <Route path="/chat/:chatId" element={<ChatPage />} />

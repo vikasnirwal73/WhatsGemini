@@ -277,26 +277,26 @@ const CharacterPage = () => {
   };
 
   return (
-    <div className="w-full h-screen flex flex-col bg-app">
+    <div className="w-full h-screen flex flex-col bg-background">
       <Header title="Characters" onBack={goBackOrHome} />
       <div className="flex-1 overflow-auto p-4 md:p-8">
       <div className="w-full max-w-[1060px] mx-auto">
 
         <div className="mb-6">
-          <h1 className="text-xl font-semibold tracking-tight text-ink">Characters</h1>
-          <p className="text-sm text-ink-muted mt-1.5">Craft a persona for Gemini to embody, or open one you've already made.</p>
+          <h1 className="text-xl font-semibold tracking-tight text-foreground">Characters</h1>
+          <p className="text-sm text-muted-foreground mt-1.5">Craft a persona for Gemini to embody, or open one you've already made.</p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-[360px_1fr] gap-6 items-start">
 
           {/* Create / Edit form */}
-          <div className="bg-panel border border-line rounded-2xl overflow-hidden lg:sticky lg:top-0">
-            <div className="px-[18px] py-4 border-b border-line flex items-center gap-2.5">
+          <div className="bg-card border border-border rounded-2xl overflow-hidden lg:sticky lg:top-0">
+            <div className="px-[18px] py-4 border-b border-border flex items-center gap-2.5">
               <span className="w-8 h-8 rounded-[9px] bg-gemini-logo flex items-center justify-center text-onAccent flex-shrink-0">
                 {editCharacter ? <FaEdit size={13} /> : <FaPlus size={13} />}
               </span>
               <div className="min-w-0">
-                <div className="text-[14.5px] font-bold text-ink">{editCharacter ? "Edit character" : "New character"}</div>
+                <div className="text-[14.5px] font-bold text-foreground">{editCharacter ? "Edit character" : "New character"}</div>
                 <div className="text-[11.5px] text-ink-faint">{editCharacter ? "Update who Gemini becomes" : "Define who Gemini becomes"}</div>
               </div>
             </div>
@@ -305,7 +305,7 @@ const CharacterPage = () => {
               <div className="flex items-center gap-[13px]">
                 <CharacterAvatar name={name || "?"} accent={CHARACTER_SWATCHES[accentIndex]} size={56} className="text-xl flex-shrink-0" />
                 <div className="flex-1 min-w-0">
-                  <label className="block text-[11.5px] text-ink-muted mb-1.5">Accent</label>
+                  <label className="block text-[11.5px] text-muted-foreground mb-1.5">Accent</label>
                   <div className="flex gap-[7px]">
                     {CHARACTER_SWATCHES.map((sw, i) => (
                       <button
@@ -340,7 +340,7 @@ const CharacterPage = () => {
                       variant="panel"
                       onClick={() => speak(`Hi, I'm ${name || "your character"}.`, voiceURI || undefined)}
                       disabled={voices.length === 0}
-                      className="w-11 h-11 flex-shrink-0 rounded-xl border border-line hover:border-primary hover:text-primary"
+                      className="w-11 h-11 flex-shrink-0 rounded-xl border border-border hover:border-primary hover:text-primary"
                       title="Preview voice"
                       aria-label="Preview voice"
                     >
@@ -359,7 +359,7 @@ const CharacterPage = () => {
                 />
                 {autoSelfieEnabled && (
                   <div className="mt-3">
-                    <div className="flex justify-between text-xs text-ink-muted mb-2">
+                    <div className="flex justify-between text-xs text-muted-foreground mb-2">
                       <span>Frequency</span>
                       <span className="font-mono">{autoSelfieFrequency}%</span>
                     </div>
@@ -395,10 +395,10 @@ const CharacterPage = () => {
               />
 
               <div>
-                <label className="block text-sm text-ink font-medium mb-2">Character Reference Images</label>
+                <label className="block text-sm text-foreground font-medium mb-2">Character Reference Images</label>
                 <div className="flex flex-wrap gap-2 mb-2">
                   {appearanceImages.map((src, idx) => (
-                    <div key={idx} className="relative w-20 h-20 rounded-lg overflow-hidden border border-line bg-panel2">
+                    <div key={idx} className="relative w-20 h-20 rounded-lg overflow-hidden border border-border bg-muted">
                       <DisplayImage srcContext={src} alt="Appearance Reference" className="w-full h-full object-cover" />
                       <Button
                         onClick={() => removeAppearanceImage(idx)}
@@ -411,7 +411,7 @@ const CharacterPage = () => {
                   ))}
                   <button
                     onClick={() => imageInputRef.current?.click()}
-                    className="w-20 h-20 flex flex-col justify-center items-center rounded-lg border-2 border-dashed border-line text-ink-muted hover:text-primary hover:border-primary transition-colors"
+                    className="w-20 h-20 flex flex-col justify-center items-center rounded-lg border-2 border-dashed border-border text-muted-foreground hover:text-primary hover:border-primary transition-colors"
                   >
                     <FaUpload size={16} />
                     <span className="text-[10px] mt-1 text-center font-medium">Add Image</span>
@@ -430,12 +430,12 @@ const CharacterPage = () => {
 
               {editCharacter && editCharacter.memory && editCharacter.memory.length > 0 && (
                 <div>
-                  <label className="block text-sm text-ink font-medium mb-2">
+                  <label className="block text-sm text-foreground font-medium mb-2">
                     Memory <span className="text-ink-faint font-normal">({editCharacter.memory.length} facts remembered)</span>
                   </label>
                   <div className="flex flex-col gap-1.5 max-h-48 overflow-y-auto pr-1">
                     {editCharacter.memory.map((fact, idx) => (
-                      <div key={idx} className="flex items-start gap-2 text-xs text-ink-muted bg-panel2 border border-line rounded-lg px-2.5 py-2">
+                      <div key={idx} className="flex items-start gap-2 text-xs text-muted-foreground bg-muted border border-border rounded-lg px-2.5 py-2">
                         <span className="flex-1">{fact}</span>
                         <Button
                           onClick={() => handleRemoveMemoryFact(idx)}
@@ -473,7 +473,7 @@ const CharacterPage = () => {
                   <Button
                     onClick={handleImportClick}
                     variant="panel"
-                    className="h-auto px-4 py-3 rounded-xl border border-line hover:border-primary font-medium"
+                    className="h-auto px-4 py-3 rounded-xl border border-border hover:border-primary font-medium"
                     title="Import Character from JSON"
                   >
                     <FaUpload size={14} />
@@ -484,7 +484,7 @@ const CharacterPage = () => {
                   <Button
                     onClick={resetForm}
                     variant="panel"
-                    className="h-auto px-4 py-3 rounded-xl border border-line hover:border-primary"
+                    className="h-auto px-4 py-3 rounded-xl border border-border hover:border-primary"
                   >
                     <FaTimes size={16} />
                   </Button>
@@ -503,14 +503,14 @@ const CharacterPage = () => {
           {/* Saved Characters */}
           <div>
             <div className="flex items-center justify-between mb-3.5">
-              <div className="text-[12.5px] text-ink-muted">
+              <div className="text-[12.5px] text-muted-foreground">
                 {loading ? "Loading..." : `${characters.length} character${characters.length === 1 ? "" : "s"}`}
               </div>
             </div>
             {!loading && characters.length === 0 ? (
-              <div className="bg-panel border border-line rounded-2xl p-6 text-center flex flex-col items-center gap-3">
-                <p className="text-ink-muted">No characters created yet.</p>
-                <p className="text-sm text-ink-muted">Fill out the form to build your own, or jump straight into a chat with a ready-made one.</p>
+              <div className="bg-card border border-border rounded-2xl p-6 text-center flex flex-col items-center gap-3">
+                <p className="text-muted-foreground">No characters created yet.</p>
+                <p className="text-sm text-muted-foreground">Fill out the form to build your own, or jump straight into a chat with a ready-made one.</p>
                 <Button
                   onClick={handleTrySampleCharacter}
                   variant="gradient"
@@ -524,19 +524,19 @@ const CharacterPage = () => {
                 {characters.map((char) => (
                   <div
                     key={char.id}
-                    className="bg-panel border border-line rounded-2xl p-[18px] flex flex-col gap-3 hover:border-primary transition"
+                    className="bg-card border border-border rounded-2xl p-[18px] flex flex-col gap-3 hover:border-primary transition"
                   >
                     <div className="flex items-start gap-3">
                       <CharacterAvatar name={char.name} accent={char.accent} size={44} />
                       <div className="min-w-0 flex-1">
-                        <h4 className="text-[15px] font-bold text-ink truncate">{char.name}</h4>
+                        <h4 className="text-[15px] font-bold text-foreground truncate">{char.name}</h4>
                         {char.relationship && <p className="text-xs font-medium text-primary mt-0.5 truncate">{char.relationship}</p>}
                       </div>
                     </div>
-                    <p className="text-[12.5px] text-ink-muted leading-relaxed line-clamp-3 flex-1">
+                    <p className="text-[12.5px] text-muted-foreground leading-relaxed line-clamp-3 flex-1">
                       {truncateText(char.description, 140)}
                     </p>
-                    <div className="flex gap-2 mt-1 pt-3 border-t border-line">
+                    <div className="flex gap-2 mt-1 pt-3 border-t border-border">
                       <Button
                         onClick={() => handleChatWithCharacter(char)}
                         variant="panel"
@@ -558,7 +558,7 @@ const CharacterPage = () => {
                           <Button
                             variant="outline"
                             size="icon"
-                            className="rounded-[10px] bg-transparent hover:bg-hover hover:text-ink"
+                            className="rounded-[10px] bg-transparent hover:bg-hover hover:text-foreground"
                             title="More options"
                             aria-label="More options"
                           >

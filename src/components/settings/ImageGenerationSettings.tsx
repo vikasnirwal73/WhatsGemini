@@ -101,7 +101,7 @@ const ImageGenerationSettings: React.FC<ImageGenerationSettingsProps> = ({
           />
 
           <div className="flex justify-between items-center mb-1.5">
-            <label className="block text-sm font-medium text-ink">SD Model</label>
+            <label className="block text-sm font-medium text-foreground">SD Model</label>
             <button
               type="button"
               onClick={fetchSdModels}
@@ -139,7 +139,7 @@ const ImageGenerationSettings: React.FC<ImageGenerationSettingsProps> = ({
               <p className="text-xs text-primary font-medium mb-1">
                 ReActor requires the "sd-webui-reactor-sfw" extension installed in Forge.
               </p>
-              <p className="text-xs text-ink-muted">
+              <p className="text-xs text-muted-foreground">
                 This passes the character image natively to inswapper to perform a highly accurate
                 post-process face swap over the generated subject.
               </p>
@@ -148,7 +148,7 @@ const ImageGenerationSettings: React.FC<ImageGenerationSettingsProps> = ({
 
           {sdWebuiRefMode === 'img2img' && (
             <div className="mb-4">
-              <div className="flex justify-between text-sm text-ink-muted mb-2">
+              <div className="flex justify-between text-sm text-muted-foreground mb-2">
                 <span>Denoising Strength</span>
                 <span className="font-mono text-xs">{sdWebuiDenoising}</span>
               </div>
@@ -165,7 +165,7 @@ const ImageGenerationSettings: React.FC<ImageGenerationSettingsProps> = ({
                 onChange={(e) => setSdWebuiControlnetModel(e.target.value)}
                 placeholder="e.g. ip-adapter_sd15"
               />
-              <p className="text-xs text-ink-muted mt-1">
+              <p className="text-xs text-muted-foreground mt-1">
                 Make sure this model is installed in your Forge/WebUI.
               </p>
             </div>
@@ -224,8 +224,8 @@ const ImageGenerationSettings: React.FC<ImageGenerationSettingsProps> = ({
         </Select>
 
         <FieldLabel>Save Generated Images To:</FieldLabel>
-        <div className="flex items-center justify-between bg-app p-3 rounded-xl border border-line mb-2">
-          <span className="text-ink text-sm truncate pr-2">
+        <div className="flex items-center justify-between bg-background p-3 rounded-xl border border-border mb-2">
+          <span className="text-foreground text-sm truncate pr-2">
             {imageSaveDirName}
           </span>
           <button
@@ -235,7 +235,7 @@ const ImageGenerationSettings: React.FC<ImageGenerationSettingsProps> = ({
             Select Folder
           </button>
         </div>
-        <p className="text-xs text-ink-muted">
+        <p className="text-xs text-muted-foreground">
           Note: Browsers may prompt you to re-approve write permissions to this folder when resuming
           the app.
         </p>

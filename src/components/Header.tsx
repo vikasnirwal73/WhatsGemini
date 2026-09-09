@@ -34,9 +34,9 @@ interface HeaderProps {
   actionGroups?: HeaderAction[][];
 }
 
-export const iconBtnClass = "flex items-center justify-center w-9 h-9 rounded-[10px] border border-line bg-panel2 text-ink-muted hover:bg-hover hover:text-ink transition flex-shrink-0";
-const iconBtnActiveClass = "flex items-center justify-center w-9 h-9 rounded-[10px] border border-primary bg-panel2 text-primary hover:bg-hover transition flex-shrink-0";
-const iconBtnDangerClass = "flex items-center justify-center w-9 h-9 rounded-[10px] border border-line bg-panel2 text-ink-muted hover:bg-red-500/10 hover:text-red-500 hover:border-red-500/50 transition flex-shrink-0";
+export const iconBtnClass = "flex items-center justify-center w-9 h-9 rounded-[10px] border border-border bg-muted text-muted-foreground hover:bg-hover hover:text-foreground transition flex-shrink-0";
+const iconBtnActiveClass = "flex items-center justify-center w-9 h-9 rounded-[10px] border border-primary bg-muted text-primary hover:bg-hover transition flex-shrink-0";
+const iconBtnDangerClass = "flex items-center justify-center w-9 h-9 rounded-[10px] border border-border bg-muted text-muted-foreground hover:bg-red-500/10 hover:text-red-500 hover:border-red-500/50 transition flex-shrink-0";
 
 const Header: React.FC<HeaderProps> = ({ title, subtitle, avatar, onBack, actionGroups = [] }) => {
   const navigate = useNavigate();
@@ -79,7 +79,7 @@ const Header: React.FC<HeaderProps> = ({ title, subtitle, avatar, onBack, action
   const groups = [...actionGroups, appGroup, sessionGroup].filter((g) => g.length > 0);
 
   return (
-    <header className="h-[60px] flex-shrink-0 border-b border-line bg-panel flex items-center gap-2.5 px-3 md:px-4 z-20">
+    <header className="h-[60px] flex-shrink-0 border-b border-border bg-card flex items-center gap-2.5 px-3 md:px-4 z-20">
       <Button onClick={open} variant="outline" size="icon" title="Menu" aria-label="Open menu" className={cn(iconBtnClass, "md:hidden")}>
         <FaBars size={16} />
       </Button>
@@ -90,7 +90,7 @@ const Header: React.FC<HeaderProps> = ({ title, subtitle, avatar, onBack, action
           variant="outline"
           title="Back"
           aria-label="Back"
-          className="h-9 px-3 rounded-[10px] bg-panel2 text-ink-muted hover:text-ink hover:border-primary text-[13px] font-medium flex-shrink-0"
+          className="h-9 px-3 rounded-[10px] bg-muted text-muted-foreground hover:text-foreground hover:border-primary text-[13px] font-medium flex-shrink-0"
         >
           <FaArrowLeft size={13} /> <span className="hidden sm:inline">Back</span>
         </Button>
@@ -99,8 +99,8 @@ const Header: React.FC<HeaderProps> = ({ title, subtitle, avatar, onBack, action
       <div className="flex items-center gap-2.5 min-w-0">
         {avatar}
         <div className="min-w-0 leading-tight">
-          <div className="text-[14.5px] font-semibold truncate text-ink">{title}</div>
-          {subtitle && <div className="text-[11.5px] text-ink-muted truncate">{subtitle}</div>}
+          <div className="text-[14.5px] font-semibold truncate text-foreground">{title}</div>
+          {subtitle && <div className="text-[11.5px] text-muted-foreground truncate">{subtitle}</div>}
         </div>
       </div>
 
@@ -110,7 +110,7 @@ const Header: React.FC<HeaderProps> = ({ title, subtitle, avatar, onBack, action
       <div className="hidden md:flex items-center gap-1">
         {groups.map((group, gi) => (
           <React.Fragment key={gi}>
-            {gi > 0 && <div className="w-px h-6 bg-line mx-1 flex-shrink-0" />}
+            {gi > 0 && <div className="w-px h-6 bg-border mx-1 flex-shrink-0" />}
             {group.map((action, ai) => (
               <Tooltip key={ai} label={action.label}>
                 <Button
