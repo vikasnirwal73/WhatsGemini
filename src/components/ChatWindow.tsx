@@ -12,6 +12,8 @@ import ChatMessage from "./chat/ChatMessage";
 import { DialogRoot, DialogContent, DialogTitle, DialogClose } from "./ui/Dialog";
 import { CharacterAvatar } from "./ui/CharacterAvatar";
 import { Button } from "./ui/button";
+import { Card } from "./ui/card";
+import { Badge } from "./ui/badge";
 
 interface ChatWindowProps {
   messages: Message[];
@@ -236,18 +238,20 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ messages = [], tree, onSwitchBr
     >
       {filteredMessages.length === 0 ? (
         <div className="flex flex-col items-center h-full w-full px-4 pt-10">
-          <div className="flex flex-col items-center text-center gap-3 w-full max-w-[440px] px-5 py-8 bg-card border border-border rounded-2xl shadow-sm">
+          <Card className="flex flex-col items-center text-center gap-3 w-full max-w-[440px] px-5 py-8 rounded-2xl shadow-sm">
             <CharacterAvatar name={charInitials} accent={character?.accent} size={64} className="text-2xl" />
             <div>
               <div className="text-[19px] font-bold tracking-tight text-foreground">{characterName || "New Conversation"}</div>
               {character?.relationship && (
-                <div className="text-[13px] text-primary font-medium mt-0.5">{character.relationship}</div>
+                <Badge variant="outline" className="mt-1 max-w-full truncate border-primary/20 bg-primary/10 font-medium text-primary">
+                  {character.relationship}
+                </Badge>
               )}
             </div>
             <p className="text-[13.5px] leading-relaxed text-muted-foreground">
               {character?.description || "Send a message to get started."}
             </p>
-          </div>
+          </Card>
         </div>
       ) : (
         filteredMessages.map((msg, i) => {

@@ -2,6 +2,7 @@ import React from 'react';
 import { IMAGE_RESOLUTIONS } from '../../utils/constants';
 import { TextInput, TextArea, Select, FieldLabel, Slider } from '../ui/FormControls';
 import { IMAGE_PROVIDER_META } from '../../features/ai/providers/registry';
+import { Button } from '../ui/button';
 
 interface ImageGenerationSettingsProps {
   imageProvider: string;
@@ -102,13 +103,14 @@ const ImageGenerationSettings: React.FC<ImageGenerationSettingsProps> = ({
 
           <div className="flex justify-between items-center mb-1.5">
             <label className="block text-sm font-medium text-foreground">SD Model</label>
-            <button
+            <Button
               type="button"
+              variant="link"
               onClick={fetchSdModels}
-              className="text-xs text-primary hover:text-primary-hover"
+              className="h-auto p-0 text-xs text-primary hover:text-primary-hover no-underline hover:no-underline"
             >
               Refresh Models
-            </button>
+            </Button>
           </div>
           <Select
             value={sdWebuiModel}
@@ -228,12 +230,9 @@ const ImageGenerationSettings: React.FC<ImageGenerationSettingsProps> = ({
           <span className="text-foreground text-sm truncate pr-2">
             {imageSaveDirName}
           </span>
-          <button
-            onClick={handleSelectDirectory}
-            className="px-3 py-1.5 bg-primary text-onAccent text-sm rounded-lg hover:bg-primary-hover transition whitespace-nowrap"
-          >
+          <Button onClick={handleSelectDirectory} className="h-auto px-3 py-1.5 whitespace-nowrap">
             Select Folder
-          </button>
+          </Button>
         </div>
         <p className="text-xs text-muted-foreground">
           Note: Browsers may prompt you to re-approve write permissions to this folder when resuming

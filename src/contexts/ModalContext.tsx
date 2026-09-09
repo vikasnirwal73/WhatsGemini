@@ -1,6 +1,14 @@
 import React, { createContext, useContext, useState, ReactNode, useCallback } from "react";
 import { FaExclamationTriangle, FaInfoCircle } from "react-icons/fa";
-import Modal from "../components/Modal";
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogFooter,
+  AlertDialogTitle,
+  AlertDialogAction,
+  AlertDialogCancel,
+} from "../components/ui/alert-dialog";
 
 interface ModalState {
   isOpen: boolean;
@@ -68,7 +76,8 @@ export const ModalProvider = ({ children }: { children: ReactNode }) => {
     });
   }, []);
 
-  // Escape/backdrop-click land here too since they route through onClose -> onCancel
+  // Escape lands here too (AlertDialog doesn't close on backdrop click by
+  // design - it demands an explicit choice) and routes through to onCancel
   // (or onConfirm for a plain alert, which only has one exit path).
   const handleClose = modalState.isConfirm ? modalState.onCancel : modalState.onConfirm;
 
@@ -76,37 +85,33 @@ export const ModalProvider = ({ children }: { children: ReactNode }) => {
     <ModalContext.Provider value={{ showAlert, showConfirm }}>
       {children}
 
-      <Modal isOpen={modalState.isOpen} onClose={() => handleClose?.()} title={modalState.title}>
-        <div className="flex items-center gap-3 mb-1">
-          <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${modalState.isConfirm ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400' : 'bg-secondary/15 text-secondary'}`}>
-            {modalState.isConfirm ? <FaExclamationTriangle size={18} /> : <FaInfoCircle size={18} />}
-          </div>
-          <p className="text-muted-foreground text-sm flex-1">
-            {modalState.message}
-          </p>
-        </div>
+      <AlertDialog open={modalState.isOpen} onOpenChange={(open) => !open && handleClose?.()}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <div className="flex items-center gap-3 mb-1">
+              <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${modalState.isConfirm ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400' : 'bg-secondary/15 text-secondary'}`}>
+                {modalState.isConfirm ? <FaExclamationTriangle size={18} /> : <FaInfoCircle size={18} />}
+              </div>
+              <AlertDialogTitle className="flex-1 text-left">{modalState.title}</AlertDialogTitle>
+            </div>
+            <p className="text-muted-foreground text-sm text-left">
+              {modalState.message}
+            </p>
+          </AlertDialogHeader>
 
-        <div className="flex gap-3 justify-end mt-3">
-          {modalState.isConfirm && (
-            <button
-              onClick={modalState.onCancel}
-              className="px-4 py-2 text-sm font-medium text-muted-foreground bg-background rounded-lg hover:bg-muted transition"
+          <AlertDialogFooter>
+            {modalState.isConfirm && (
+              <AlertDialogCancel onClick={modalState.onCancel}>Cancel</AlertDialogCancel>
+            )}
+            <AlertDialogAction
+              onClick={modalState.onConfirm}
+              variant={modalState.isConfirm ? "destructive" : "default"}
             >
-              Cancel
-            </button>
-          )}
-          <button
-            onClick={modalState.onConfirm}
-            className={`px-4 py-2 text-sm font-medium rounded-lg transition ${
-              modalState.isConfirm
-                ? 'bg-red-500 hover:bg-red-600 text-white'
-                : 'bg-primary hover:bg-primary-hover text-onAccent'
-            }`}
-          >
-            {modalState.isConfirm ? 'Confirm' : 'OK'}
-          </button>
-        </div>
-      </Modal>
+              {modalState.isConfirm ? 'Confirm' : 'OK'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </ModalContext.Provider>
   );
 };

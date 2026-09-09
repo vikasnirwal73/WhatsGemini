@@ -12,6 +12,8 @@ import { DisplayImage } from "../components/DisplayImage";
 import { TextInput, TextArea, Select, FieldLabel, Slider } from "../components/ui/FormControls";
 import { CharacterAvatar } from "../components/ui/CharacterAvatar";
 import { Button } from "../components/ui/button";
+import { Badge } from "../components/ui/badge";
+import { Card } from "../components/ui/card";
 import ToggleSwitch from "../components/ToggleSwitch";
 import Header from "../components/Header";
 import { CHARACTER_SWATCHES, MEMORY_EXTRACTION_INTERVAL, SAMPLE_CHARACTER, DEFAULT_AUTO_SELFIE_FREQUENCY } from "../utils/constants";
@@ -290,7 +292,7 @@ const CharacterPage = () => {
         <div className="grid grid-cols-1 lg:grid-cols-[360px_1fr] gap-6 items-start">
 
           {/* Create / Edit form */}
-          <div className="bg-card border border-border rounded-2xl overflow-hidden lg:sticky lg:top-0">
+          <Card className="overflow-hidden lg:sticky lg:top-0">
             <div className="px-[18px] py-4 border-b border-border flex items-center gap-2.5">
               <span className="w-8 h-8 rounded-[9px] bg-gemini-logo flex items-center justify-center text-onAccent flex-shrink-0">
                 {editCharacter ? <FaEdit size={13} /> : <FaPlus size={13} />}
@@ -498,7 +500,7 @@ const CharacterPage = () => {
                 style={{ display: "none" }}
               />
             </div>
-          </div>
+          </Card>
 
           {/* Saved Characters */}
           <div>
@@ -508,7 +510,7 @@ const CharacterPage = () => {
               </div>
             </div>
             {!loading && characters.length === 0 ? (
-              <div className="bg-card border border-border rounded-2xl p-6 text-center flex flex-col items-center gap-3">
+              <Card className="p-6 text-center flex flex-col items-center gap-3">
                 <p className="text-muted-foreground">No characters created yet.</p>
                 <p className="text-sm text-muted-foreground">Fill out the form to build your own, or jump straight into a chat with a ready-made one.</p>
                 <Button
@@ -518,19 +520,23 @@ const CharacterPage = () => {
                 >
                   Try a sample character
                 </Button>
-              </div>
+              </Card>
             ) : (
               <div className="grid gap-4" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(232px, 1fr))" }}>
                 {characters.map((char) => (
-                  <div
+                  <Card
                     key={char.id}
-                    className="bg-card border border-border rounded-2xl p-[18px] flex flex-col gap-3 hover:border-primary transition"
+                    className="p-[18px] flex flex-col gap-3 hover:border-primary transition"
                   >
                     <div className="flex items-start gap-3">
                       <CharacterAvatar name={char.name} accent={char.accent} size={44} />
                       <div className="min-w-0 flex-1">
                         <h4 className="text-[15px] font-bold text-foreground truncate">{char.name}</h4>
-                        {char.relationship && <p className="text-xs font-medium text-primary mt-0.5 truncate">{char.relationship}</p>}
+                        {char.relationship && (
+                          <Badge variant="outline" className="mt-1 max-w-full truncate border-primary/20 bg-primary/10 font-medium text-primary">
+                            {char.relationship}
+                          </Badge>
+                        )}
                       </div>
                     </div>
                     <p className="text-[12.5px] text-muted-foreground leading-relaxed line-clamp-3 flex-1">
@@ -572,7 +578,7 @@ const CharacterPage = () => {
                         <DropdownMenuItem icon={FaTrash} label="Delete" onClick={() => handleDeleteCharacter(char.id)} danger />
                       </DropdownMenu>
                     </div>
-                  </div>
+                  </Card>
                 ))}
               </div>
             )}

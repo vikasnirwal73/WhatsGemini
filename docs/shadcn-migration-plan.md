@@ -447,6 +447,89 @@ using shadcn's names directly instead of the app-specific aliases.
 One real bug found and fixed along the way, unrelated to the rename itself (during the
 mandatory click-through, before the rename started) — see item 4 above.
 
+## Phase 8 — Broader component adoption ✅ Done
+
+A follow-up pass, requested explicitly rather than following this doc's own
+"clear-win-only" bar from Phase 6: adopt shadcn/ui components more broadly across the
+app, including revisiting all three of Phase 6's skips and completing the Button sweep
+in the files Phase 5 never reached.
+
+**New primitives pulled**: `avatar`, `checkbox`, `alert-dialog` (`npx shadcn@latest add`
+— the CLI's own install step also pulled `sonner` + its `next-themes` peer dep as a
+fourth item), each restyled the same way every earlier primitive was — kept Radix's
+structure, swapped stock classNames for the app's existing look, swapped `lucide-react`
+icons for `react-icons/fa` (`checkbox.tsx`'s check mark). `alert-dialog.tsx`'s
+`AlertDialogAction`/`AlertDialogCancel` reuse this app's own `buttonVariants` from
+`button.tsx` (that's what the CLI generates by default for this component) — extended
+`AlertDialogAction` to actually accept a `variant`/`size` prop pass-through, since the
+stock generated file hardcoded `buttonVariants()` with no way to ask for `destructive`.
+
+**Phase 6 skips, revisited:**
+- **Toast → sonner.** `src/components/Toast.tsx` (custom Framer Motion toast +
+  `ToastContainer`) deleted outright — its only consumer was `SettingsPage.tsx`
+  (`toasts` state, `addToast`/`removeToast`, ~30 lines of plumbing), now just
+  `toast.success(...)`/`toast.error(...)` calls from `sonner` at each existing call
+  site. `<Toaster position="bottom-right" />` mounted once in `App.tsx` inside
+  `ThemeProvider`. **Found and fixed a real wiring bug in the CLI's own generated
+  `sonner.tsx`**: it calls `next-themes`' `useTheme()`, but this app has never used
+  `next-themes` — it has its own `ThemeContext` (`.dark` class on `<html>`, see
+  `src/contexts/ThemeContext.tsx`) — so the stock file would've always fallen back to
+  `theme: "system"` and never actually tracked the app's real dark/light state. Swapped
+  to `useContext(ThemeContext)` instead and removed the now-unused `next-themes`
+  dependency (`yarn remove`). Success/error toasts explicitly recolored to this app's
+  own `bg-primary`/`bg-destructive` (sonner's default is a subtle bordered-white toast
+  with a colored icon, not the app's original loud-colored-toast convention) so the
+  swap doesn't read as a style regression.
+- **`CharacterAvatar` → shadcn `Avatar`.** Now wraps `Avatar`/`AvatarFallback` (no
+  `AvatarImage` — this component never renders a real image, always initials-over-
+  gradient, unchanged from Phase 6's own finding). The non-standard sizing — radius at
+  `0.32 × size` rather than a full circle, font size at `0.4 × size` — is preserved
+  exactly via inline styles on both `Avatar` and `AvatarFallback`, overriding Radix's
+  default `rounded-full`.
+- **Panel-container divs → `Card`.** Applied wherever a plain `bg-card rounded-* border
+  border-border` wrapper div existed as a self-contained panel (not app chrome like
+  `Header`/`Sidebar`, which stay raw elements): `Login.tsx`'s auth card,
+  `CharacterPage.tsx`'s create/edit form panel and each character grid card,
+  `ChatWindow.tsx`'s empty-conversation panel, `InitialMessages.tsx`'s per-message
+  editor card, `ServiceWorkerUpdater.tsx`'s update banner.
+
+**Badge wired up** (pulled in Phase 3, never used until now): the character
+"relationship" tag (e.g. "Mentor", "Employee") — previously plain colored text — is now
+a `<Badge variant="outline">` chip, at both places it renders (`CharacterPage.tsx`'s
+character grid, `ChatWindow.tsx`'s empty-conversation panel).
+
+**Checkbox**: pulled and restyled, but genuinely unwired — audited the whole app for
+checkbox-shaped UI (multi-select lists, "select all" flows, terms-agreement) and found
+none; every existing boolean toggle already correctly uses `Switch` (instant-effect
+settings) or `Select`, not a form-submission checkbox. Left additive-only, available for
+whenever a real multi-select/list-selection UI gets built, rather than forced into a
+fake use case.
+
+**Button sweep completion.** Phase 5's sweep only ever touched the files reachable from
+its own file-by-file walk (`SettingsPage`/`CharacterPage`/`ChatWindow`/`MessageInput`/
+`Modal`/`ImageSettingsModal`/`Sidebar`/`Header`) and missed 12 more files with raw
+`<button>`s: `App.tsx`, `NotFound.tsx`, `Login.tsx`, `CharacterGalleryPage.tsx`
+(lightbox close/prev/next), `ErrorBoundary.tsx`, `chat/MarkdownRenderer.tsx` (code-block
+copy button), `chat/ChatMessage.tsx` (8 buttons — sibling-variant prev/next/delete pill,
+the `⋮` dropdown trigger, and the Copy/Regenerate/Speak/Edit action row — the biggest
+single gap, since this file wasn't in Phase 5's own file list at all),
+`InitialMessages.tsx`, `BackupReminderBanner.tsx`, `ServiceWorkerUpdater.tsx`,
+`settings/ImageGenerationSettings.tsx`, `settings/TextModelSettings.tsx`. All converted
+to `<Button variant=... size=...>` using the same finalized variant set from Phase 5 (no
+new variants needed). `ModalContext.tsx`'s confirm/alert dialog buttons were replaced by
+the `AlertDialog` swap above rather than converted in place. `CharacterPage.tsx`'s 2
+deliberate non-Button exceptions from Phase 5 (accent-swatch picker, Add Image dropzone)
+are still exactly that — confirmed via a final `<button\b` grep across `src/` turning up
+only those two.
+
+Verified via `tsc --noEmit`, a cold-cache zero-warning `npm run build`, and a live
+Chrome pass confirming: the `AlertDialog` opens/closes correctly (delete-character
+confirmation, both Cancel and the underlying promise-resolution path checked via DOM
+query since screenshot capture was flaky this session), the `sonner` `Toaster` mounts
+and a triggered toast renders with the correct green success color/text (confirmed via
+computed styles when screenshots wouldn't cooperate), `Badge` role tags and the new
+`Card` panels render correctly in dark mode, and no new console errors.
+
 ---
 
 ## Suggested execution order / sizing
@@ -463,6 +546,8 @@ Each phase above is meant to be its own session/PR. Rough sizing:
 | 5 - Button sweep | Low risk per-page, high total effort | Large (split by page) | ✅ Done, visually verified |
 | 6 - Accordion/Toast/Avatar/Card | Low, optional | Medium | ✅ Done (Accordion only - Toast/Avatar/Card deliberately skipped, see Phase 6) |
 | 7 - Cleanup + optional rename | Low, optional | Small–Large depending on rename | ✅ Done, including the optional rename |
+| 8 - Broader component adoption (Toast/Avatar/Card revisit, Badge, button-sweep gaps) | Low-Medium | Large | ✅ Done |
 
-The migration is complete end-to-end, including the fully optional full token rename -
-nothing left on the plan.
+The migration is complete end-to-end, including the fully optional full token rename
+and a broader Phase 8 adoption pass - nothing left on the plan. `Checkbox` is pulled and
+available but intentionally unwired (no checkbox-shaped UI exists in the app yet).

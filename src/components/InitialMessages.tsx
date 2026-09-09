@@ -2,6 +2,8 @@ import React, { useEffect, useState, useCallback } from "react";
 import { FaPlus, FaTrash } from "react-icons/fa";
 import { AI, LS_INITIAL_MESSAGES, YOU } from "../utils/constants";
 import { Select, TextArea } from "./ui/FormControls";
+import { Card } from "./ui/card";
+import { Button } from "./ui/button";
 
 interface InitialMessage {
   role: string;
@@ -80,9 +82,9 @@ const InitialMessages: React.FC<InitialMessagesProps> = ({ onSave }) => {
         {initialMessages.length === 0 ? "Add a predefined system message" : "Predefined System Messages"}
       </label>
       {initialMessages.map((msg, idx) => (
-        <div
+        <Card
           key={idx}
-          className="mb-5 p-3 shadow-sm rounded-2xl bg-card border border-border flex flex-col gap-2 relative"
+          className="mb-5 p-3 shadow-sm rounded-2xl flex flex-col gap-2 relative"
         >
           <Select
             value={msg.role}
@@ -97,21 +99,23 @@ const InitialMessages: React.FC<InitialMessagesProps> = ({ onSave }) => {
             placeholder="Enter a message that will be sent as the first message in any new chat..."
           />
           {initialMessages.length > 1 && (
-            <button
+            <Button
+              variant="destructive"
+              size="icon"
               onClick={() => handleDeleteMessage(idx)}
-              className="absolute -top-4 right-2 flex items-center justify-center bg-red-500 text-white hover:bg-red-600 w-8 h-8 rounded-full shadow-md transition hover:opacity-100 opacity-90 border-2 border-card"
+              className="absolute -top-4 right-2 h-8 w-8 rounded-full shadow-md opacity-90 hover:opacity-100 border-2 border-card"
             >
               <FaTrash size={14} />
-            </button>
+            </Button>
           )}
-        </div>
+        </Card>
       ))}
-      <button
+      <Button
         onClick={handleAddMessage}
-        className="mx-auto mt-4 flex items-center gap-2 bg-primary text-onAccent px-4 py-2 rounded-full shadow-md hover:bg-primary-hover transition w-max"
+        className="mx-auto mt-4 rounded-full shadow-md w-max"
       >
         <FaPlus /> Add Message
-      </button>
+      </Button>
     </div>
   );
 };

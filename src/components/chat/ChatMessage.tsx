@@ -9,6 +9,7 @@ import MarkdownRenderer from "./MarkdownRenderer";
 import { DropdownMenu, DropdownMenuItem } from "../ui/DropdownMenu";
 import { DisplayImage } from "../DisplayImage";
 import { CharacterAvatar } from "../ui/CharacterAvatar";
+import { Button } from "../ui/button";
 import { isSpeechSynthesisSupported } from "../../utils/speech";
 
 interface SiblingInfo {
@@ -118,37 +119,43 @@ const ChatMessage = React.memo(({
               )}
               title={`${siblingInfo.total} variants of this message`}
             >
-              <button
+              <Button
+                variant="ghost"
+                size="icon"
                 onClick={() => siblingInfo.index > 0 && onSwitchBranch?.(siblingInfo.siblingIds[siblingInfo.index - 1])}
                 disabled={siblingInfo.index === 0}
-                className="p-1 rounded-full hover:bg-black/10 disabled:opacity-30 disabled:cursor-not-allowed transition"
+                className="h-auto w-auto p-1 rounded-full hover:bg-black/10"
                 aria-label="Previous variant"
                 title="Previous variant"
               >
                 <FaChevronLeft size={9} />
-              </button>
+              </Button>
               <span className="px-0.5">{siblingInfo.index + 1}/{siblingInfo.total}</span>
-              <button
+              <Button
+                variant="ghost"
+                size="icon"
                 onClick={() => siblingInfo.index < siblingInfo.total - 1 && onSwitchBranch?.(siblingInfo.siblingIds[siblingInfo.index + 1])}
                 disabled={siblingInfo.index === siblingInfo.total - 1}
-                className="p-1 rounded-full hover:bg-black/10 disabled:opacity-30 disabled:cursor-not-allowed transition"
+                className="h-auto w-auto p-1 rounded-full hover:bg-black/10"
                 aria-label="Next variant"
                 title="Next variant"
               >
                 <FaChevronRight size={9} />
-              </button>
+              </Button>
               {onDeleteBranch && (
                 <>
                   <span className="w-px h-3 bg-current opacity-20 mx-0.5" />
-                  <button
+                  <Button
+                    variant="ghost"
+                    size="icon"
                     onClick={handleDeleteBranch}
                     disabled={aiLoading}
-                    className="p-1 rounded-full hover:bg-red-500/15 hover:text-red-500 disabled:opacity-30 disabled:cursor-not-allowed transition"
+                    className="h-auto w-auto p-1 rounded-full hover:bg-red-500/15 hover:text-red-500"
                     aria-label="Delete this variant"
                     title="Delete this variant"
                   >
                     <FaTrash size={9} />
-                  </button>
+                  </Button>
                 </>
               )}
             </div>
@@ -159,9 +166,11 @@ const ChatMessage = React.memo(({
         <div className="absolute top-2 right-2">
           <DropdownMenu
             trigger={
-              <button
+              <Button
+                variant="ghost"
+                size="icon"
                 className={cn(
-                  "p-1.5 rounded-full transition",
+                  "h-auto w-auto p-1.5 rounded-full",
                   isUser
                     ? "text-bubble-sentFg/70 hover:text-bubble-sentFg hover:bg-black/10"
                     : "text-muted-foreground hover:text-foreground hover:bg-background"
@@ -170,7 +179,7 @@ const ChatMessage = React.memo(({
                 aria-label="Message options"
               >
                 <FaEllipsisV size={12} />
-              </button>
+              </Button>
             }
           >
             <DropdownMenuItem icon={FaCopy} label="Copy" onClick={handleCopy} />
@@ -187,20 +196,27 @@ const ChatMessage = React.memo(({
         {/* Action Row for AI Messages */}
         {!isUser && (
           <div className="flex items-center gap-4 mt-3 pt-2 text-xs text-muted-foreground">
-            <button onClick={handleCopy} className="flex items-center gap-1.5 hover:text-foreground transition">
+            <Button variant="ghost" onClick={handleCopy} className="h-auto w-auto p-0 gap-1.5 text-xs font-normal text-muted-foreground hover:bg-transparent hover:text-foreground">
               <FaCopy size={12} /> Copy
-            </button>
-            <button onClick={handleRegenerate} className="flex items-center gap-1.5 hover:text-foreground transition">
+            </Button>
+            <Button variant="ghost" onClick={handleRegenerate} className="h-auto w-auto p-0 gap-1.5 text-xs font-normal text-muted-foreground hover:bg-transparent hover:text-foreground">
               <FaRedo size={12} /> Regenerate
-            </button>
+            </Button>
             {speechSupported && (
-              <button onClick={handleToggleSpeak} className={cn("flex items-center gap-1.5 transition", isSpeaking ? "text-primary" : "hover:text-foreground")}>
+              <Button
+                variant="ghost"
+                onClick={handleToggleSpeak}
+                className={cn(
+                  "h-auto w-auto p-0 gap-1.5 text-xs font-normal hover:bg-transparent",
+                  isSpeaking ? "text-primary hover:text-primary" : "text-muted-foreground hover:text-foreground"
+                )}
+              >
                 {isSpeaking ? <FaStop size={12} /> : <FaVolumeUp size={12} />} {isSpeaking ? "Stop" : "Speak"}
-              </button>
+              </Button>
             )}
-            <button onClick={handleEdit} className="flex items-center gap-1.5 hover:text-foreground transition">
+            <Button variant="ghost" onClick={handleEdit} className="h-auto w-auto p-0 gap-1.5 text-xs font-normal text-muted-foreground hover:bg-transparent hover:text-foreground">
               <FaEdit size={12} /> Edit
-            </button>
+            </Button>
           </div>
         )}
       </div>

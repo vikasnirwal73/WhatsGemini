@@ -3,9 +3,10 @@ import { useSelector } from "react-redux";
 import { AuthContext } from "../contexts/AuthContext";
 import { Navigate } from "react-router-dom";
 import { FaExternalLinkAlt, FaLock } from "react-icons/fa";
-import { cn } from "../utils/cn";
 import Logo from "../components/ui/Logo";
 import { TextInput, Select } from "../components/ui/FormControls";
+import { Button } from "../components/ui/button";
+import { Card } from "../components/ui/card";
 import { useAppDispatch } from "../store/hooks";
 import { RootState } from "../store/store";
 import { setChatProvider, setOllamaBaseUrl } from "../features/settingsSlice";
@@ -50,7 +51,7 @@ const Login = () => {
 
   return (
     <div className="flex items-center justify-center h-screen bg-background">
-      <div className="bg-card border border-border p-8 rounded-2xl shadow-xl w-96 max-w-[calc(100%-30px)]">
+      <Card className="p-8 rounded-2xl shadow-xl w-96 max-w-[calc(100%-30px)]">
         <Logo size={48} className="shadow-lg shadow-primary/30 rounded-[13px] mx-auto mb-5 block" />
         <h2 className="text-xl font-bold text-center text-foreground mb-1.5">
           Welcome to WhatsGemini
@@ -116,19 +117,17 @@ const Login = () => {
               Stored encrypted, only on this device - never sent anywhere but the provider's API.
             </p>
 
-            <button
+            <Button
               onClick={handleLogin}
-              className={cn(
-                "w-full p-3 bg-primary text-onAccent rounded-xl shadow-lg transition-all font-semibold",
-                loading || !key.trim() ? "opacity-70 cursor-not-allowed" : "hover:bg-primary-hover transform hover:scale-[1.02]"
-              )}
+              size="lg"
+              className="w-full rounded-xl shadow-lg transition-all hover:scale-[1.02]"
               disabled={loading || !key.trim()}
             >
               {loading ? "Saving..." : "Save & Continue"}
-            </button>
+            </Button>
           </>
         )}
-      </div>
+      </Card>
     </div>
   );
 };

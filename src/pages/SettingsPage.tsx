@@ -14,7 +14,7 @@ import {
 import { FaDownload, FaUpload, FaInfoCircle, FaFileArchive, FaUser, FaMicrochip, FaImage, FaComments, FaShieldAlt, FaDatabase } from "react-icons/fa";
 import Header from "../components/Header";
 import InitialMessages from "../components/InitialMessages";
-import { ToastContainer, ToastData } from "../components/Toast";
+import { toast } from "sonner";
 import UserProfileSettings from "../components/settings/UserProfileSettings";
 import TextModelSettings from "../components/settings/TextModelSettings";
 import ImageGenerationSettings from "../components/settings/ImageGenerationSettings";
@@ -80,7 +80,6 @@ const SettingsPage = () => {
   const location = useLocation();
   const { showConfirm } = useModal();
   const [initialMessagesKey, setInitialMessagesKey] = useState(0);
-  const [toasts, setToasts] = useState<ToastData[]>([]);
 
   const [modelList, setModelList] = useState<{value: string, label: string}[]>(() => {
     const list = models.map((m: string) => ({ value: m, label: m }));
@@ -165,20 +164,10 @@ const SettingsPage = () => {
         }
       }
       
-      const newToast: ToastData = {
-        id: Date.now().toString(),
-        message: "Successfully fetched SD models",
-        type: "success",
-      };
-      setToasts((prev) => [...prev, newToast]);
+      toast.success("Successfully fetched SD models");
     } catch (e: any) {
       console.error(e);
-      const newToast: ToastData = {
-        id: Date.now().toString(),
-        message: "Failed to fetch SD models: " + e.message,
-        type: "error",
-      };
-      setToasts((prev) => [...prev, newToast]);
+      toast.error("Failed to fetch SD models: " + e.message);
     }
   };
 
@@ -274,7 +263,7 @@ const SettingsPage = () => {
   const handleSelectDirectory = async () => {
     try {
       if (!('showDirectoryPicker' in window)) {
-        addToast("Your browser does not support the File System Access API. Please configure standard downloads instead.", "error");
+        toast.error("Your browser does not support the File System Access API. Please configure standard downloads instead.");
         return;
       }
       const dirHandle = await (window as any).showDirectoryPicker({
@@ -283,11 +272,11 @@ const SettingsPage = () => {
       // Try to save to IndexedDB
       await dbService.setSetting("image_save_directory", dirHandle);
       setImageSaveDirName(dirHandle.name);
-      addToast("Directory selected and saved successfully!", "success");
+      toast.success("Directory selected and saved successfully!");
     } catch (err: any) {
       if (err.name !== 'AbortError') {
         console.error("Directory picker error:", err);
-        addToast("Failed to select directory.", "error");
+        toast.error("Failed to select directory.");
       }
     }
   };
@@ -306,17 +295,6 @@ const SettingsPage = () => {
     "Saved! That's definitely going to fix all your problems.",
   ], []);
 
-  // Add a toast notification
-  const addToast = useCallback((message: string, type: "success" | "error" = "success", duration = 5000) => {
-    const id = Date.now().toString();
-    setToasts((prev) => [...prev, { id, message, type, duration }]);
-  }, []);
-
-  // Remove a toast by id
-  const removeToast = useCallback((id: string) => {
-    setToasts((prev) => prev.filter((toast) => toast.id !== id));
-  }, []);
-
   // Debounced roast toast for any setting change
   const roastTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const prevSettingsRef = useRef(settings);
@@ -332,14 +310,14 @@ const SettingsPage = () => {
       
       roastTimeoutRef.current = setTimeout(() => {
         const randomRoast = roastMessages[Math.floor(Math.random() * roastMessages.length)];
-        addToast(randomRoast, "success");
+        toast.success(randomRoast);
       }, 1000);
     }
 
     return () => {
       if (roastTimeoutRef.current) clearTimeout(roastTimeoutRef.current);
     };
-  }, [settings, addToast, roastMessages]);
+  }, [settings, roastMessages]);
 
   // Redux automatically handles syncing to localStorage via store.subscribe, 
   // so we don't need the 100-line useEffect for localStorage synchronization anymore.
@@ -350,8 +328,8 @@ const SettingsPage = () => {
 
   const handleInitialMessagesSave = useCallback(() => {
     const randomRoast = roastMessages[Math.floor(Math.random() * roastMessages.length)];
-    addToast(randomRoast, "success");
-  }, [addToast, roastMessages]);
+    toast.success(randomRoast);
+  }, [roastMessages]);
 
   const settingsFileInputRef = useRef<HTMLInputElement>(null);
 
@@ -452,10 +430,10 @@ const SettingsPage = () => {
       try {
         const settings = JSON.parse(e.target?.result as string);
         applyImportedSettings(settings);
-        addToast("Settings imported successfully!", "success");
+        toast.success("Settings imported successfully!");
       } catch (err) {
         console.error("Import error:", err);
-        addToast("Failed to import settings. Invalid JSON file.", "error");
+        toast.error("Failed to import settings. Invalid JSON file.");
       }
     };
     reader.readAsText(file);
@@ -473,14 +451,14 @@ const SettingsPage = () => {
       let message = `Backed up ${chats.length} chat(s) and ${characters.length} character(s)`;
       message += imagesIncluded > 0 ? `, including ${imagesIncluded} image(s).` : ".";
       if (imagesSkipped > 0) message += ` ${imagesSkipped} local image(s) couldn't be read and were skipped.`;
-      addToast(message, "success");
+      toast.success(message);
 
       const now = Date.now();
       localStorage.setItem(LS_LAST_BACKUP_AT, String(now));
       setLastBackupAt(now);
     } catch (err) {
       console.error("Backup export error:", err);
-      addToast("Failed to create backup.", "error");
+      toast.error("Failed to create backup.");
     }
   };
 
@@ -512,10 +490,10 @@ const SettingsPage = () => {
 
       let message = `Restored ${chatsRestored} chat(s) and ${charactersRestored} character(s)`;
       message += imagesRestored > 0 ? `, including ${imagesRestored} image(s).` : ".";
-      addToast(message, "success");
+      toast.success(message);
     } catch (err) {
       console.error("Backup import error:", err);
-      addToast("Failed to restore backup. Invalid file.", "error");
+      toast.error("Failed to restore backup. Invalid file.");
     }
   };
 
@@ -558,9 +536,6 @@ const SettingsPage = () => {
           <h1 className="text-xl font-semibold tracking-tight text-foreground">AI Provider Settings</h1>
           <FaInfoCircle className="text-muted-foreground" size={18} />
         </div>
-
-        {/* Toast Notifications */}
-        <ToastContainer toasts={toasts} removeToast={removeToast} />
 
         <Accordion type="single" collapsible value={openSection} onValueChange={setOpenSection}>
         {renderAccordion("profile", <FaUser size={15} />, "User Profile", "Your name and bio",

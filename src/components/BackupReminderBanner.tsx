@@ -7,6 +7,7 @@ import {
   LS_BACKUP_REMINDER_SNOOZE_UNTIL,
   BACKUP_REMINDER_INTERVAL_DAYS,
 } from "../utils/constants";
+import { Button } from "./ui/button";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const REMINDER_INTERVAL_MS = BACKUP_REMINDER_INTERVAL_DAYS * DAY_MS;
@@ -51,20 +52,22 @@ const BackupReminderBanner = () => {
           ? "It's been a while since your last backup - everything here only lives in this browser."
           : "You haven't backed up yet - everything here only lives in this browser."}
       </span>
-      <button
+      <Button
         onClick={handleBackupNow}
-        className="px-3 py-1.5 rounded-lg bg-primary text-onAccent text-[12.5px] font-semibold hover:bg-primary-hover transition flex-shrink-0"
+        className="h-auto px-3 py-1.5 text-[12.5px] flex-shrink-0"
       >
         Back up now
-      </button>
-      <button
+      </Button>
+      <Button
+        variant="ghost"
+        size="icon"
         onClick={handleDismiss}
-        className="p-1.5 rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition flex-shrink-0"
+        className="h-auto w-auto p-1.5 rounded-md flex-shrink-0"
         aria-label="Dismiss, remind me later"
         title="Remind me later"
       >
         <FaTimes size={12} />
-      </button>
+      </Button>
     </div>
   );
 };

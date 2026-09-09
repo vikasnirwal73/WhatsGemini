@@ -5,6 +5,7 @@ import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import remarkGfm from 'remark-gfm';
 import { FaCheck, FaCopy } from 'react-icons/fa';
 import { cn } from '../../utils/cn';
+import { Button } from '../ui/button';
 
 // CodeBlock Component to handle syntax highlighting and copying
 const CodeBlock = ({ node, className, children, ...props }: any) => {
@@ -31,14 +32,15 @@ const CodeBlock = ({ node, className, children, ...props }: any) => {
     <div className="relative group my-4 rounded-md overflow-hidden border border-gray-200 dark:border-gray-700">
       <div className="flex items-center justify-between px-4 py-1.5 bg-gray-100 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 text-xs text-gray-500 dark:text-gray-400 font-mono">
         <span>{lang || 'text'}</span>
-        <button
+        <Button
+          variant="ghost"
           onClick={handleCopy}
-          className="flex items-center gap-1.5 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
+          className="h-auto w-auto p-0 gap-1.5 text-xs font-mono text-gray-500 dark:text-gray-400 hover:bg-transparent hover:text-gray-700 dark:hover:text-gray-200"
           title="Copy code"
         >
           {copied ? <FaCheck size={12} /> : <FaCopy size={12} />}
           <span>{copied ? 'Copied!' : 'Copy'}</span>
-        </button>
+        </Button>
       </div>
       <SyntaxHighlighter
         style={vscDarkPlus as any}

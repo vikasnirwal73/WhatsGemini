@@ -17,6 +17,8 @@ import ServiceWorkerUpdater from "./components/ServiceWorkerUpdater";
 import BackupReminderBanner from "./components/BackupReminderBanner";
 import Logo from "./components/ui/Logo";
 import { TooltipProvider } from "./components/ui/Tooltip";
+import { Toaster } from "./components/ui/sonner";
+import { Button } from "./components/ui/button";
 
 const ChatPage = lazy(() => import("./pages/ChatPage"));
 const Login = lazy(() => import("./pages/Login"));
@@ -74,30 +76,33 @@ const EmptyChatState = () => {
               </p>
             </div>
             <div className="flex flex-col sm:flex-row gap-2.5 mt-1">
-              <button
+              <Button
+                variant="gradient"
                 onClick={handleTrySample}
                 disabled={creatingSample}
-                className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gemini-logo text-onAccent font-semibold text-sm shadow-lg shadow-primary/20 disabled:opacity-60 disabled:cursor-not-allowed transition"
+                className="rounded-xl px-4 py-2.5 h-auto"
               >
                 {creatingSample ? "Creating..." : "Try a sample character"}
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="outline"
                 onClick={() => navigate("/characters")}
-                className="px-4 py-2.5 rounded-xl border border-border bg-muted text-foreground font-medium text-sm hover:border-primary hover:text-primary transition"
+                className="rounded-xl px-4 py-2.5 h-auto bg-muted hover:border-primary hover:text-primary hover:bg-muted"
               >
                 Create your own
-              </button>
+              </Button>
             </div>
           </>
         ) : (
           <>
             <p className="text-sm">Select a chat from the sidebar to continue a conversation.</p>
-            <button
+            <Button
+              variant="gradient"
               onClick={open}
-              className="md:hidden flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gemini-logo text-onAccent font-semibold text-sm shadow-lg shadow-primary/20"
+              className="md:hidden rounded-xl px-4 py-2.5 h-auto"
             >
               Browse chats
-            </button>
+            </Button>
           </>
         )}
       </div>
@@ -217,6 +222,7 @@ const App = () => (
             </SidebarProvider>
           </ModalProvider>
         </TooltipProvider>
+        <Toaster position="bottom-right" />
       </ThemeProvider>
     </AuthProvider>
   </Provider>

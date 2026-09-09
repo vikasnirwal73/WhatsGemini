@@ -2,6 +2,7 @@ import React from 'react';
 import { TextInput, Select, FieldLabel, Slider } from '../ui/FormControls';
 import { CHAT_PROVIDER_META } from '../../features/ai/providers/registry';
 import { ProviderCapabilities } from '../../features/ai/providers/types';
+import { Button } from '../ui/button';
 
 interface TextModelSettingsProps {
   temperature: number;
@@ -99,13 +100,14 @@ const TextModelSettings: React.FC<TextModelSettingsProps> = ({
         <>
           <div className="flex justify-between items-center mb-1.5">
             <label className="block text-sm font-medium text-foreground">Text Generation Model</label>
-            <button
+            <Button
               type="button"
+              variant="link"
               onClick={fetchOllamaModels}
-              className="text-xs text-primary hover:text-primary-hover"
+              className="h-auto p-0 text-xs text-primary hover:text-primary-hover no-underline hover:no-underline"
             >
               Fetch installed models
-            </button>
+            </Button>
           </div>
           <TextInput
             type="text"

@@ -8,6 +8,7 @@ import { DisplayImage } from "../components/DisplayImage";
 import { DialogRoot, DialogContent, DialogTitle, DialogClose } from "../components/ui/Dialog";
 import Header from "../components/Header";
 import { CharacterAvatar } from "../components/ui/CharacterAvatar";
+import { Button } from "../components/ui/button";
 
 const CharacterGalleryPage = () => {
   const { characterId } = useParams();
@@ -89,7 +90,7 @@ const CharacterGalleryPage = () => {
     return (
       <div className="flex flex-col h-screen items-center justify-center bg-background text-foreground">
         <h2 className="text-2xl font-medium mb-4">Character not found</h2>
-        <button onClick={() => navigate('/characters')} className="text-primary hover:underline">Return to Characters</button>
+        <Button variant="link" onClick={() => navigate('/characters')} className="h-auto p-0 text-primary">Return to Characters</Button>
       </div>
     );
   }
@@ -108,21 +109,25 @@ const CharacterGalleryPage = () => {
             <span className="sr-only">{character.name}'s gallery image</span>
           </DialogTitle>
           <DialogClose asChild>
-            <button
-              className="absolute top-4 right-4 p-2 text-white bg-black/50 rounded-full hover:bg-black/80 transition z-10"
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute top-4 right-4 h-auto w-auto p-2 text-white hover:text-white bg-black/50 hover:bg-black/80 rounded-full z-10"
             >
               <FaTimes size={24} />
-            </button>
+            </Button>
           </DialogClose>
 
           {hasPrev && (
-            <button
-              className="absolute left-4 md:left-8 p-3 text-white bg-black/50 rounded-full hover:bg-black/80 transition z-10"
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute left-4 md:left-8 h-auto w-auto p-3 text-white hover:text-white bg-black/50 hover:bg-black/80 rounded-full z-10"
               onClick={handlePrev}
               title="Previous (Left Arrow)"
             >
               <FaChevronLeft size={24} />
-            </button>
+            </Button>
           )}
 
           {selectedImage && (
@@ -134,13 +139,15 @@ const CharacterGalleryPage = () => {
           )}
 
           {hasNext && (
-            <button
-              className="absolute right-4 md:right-8 p-3 text-white bg-black/50 rounded-full hover:bg-black/80 transition z-10"
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute right-4 md:right-8 h-auto w-auto p-3 text-white hover:text-white bg-black/50 hover:bg-black/80 rounded-full z-10"
               onClick={handleNext}
               title="Next (Right Arrow)"
             >
               <FaChevronRight size={24} />
-            </button>
+            </Button>
           )}
         </DialogContent>
       </DialogRoot>
