@@ -376,7 +376,7 @@ code, not just reshuffling" bar):
   cosmetic, not urgent" - by its own stated bar this is exactly the "just reshuffling"
   case to skip.
 
-## Phase 7 — Cleanup and optional full token rename 🟡 Mandatory items done, optional rename pending a decision
+## Phase 7 — Cleanup and optional full token rename ✅ Done, including the optional rename
 
 **Note:** Phases 0-6 had never actually been committed on this branch before this
 session started (`ui/to-shadcn-ui` was sitting at the same commit as `main`, with all
@@ -410,13 +410,42 @@ What shipped:
    to a functional `setState` update (`prev.some(...)` check) with an empty dependency
    array, confirmed clean via console after a full reload.
 
-**Not yet decided — optional full token rename:** now that the app has lived with both
-naming schemes for a while and every shadcn component is in, a single mechanical rename
-pass (`bg-panel` → `bg-card`, `text-ink` → `text-foreground`, `border-line` →
-`border-border`, etc.) across the whole codebase, deleting the bridge-alias layer from
-Phase 2, is still available. This is purely cosmetic/consistency cleanup with no
-functional benefit, so it's fine to leave the bridge layer in place indefinitely
-instead — pending user decision on whether it's worth the ~29-file diff.
+**Optional full token rename — done, user opted in.** Every app-specific Tailwind color
+class with an exact 1:1 bridge equivalent (same underlying CSS variable) was mechanically
+renamed to its shadcn-canonical name, across all 35 files that used one:
+
+- `bg-panel` → `bg-card`, `border-panel` → `border-card`
+- `bg-panel2` → `bg-muted`
+- `bg-panel3` → `bg-accent`
+- `text-ink` → `text-foreground`, `bg-ink` → `bg-foreground`, `fill-ink` →
+  `fill-foreground`
+- `text-ink-muted` → `text-muted-foreground`
+- `border-line` → `border-border`, `divide-line` → `divide-border`, `bg-line` →
+  `bg-border`
+- `bg-app` → `bg-background`, `text-app` → `text-background`
+
+Value-preserving by construction (each renamed class already resolved to the exact
+bridge variable it's now named after) — verified via `tsc --noEmit`, a clean
+zero-ESLint-warning `npm run build`, a grep pass confirming no leftover old-name usages,
+and a live-browser before/after screenshot comparison across Chat/Settings/Character in
+both themes.
+
+**Deliberately left untouched** (no shadcn-canonical counterpart, so renaming would be
+lossy rather than mechanical): `text-ink-faint`/`bg-ink-faint` (shadcn has no third
+"faint" text tier beyond foreground/muted-foreground), `bg-hover` (a hover surface
+distinct from `--accent`), `bg-chat`, `bubble-*`, `accent-2`, `primary-hover`/
+`secondary-hover`, `onAccent`/`onSecondary`.
+
+`tailwind.config.js` had its now-fully-unused `panel`/`panel2`/`panel3`/`ink.DEFAULT`+
+`muted`/`line`/`app` color keys removed (along with their already-dead `app-light`/
+`app-dark`/`panel-light`/`panel-dark` compat sub-keys, confirmed unused via grep before
+deleting) — only `ink.faint`/`hover`/`chat`/`bubble`/etc. remain as app-specific keys
+with no shadcn equivalent. The Phase 1/2 bridge *variables* in `tokens.css` stay in
+place (they're what makes the rename value-identical), just with their consumers now
+using shadcn's names directly instead of the app-specific aliases.
+
+One real bug found and fixed along the way, unrelated to the rename itself (during the
+mandatory click-through, before the rename started) — see item 4 above.
 
 ---
 
@@ -433,9 +462,7 @@ Each phase above is meant to be its own session/PR. Rough sizing:
 | 4 - Swap FormControls/ToggleSwitch/Slider | Medium | Medium | ✅ Done, visually verified |
 | 5 - Button sweep | Low risk per-page, high total effort | Large (split by page) | ✅ Done, visually verified |
 | 6 - Accordion/Toast/Avatar/Card | Low, optional | Medium | ✅ Done (Accordion only - Toast/Avatar/Card deliberately skipped, see Phase 6) |
-| 7 - Cleanup + optional rename | Low, optional | Small–Large depending on rename | 🟡 Mandatory items done, optional rename pending decision |
+| 7 - Cleanup + optional rename | Low, optional | Small–Large depending on rename | ✅ Done, including the optional rename |
 
-The migration's functional goals are complete: all mandatory work through Phase 7 is
-done and committed. The only thing left on the table is the fully optional full token
-rename described in Phase 7 above — cosmetic/consistency-only, no functional benefit,
-safe to defer indefinitely.
+The migration is complete end-to-end, including the fully optional full token rename -
+nothing left on the plan.
