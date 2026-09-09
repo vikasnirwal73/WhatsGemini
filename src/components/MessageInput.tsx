@@ -142,10 +142,10 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSend, disabled = false, o
       )}
 
       {isListening && (
-        <div className="flex items-center gap-2.5 px-3 py-2 bg-red-500/10 border border-red-500/50 rounded-lg">
+        <div className="flex items-center gap-2.5 px-3 py-2 bg-destructive/10 border border-destructive/50 rounded-lg">
           <span className="relative flex-shrink-0 w-2.5 h-2.5">
-            <span className="absolute inset-0 rounded-full bg-red-500 animate-ping opacity-75" />
-            <span className="absolute inset-0 rounded-full bg-red-500" />
+            <span className="absolute inset-0 rounded-full bg-destructive animate-ping opacity-75" />
+            <span className="absolute inset-0 rounded-full bg-destructive" />
           </span>
           <span className="flex-1 text-[12.5px] text-foreground font-medium">
             Listening… speak, then tap the mic to stop.
@@ -171,7 +171,7 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSend, disabled = false, o
           aria-label="Request an image with this message"
           aria-pressed={isImageRequest}
           className={cn(
-            "h-11 w-11 flex-shrink-0 rounded-[13px] border",
+            "h-11 w-11 flex-shrink-0 rounded-xl border",
             isImageRequest
               ? "border-primary bg-primary/10 text-primary hover:bg-primary/10"
               : "border-border bg-muted text-ink-faint hover:border-primary hover:bg-muted hover:text-foreground"
@@ -189,9 +189,9 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSend, disabled = false, o
             aria-label={isListening ? "Stop dictation" : "Dictate a message"}
             aria-pressed={isListening}
             className={cn(
-              "h-11 w-11 flex-shrink-0 rounded-[13px] border",
+              "h-11 w-11 flex-shrink-0 rounded-xl border",
               isListening
-                ? "border-red-500 bg-red-500/10 text-red-500 hover:bg-red-500/10"
+                ? "border-destructive bg-destructive/10 text-destructive hover:bg-destructive/10"
                 : "border-border bg-muted text-ink-faint hover:border-primary hover:bg-muted hover:text-foreground"
             )}
           >
@@ -204,12 +204,12 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSend, disabled = false, o
           variant="ghost"
           title="Image Generation Settings"
           aria-label="Image Generation Settings"
-          className="h-11 w-11 flex-shrink-0 rounded-[13px] border border-border bg-muted text-ink-faint hover:border-primary hover:bg-muted hover:text-foreground"
+          className="h-11 w-11 flex-shrink-0 rounded-xl border border-border bg-muted text-ink-faint hover:border-primary hover:bg-muted hover:text-foreground"
         >
           <FaCog size={14} />
         </Button>
 
-        <div className="flex-1 flex items-center gap-2 bg-muted border border-border rounded-[18px] min-h-[44px] pl-4 pr-1.5 py-0.5 shadow-sm">
+        <div className="flex-1 flex items-center gap-2 bg-muted border border-border rounded-2xl min-h-[44px] pl-4 pr-1.5 py-0.5 shadow-sm">
           <textarea
             ref={inputRef}
             value={text}

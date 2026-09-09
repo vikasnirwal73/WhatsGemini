@@ -3,7 +3,7 @@ import { FaCopy, FaRedo, FaEdit, FaEllipsisV, FaChevronLeft, FaChevronRight, FaT
 import { motion } from "framer-motion";
 import { cn } from "../../utils/cn";
 import { Message } from "../../types";
-import { AI, YOU } from "../../utils/constants";
+import { YOU } from "../../utils/constants";
 import { stripImageContextTag } from "../../features/ai/utils/imageGeneration";
 import MarkdownRenderer from "./MarkdownRenderer";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "../ui/dropdown-menu";
@@ -94,14 +94,42 @@ const ChatMessage = React.memo(({
 
       <div
         className={cn(
-          "relative p-4 rounded-2xl max-w-[85%] md:max-w-[70%] shadow-sm min-w-0 group",
+          "relative p-4 rounded-2xl max-w-[85%] md:max-w-[70%] min-w-0 group",
           isUser
-            ? "bg-bubble-sent text-bubble-sentFg rounded-br-[5px]"
-            : "bg-bubble-received text-bubble-receivedFg rounded-bl-[5px] border border-border"
+            ? "bg-primary/[0.16] border border-primary/[0.28] text-foreground rounded-br-[5px]"
+            : "bg-card/[0.88] border border-border/40 shadow-soft text-foreground rounded-bl-[5px]"
         )}
         style={{ fontSize: "var(--chat-font-size, 16px)" }}
       >
-        <MarkdownRenderer msgText={stripImageContextTag(msg.txt || "")} isUser={isUser} />
+        {/* Floating sibling prev/next, anchored to the card's edges */}
+        {siblingInfo && siblingInfo.index > 0 && (
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => onSwitchBranch?.(siblingInfo.siblingIds[siblingInfo.index - 1])}
+            className="absolute -left-4 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full bg-secondary border border-border/50 shadow-soft text-foreground hover:bg-muted z-10"
+            aria-label="Previous variant"
+            title="Previous variant"
+          >
+            <FaChevronLeft size={12} />
+          </Button>
+        )}
+        {siblingInfo && siblingInfo.index < siblingInfo.total - 1 && (
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => onSwitchBranch?.(siblingInfo.siblingIds[siblingInfo.index + 1])}
+            className="absolute -right-4 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full bg-secondary border border-border/50 shadow-soft text-foreground hover:bg-muted z-10"
+            aria-label="Next variant"
+            title="Next variant"
+          >
+            <FaChevronRight size={12} />
+          </Button>
+        )}
+
+        <div className="font-serif">
+          <MarkdownRenderer msgText={stripImageContextTag(msg.txt || "")} isUser={isUser} />
+        </div>
 
         {msg.images && msg.images.map((imgSrc, idx) => (
           <DisplayImage
@@ -114,108 +142,65 @@ const ChatMessage = React.memo(({
         ))}
 
         {siblingInfo && (
-          <div className={cn("flex items-center mt-2", isUser ? "justify-end" : "justify-start")}>
-            <div
-              className={cn(
-                "flex items-center gap-0.5 rounded-full text-[11px] font-mono font-semibold pl-1.5 pr-1 py-1",
-                isUser ? "bg-black/10 text-bubble-sentFg" : "bg-muted border border-border text-muted-foreground"
-              )}
+          <div className={cn("flex items-center gap-1.5 mt-2 font-sans", isUser ? "justify-end" : "justify-start")}>
+            <span
+              className="text-[11px] font-mono font-semibold text-subtle tabular-nums"
               title={`${siblingInfo.total} variants of this message`}
             >
+              {siblingInfo.index + 1}/{siblingInfo.total}
+            </span>
+            {onDeleteBranch && (
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={() => siblingInfo.index > 0 && onSwitchBranch?.(siblingInfo.siblingIds[siblingInfo.index - 1])}
-                disabled={siblingInfo.index === 0}
-                className="h-auto w-auto p-1 rounded-full hover:bg-black/10"
-                aria-label="Previous variant"
-                title="Previous variant"
+                onClick={handleDeleteBranch}
+                disabled={aiLoading}
+                className="h-auto w-auto p-1 rounded-full text-subtle hover:bg-destructive/15 hover:text-destructive"
+                aria-label="Delete this variant"
+                title="Delete this variant"
               >
-                <FaChevronLeft size={9} />
+                <FaTrash size={9} />
               </Button>
-              <span className="px-0.5">{siblingInfo.index + 1}/{siblingInfo.total}</span>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => siblingInfo.index < siblingInfo.total - 1 && onSwitchBranch?.(siblingInfo.siblingIds[siblingInfo.index + 1])}
-                disabled={siblingInfo.index === siblingInfo.total - 1}
-                className="h-auto w-auto p-1 rounded-full hover:bg-black/10"
-                aria-label="Next variant"
-                title="Next variant"
-              >
-                <FaChevronRight size={9} />
-              </Button>
-              {onDeleteBranch && (
-                <>
-                  <span className="w-px h-3 bg-current opacity-20 mx-0.5" />
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={handleDeleteBranch}
-                    disabled={aiLoading}
-                    className="h-auto w-auto p-1 rounded-full hover:bg-red-500/15 hover:text-red-500"
-                    aria-label="Delete this variant"
-                    title="Delete this variant"
-                  >
-                    <FaTrash size={9} />
-                  </Button>
-                </>
-              )}
-            </div>
+            )}
           </div>
         )}
 
-        {/* Always visible (not hover-gated) so the menu is reachable on touch devices */}
-        <div className="absolute top-2 right-2">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className={cn(
-                  "h-auto w-auto p-1.5 rounded-full",
-                  isUser
-                    ? "text-bubble-sentFg/70 hover:text-bubble-sentFg hover:bg-black/10"
-                    : "text-muted-foreground hover:text-foreground hover:bg-background"
-                )}
-                title="More options"
-                aria-label="Message options"
-              >
-                <FaEllipsisV size={12} />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onSelect={handleCopy}>
-                <FaCopy className="mr-2 h-4 w-4" />
-                <span>Copy</span>
-              </DropdownMenuItem>
-              {msg.role === AI && (
-                <DropdownMenuItem onSelect={handleRegenerate} disabled={aiLoading}>
-                  <FaRedo className="mr-2 h-4 w-4" />
-                  <span>Regenerate</span>
+        {/* User messages: dropdown is the only action surface (always visible so it's reachable on touch devices) */}
+        {isUser && (
+          <div className="absolute top-2 right-2">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-auto w-auto p-1.5 rounded-full text-foreground/70 hover:text-foreground hover:bg-primary/10"
+                  title="More options"
+                  aria-label="Message options"
+                >
+                  <FaEllipsisV size={12} />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onSelect={handleCopy}>
+                  <FaCopy className="mr-2 h-4 w-4" />
+                  <span>Copy</span>
                 </DropdownMenuItem>
-              )}
-              {msg.role === AI && speechSupported && (
-                <DropdownMenuItem onSelect={handleToggleSpeak}>
-                  {isSpeaking ? <FaStop className="mr-2 h-4 w-4" /> : <FaVolumeUp className="mr-2 h-4 w-4" />}
-                  <span>{isSpeaking ? "Stop speaking" : "Speak"}</span>
+                <DropdownMenuItem onSelect={handleEdit} disabled={aiLoading}>
+                  <FaEdit className="mr-2 h-4 w-4" />
+                  <span>Edit</span>
                 </DropdownMenuItem>
-              )}
-              <DropdownMenuItem onSelect={handleEdit} disabled={aiLoading}>
-                <FaEdit className="mr-2 h-4 w-4" />
-                <span>Edit</span>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        )}
 
-        {/* Action Row for AI Messages */}
+        {/* AI messages: one inline action row, no duplicate dropdown */}
         {!isUser && (
-          <div className="flex items-center gap-4 mt-3 pt-2 text-xs text-muted-foreground">
-            <Button variant="ghost" onClick={handleCopy} className="h-auto w-auto p-0 gap-1.5 text-xs font-normal text-muted-foreground hover:bg-transparent hover:text-foreground">
+          <div className="flex items-center gap-1 mt-3 pt-2.5 border-t border-border/30 font-sans">
+            <Button variant="ghost" onClick={handleCopy} className="h-auto w-auto px-2 py-1 gap-1.5 rounded-full text-xs font-normal text-muted-foreground hover:bg-secondary hover:text-foreground">
               <FaCopy size={12} /> Copy
             </Button>
-            <Button variant="ghost" onClick={handleRegenerate} className="h-auto w-auto p-0 gap-1.5 text-xs font-normal text-muted-foreground hover:bg-transparent hover:text-foreground">
+            <Button variant="ghost" onClick={handleRegenerate} className="h-auto w-auto px-2 py-1 gap-1.5 rounded-full text-xs font-normal text-muted-foreground hover:bg-secondary hover:text-foreground">
               <FaRedo size={12} /> Regenerate
             </Button>
             {speechSupported && (
@@ -223,14 +208,14 @@ const ChatMessage = React.memo(({
                 variant="ghost"
                 onClick={handleToggleSpeak}
                 className={cn(
-                  "h-auto w-auto p-0 gap-1.5 text-xs font-normal hover:bg-transparent",
+                  "h-auto w-auto px-2 py-1 gap-1.5 rounded-full text-xs font-normal hover:bg-secondary",
                   isSpeaking ? "text-primary hover:text-primary" : "text-muted-foreground hover:text-foreground"
                 )}
               >
                 {isSpeaking ? <FaStop size={12} /> : <FaVolumeUp size={12} />} {isSpeaking ? "Stop" : "Speak"}
               </Button>
             )}
-            <Button variant="ghost" onClick={handleEdit} className="h-auto w-auto p-0 gap-1.5 text-xs font-normal text-muted-foreground hover:bg-transparent hover:text-foreground">
+            <Button variant="ghost" onClick={handleEdit} className="h-auto w-auto px-2 py-1 gap-1.5 rounded-full text-xs font-normal text-muted-foreground hover:bg-secondary hover:text-foreground">
               <FaEdit size={12} /> Edit
             </Button>
           </div>

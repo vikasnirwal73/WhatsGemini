@@ -1,0 +1,34 @@
+import React from 'react';
+import { cn } from '../../utils/cn';
+
+interface ProviderPickerProps {
+  providers: { id: string; label: string }[];
+  value: string;
+  onChange: (id: string) => void;
+}
+
+// Provider selection as a wrapped row of pill buttons instead of a <select> -
+// matches the "Provider" row on every settings screen in the redesign
+// (Text generation, Image generation).
+export const ProviderPicker: React.FC<ProviderPickerProps> = ({ providers, value, onChange }) => (
+  <div className="flex flex-wrap gap-1.5">
+    {providers.map((p) => {
+      const active = p.id === value;
+      return (
+        <button
+          key={p.id}
+          type="button"
+          onClick={() => onChange(p.id)}
+          className={cn(
+            "h-[34px] px-3.5 rounded-full text-[13px] font-medium whitespace-nowrap border transition-colors",
+            active
+              ? "bg-primary/[0.14] text-primary border-primary/40"
+              : "bg-background text-muted-foreground border-input hover:text-foreground"
+          )}
+        >
+          {p.label}
+        </button>
+      );
+    })}
+  </div>
+);

@@ -9,6 +9,7 @@ import { stripImageContextTag } from "../features/ai/utils/imageGeneration";
 import { DisplayImage } from "./DisplayImage";
 import ToggleSwitch from "./ToggleSwitch";
 import ChatMessage from "./chat/ChatMessage";
+import ScenePanel from "./chat/ScenePanel";
 import { Dialog, DialogContent, DialogTitle, DialogClose } from "./ui/dialog";
 import { CharacterAvatar } from "./ui/CharacterAvatar";
 import { Button } from "./ui/button";
@@ -26,16 +27,21 @@ interface ChatWindowProps {
   aiLoading?: boolean;
   characterName?: string;
   character?: Character;
+  chatId?: number;
+  sceneOpen?: boolean;
+  onCloseScene?: () => void;
+  authorNote?: string;
+  worldTags?: string[];
 }
 
 const TypingIndicator = ({ charInitials, accent }: { charInitials: string; accent?: [string, string] }) => (
   <div className="flex items-end gap-3 mb-6">
     <CharacterAvatar name={charInitials} accent={accent} size={32} className="mt-1" />
-    <div className="flex items-center gap-1 px-4 py-3.5 bg-bubble-received border border-border rounded-2xl rounded-bl-[5px]">
+    <div className="flex items-center gap-1 px-4 py-3.5 bg-card/[0.88] border border-border/40 shadow-soft rounded-2xl rounded-bl-[5px]">
       {[0, 1, 2].map((i) => (
         <motion.span
           key={i}
-          className="w-1.5 h-1.5 rounded-full bg-ink-faint"
+          className="w-1.5 h-1.5 rounded-full bg-subtle"
           animate={{ y: [0, -4, 0], opacity: [0.5, 1, 0.5] }}
           transition={{ duration: 1, repeat: Infinity, delay: i * 0.15, ease: "easeInOut" }}
         />
@@ -44,7 +50,7 @@ const TypingIndicator = ({ charInitials, accent }: { charInitials: string; accen
   </div>
 );
 
-const ChatWindow: React.FC<ChatWindowProps> = ({ messages = [], tree, onSwitchBranch, onDeleteBranch, onRegenerate, onEdit, onSend, aiLoading, characterName, character }) => {
+const ChatWindow: React.FC<ChatWindowProps> = ({ messages = [], tree, onSwitchBranch, onDeleteBranch, onRegenerate, onEdit, onSend, aiLoading, characterName, character, chatId, sceneOpen, onCloseScene, authorNote, worldTags }) => {
   const chatEndRef = useRef<HTMLDivElement>(null);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [editText, setEditText] = useState("");
@@ -231,67 +237,93 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ messages = [], tree, onSwitchBr
   const charInitials = getInitials(characterName);
 
   return (
-    <div
-      className="flex-1 p-4 overflow-auto bg-chat relative z-1 h-full w-full max-w-4xl mx-auto pb-32"
-      ref={scrollContainerRef}
-      onScroll={handleScroll}
-    >
-      {filteredMessages.length === 0 ? (
-        <div className="flex flex-col items-center h-full w-full px-4 pt-10">
-          <Card className="flex flex-col items-center text-center gap-3 w-full max-w-[440px] px-5 py-8">
-            <CharacterAvatar name={charInitials} accent={character?.accent} size={64} className="text-2xl" />
-            <div>
-              <div className="text-[19px] font-bold tracking-tight text-foreground">{characterName || "New Conversation"}</div>
-              {character?.relationship && (
-                <Badge variant="outline" className="mt-1 max-w-full truncate border-primary/20 bg-primary/10 font-medium text-primary">
-                  {character.relationship}
-                </Badge>
-              )}
+    <>
+    <div className="relative h-full w-full flex overflow-hidden">
+      <div className="flex-1 min-w-0 relative flex flex-col overflow-hidden bg-background">
+        {character?.appearanceImages?.[0] && (
+          <>
+            <div className="absolute inset-0 opacity-25 pointer-events-none overflow-hidden">
+              <DisplayImage srcContext={character.appearanceImages[0]} alt="" aria-hidden="true" className="w-full h-full object-cover" />
             </div>
-            <p className="text-[13.5px] leading-relaxed text-muted-foreground">
-              {character?.description || "Send a message to get started."}
-            </p>
-          </Card>
-        </div>
-      ) : (
-        filteredMessages.map((msg, i) => {
-          const siblingInfo = tree && msg.id ? getSiblingInfo(tree, msg.id) : undefined;
-          return (
-            <ChatMessage
-              key={msg.id || i}
-              msg={msg}
-              charInitials={charInitials}
-              accent={character?.accent}
-              aiLoading={aiLoading || false}
-              onCopy={handleCopyMessage}
-              onRegenerate={handleRegenerate}
-              onStartEdit={startEdit}
-              setFullscreenImage={setFullscreenImage}
-              siblingInfo={siblingInfo && siblingInfo.total > 1 ? siblingInfo : undefined}
-              onSwitchBranch={onSwitchBranch}
-              onDeleteBranch={onDeleteBranch}
-              isSpeaking={Boolean(msg.id) && speakingMessageId === msg.id}
-              onToggleSpeak={handleToggleSpeak}
-            />
-          );
-        })
-      )}
-      {aiLoading && <TypingIndicator charInitials={charInitials} accent={character?.accent} />}
-      <div ref={chatEndRef} />
-      {isScrolledUp && (
-        <Button
-          onClick={() => {
-            setIsScrolledUp(false);
-            chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
-          }}
-          size="icon"
-          className="fixed bottom-24 right-6 z-50 h-11 w-11 rounded-full shadow-lg hover:scale-105 opacity-80 hover:opacity-100"
-          title="Scroll to bottom"
-          aria-label="Scroll to bottom"
+            <div className="absolute inset-0 pointer-events-none bg-gradient-to-b from-background/60 via-background/80 to-background" />
+          </>
+        )}
+        <div
+          className="relative z-[1] flex-1 overflow-auto"
+          ref={scrollContainerRef}
+          onScroll={handleScroll}
         >
-          <FaArrowDown size={16} />
-        </Button>
+          <div className="max-w-4xl mx-auto p-4 pb-32">
+            {filteredMessages.length === 0 ? (
+              <div className="flex flex-col items-center h-full w-full px-4 pt-10">
+                <Card className="flex flex-col items-center text-center gap-3 w-full max-w-[440px] px-5 py-8">
+                  <CharacterAvatar name={charInitials} accent={character?.accent} size={64} className="text-2xl" />
+                  <div>
+                    <div className="text-[19px] font-bold tracking-tight text-foreground">{characterName || "New Conversation"}</div>
+                    {character?.relationship && (
+                      <Badge variant="outline" className="mt-1 max-w-full truncate border-primary/20 bg-primary/10 font-medium text-primary">
+                        {character.relationship}
+                      </Badge>
+                    )}
+                  </div>
+                  <p className="text-[13.5px] leading-relaxed text-muted-foreground">
+                    {character?.description || "Send a message to get started."}
+                  </p>
+                </Card>
+              </div>
+            ) : (
+              filteredMessages.map((msg, i) => {
+                const siblingInfo = tree && msg.id ? getSiblingInfo(tree, msg.id) : undefined;
+                return (
+                  <ChatMessage
+                    key={msg.id || i}
+                    msg={msg}
+                    charInitials={charInitials}
+                    accent={character?.accent}
+                    aiLoading={aiLoading || false}
+                    onCopy={handleCopyMessage}
+                    onRegenerate={handleRegenerate}
+                    onStartEdit={startEdit}
+                    setFullscreenImage={setFullscreenImage}
+                    siblingInfo={siblingInfo && siblingInfo.total > 1 ? siblingInfo : undefined}
+                    onSwitchBranch={onSwitchBranch}
+                    onDeleteBranch={onDeleteBranch}
+                    isSpeaking={Boolean(msg.id) && speakingMessageId === msg.id}
+                    onToggleSpeak={handleToggleSpeak}
+                  />
+                );
+              })
+            )}
+            {aiLoading && <TypingIndicator charInitials={charInitials} accent={character?.accent} />}
+            <div ref={chatEndRef} />
+          </div>
+        </div>
+        {isScrolledUp && (
+          <Button
+            onClick={() => {
+              setIsScrolledUp(false);
+              chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+            }}
+            size="icon"
+            className="fixed bottom-24 right-6 z-50 h-11 w-11 rounded-full shadow-lg hover:scale-105 opacity-80 hover:opacity-100"
+            title="Scroll to bottom"
+            aria-label="Scroll to bottom"
+          >
+            <FaArrowDown size={16} />
+          </Button>
+        )}
+      </div>
+
+      {sceneOpen && chatId != null && (
+        <ScenePanel
+          chatId={chatId}
+          character={character}
+          authorNote={authorNote}
+          worldTags={worldTags}
+          onClose={onCloseScene || (() => {})}
+        />
       )}
+    </div>
 
       {/* Full Screen Edit Modal */}
       <Dialog open={editingIndex !== null} onOpenChange={(open) => !open && cancelEdit()}>
@@ -381,7 +413,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ messages = [], tree, onSwitchBr
           )}
         </DialogContent>
       </Dialog>
-    </div>
+    </>
   );
 };
 

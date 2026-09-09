@@ -18,7 +18,7 @@ const SHORTCUTS: ShortcutEntry[] = [
 ];
 
 const Kbd = ({ children }: { children: React.ReactNode }) => (
-  <kbd className="px-2 py-1 rounded-md bg-muted border border-border text-[11.5px] font-mono text-foreground font-medium min-w-[26px] text-center inline-block">
+  <kbd className="px-2.5 py-1 rounded-md bg-background border border-border/50 border-b-2 text-xs font-mono text-foreground font-medium min-w-[28px] text-center inline-block">
     {children}
   </kbd>
 );

@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { fetchChats, deleteChat, addChat, importChat, updateChatPinned } from "../features/chatSlice";
 import { fetchCharacters } from "../features/characterSlice";
 import { Link, useNavigate } from "react-router-dom";
-import { FaTrash, FaFileImport, FaPlus, FaSearch, FaThumbtack } from "react-icons/fa";
+import { FaTrash, FaFileImport, FaPlus, FaSearch, FaThumbtack, FaUser, FaPencilAlt } from "react-icons/fa";
 import { useAppDispatch, useAppSelector } from "../store/hooks";
 import { useModal } from "../contexts/ModalContext";
 import { useSidebar } from "../contexts/SidebarContext";
@@ -75,8 +75,10 @@ const Sidebar = () => {
 
   const chats = useAppSelector((state) => state.chat.chats);
   const characters = useAppSelector((state) => state.character.characters);
+  const userProfile = useAppSelector((state) => state.settings.userProfile);
   const [isNewChatModalOpen, setIsNewChatModalOpen] = useState(false);
   const [search, setSearch] = useState("");
+  const [characterSearch, setCharacterSearch] = useState("");
 
   useEffect(() => {
     dispatch(fetchChats());
@@ -157,31 +159,39 @@ const Sidebar = () => {
   const pinnedItems = useMemo(() => filteredChats.filter((i) => i.chat.pinned), [filteredChats]);
   const unpinnedItems = useMemo(() => filteredChats.filter((i) => !i.chat.pinned), [filteredChats]);
 
+  const filteredCharacters = useMemo(() => {
+    const q = characterSearch.trim().toLowerCase();
+    if (!q) return characters;
+    return characters.filter((c: Character) =>
+      c.name.toLowerCase().includes(q) || (c.description || "").toLowerCase().includes(q)
+    );
+  }, [characters, characterSearch]);
+
   return (
     <>
       {/* Sidebar */}
       <aside
         className={cn(
-          "fixed z-50 top-0 left-0 w-[300px] h-full bg-card border-r border-border flex flex-col transition-transform transform md:relative md:translate-x-0",
+          "fixed z-50 top-0 left-0 w-[300px] h-full bg-card border-r border-border/40 flex flex-col transition-transform transform md:relative md:translate-x-0",
           isOpen ? "translate-x-0" : "-translate-x-full"
         )}
         aria-label="Sidebar"
       >
         {/* Logo header - h-[60px] to match Header.tsx so the border-b seam lines up */}
-        <div className="h-[60px] px-4 flex items-center gap-[11px] border-b border-border flex-shrink-0">
-          <Logo size={36} className="shadow-lg shadow-primary/30 rounded-[11px] flex-shrink-0" />
+        <div className="h-[60px] px-4 flex items-center gap-3 border-b border-border/40 flex-shrink-0">
+          <Logo size={34} className="shadow-[0_6px_18px_rgb(var(--primary)/0.35)] rounded-full flex-shrink-0" />
           <div className="leading-tight flex-1 min-w-0">
-            <div className="font-bold text-[15.5px] tracking-tight text-foreground">WhatsGemini</div>
-            <div className="text-[11px] text-ink-faint font-medium">Gemini characters</div>
+            <div className="font-bold text-[16px] tracking-tight text-foreground">WhatsGemini</div>
+            <div className="text-[11px] text-subtle font-medium">Your characters, your stories</div>
           </div>
         </div>
 
         {/* New chat / Import */}
-        <div className="px-3.5 pt-3 pb-2.5 flex flex-col gap-2 flex-shrink-0">
+        <div className="px-4 pt-4 pb-2.5 flex gap-2 flex-shrink-0">
           <Button
             onClick={() => setIsNewChatModalOpen(true)}
             variant="default"
-            className="w-full h-auto py-[11px] text-[13.5px] font-semibold"
+            className="flex-1 h-auto py-[11px] text-[13.5px] font-semibold shadow-[0_8px_20px_rgb(var(--primary)/0.28)]"
           >
             <FaPlus size={12} />
             <span>New chat</span>
@@ -189,10 +199,12 @@ const Sidebar = () => {
           <Button
             onClick={handleImportClick}
             variant="panel"
-            className="w-full h-auto py-2.5 border border-border text-muted-foreground text-[13px] font-medium hover:border-primary hover:text-foreground"
+            size="icon"
+            title="Import chat"
+            aria-label="Import chat"
+            className="h-auto w-[42px] py-[11px] text-muted-foreground hover:text-foreground flex-shrink-0"
           >
-            <FaFileImport size={13} />
-            <span>Import chat</span>
+            <FaFileImport size={14} />
           </Button>
           <input
             type="file"
@@ -204,15 +216,15 @@ const Sidebar = () => {
         </div>
 
         {/* Search */}
-        <div className="px-3.5 pb-2.5 flex-shrink-0">
+        <div className="px-4 pb-3.5 flex-shrink-0">
           <div className="relative">
-            <FaSearch size={12} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+            <FaSearch size={12} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-subtle" />
             <Input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search chats and messages"
               aria-label="Search chats and messages"
-              className="pl-8 text-[12.5px]"
+              className="pl-8 text-[12.5px] rounded-lg bg-background"
             />
           </div>
         </div>
@@ -220,12 +232,12 @@ const Sidebar = () => {
         {/* Chat list */}
         <div className="flex-1 overflow-y-auto px-2 pb-2.5">
           {search.trim() && filteredChats.length === 0 ? (
-            <p className="text-center text-ink-faint text-[12.5px] px-3 py-6">No chats or messages match "{search.trim()}".</p>
+            <p className="text-center text-subtle text-[12.5px] px-3 py-6">No chats or messages match "{search.trim()}".</p>
           ) : (
             <>
               {pinnedItems.length > 0 && (
                 <>
-                  <div className="text-[10.5px] font-semibold tracking-[0.09em] uppercase text-ink-faint px-2 pt-2 pb-1.5">
+                  <div className="text-[10.5px] font-semibold tracking-[0.09em] uppercase text-subtle px-3 pt-2 pb-1.5">
                     Pinned
                   </div>
                   <ChatList items={pinnedItems} characters={characters} onDeleteChat={handleDeleteChat} onTogglePin={handleTogglePin} onNavigate={close} query={search.trim()} />
@@ -233,7 +245,7 @@ const Sidebar = () => {
               )}
               {unpinnedItems.length > 0 && (
                 <>
-                  <div className="text-[10.5px] font-semibold tracking-[0.09em] uppercase text-ink-faint px-2 pt-2 pb-1.5">
+                  <div className="text-[10.5px] font-semibold tracking-[0.09em] uppercase text-subtle px-3 pt-2 pb-1.5">
                     {pinnedItems.length > 0 ? "Other chats" : "Recent"}
                   </div>
                   <ChatList items={unpinnedItems} characters={characters} onDeleteChat={handleDeleteChat} onTogglePin={handleTogglePin} onNavigate={close} query={search.trim()} />
@@ -242,6 +254,27 @@ const Sidebar = () => {
             </>
           )}
         </div>
+
+        {/* Your persona - links into Settings' User Profile section */}
+        <Link
+          to="/settings"
+          state={{ openSection: "profile" }}
+          onClick={close}
+          className="flex-shrink-0 flex items-center gap-3 px-4 py-3 border-t border-border/40 group hover:bg-hover transition"
+        >
+          <div className="w-[34px] h-[34px] rounded-full bg-muted flex items-center justify-center text-muted-foreground flex-shrink-0">
+            <FaUser size={14} />
+          </div>
+          <div className="flex-1 min-w-0 leading-tight">
+            <div className="text-[13px] font-semibold text-foreground truncate">
+              {userProfile?.name?.trim() || "Your persona"}
+            </div>
+            <div className="text-[11.5px] text-subtle truncate mt-0.5">
+              {userProfile?.bio?.trim() || "Set up your name and bio"}
+            </div>
+          </div>
+          <FaPencilAlt size={12} className="text-subtle group-hover:text-foreground flex-shrink-0 transition" />
+        </Link>
       </aside>
 
       {/* Mobile Overlay */}
@@ -261,31 +294,65 @@ const Sidebar = () => {
       {/* New Chat Modal */}
       <Modal
         isOpen={isNewChatModalOpen}
-        onClose={() => setIsNewChatModalOpen(false)}
-        title="Select a Character"
+        onClose={() => {
+          setIsNewChatModalOpen(false);
+          setCharacterSearch("");
+        }}
+        title="Who do you want to talk to?"
       >
         {characters.length === 0 ? (
-          <p className="text-muted-foreground text-center py-4">No characters available.</p>
-        ) : (
-          characters.map((char: Character) => (
+          <div className="text-center py-4">
+            <p className="text-muted-foreground mb-3">No characters available yet.</p>
             <Button
-              key={char.id}
               onClick={() => {
                 setIsNewChatModalOpen(false);
-                handleCharacterClick(char.id, char.name);
+                navigate("/characters");
               }}
-              variant="ghost"
-              className="w-full h-auto justify-start gap-3 p-3 rounded-lg text-left font-normal"
+              variant="default"
+              size="sm"
             >
-              <CharacterAvatar name={char.name} accent={char.accent} size={40} />
-              <div>
-                <h3 className="font-medium text-foreground">{char.name}</h3>
-                {char.description && (
-                  <p className="text-xs text-muted-foreground line-clamp-1">{char.description}</p>
-                )}
-              </div>
+              <FaPlus size={11} />
+              <span>Create a character</span>
             </Button>
-          ))
+          </div>
+        ) : (
+          <div className="flex flex-col gap-2">
+            <div className="relative">
+              <FaSearch size={12} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-subtle" />
+              <Input
+                value={characterSearch}
+                onChange={(e) => setCharacterSearch(e.target.value)}
+                placeholder="Search your cast"
+                aria-label="Search your cast"
+                className="pl-8 text-[13px] bg-background"
+                autoFocus
+              />
+            </div>
+            {filteredCharacters.length === 0 ? (
+              <p className="text-muted-foreground text-center py-4 text-sm">No characters match "{characterSearch.trim()}".</p>
+            ) : (
+              filteredCharacters.map((char: Character) => (
+                <Button
+                  key={char.id}
+                  onClick={() => {
+                    setIsNewChatModalOpen(false);
+                    setCharacterSearch("");
+                    handleCharacterClick(char.id, char.name);
+                  }}
+                  variant="ghost"
+                  className="w-full h-auto justify-start gap-3 p-3 rounded-lg text-left font-normal"
+                >
+                  <CharacterAvatar name={char.name} accent={char.accent} size={40} />
+                  <div className="min-w-0">
+                    <h3 className="font-medium text-foreground">{char.name}</h3>
+                    {char.description && (
+                      <p className="text-xs text-muted-foreground line-clamp-1">{char.description}</p>
+                    )}
+                  </div>
+                </Button>
+              ))
+            )}
+          </div>
         )}
       </Modal>
     </>

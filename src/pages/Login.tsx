@@ -50,9 +50,19 @@ const Login = () => {
   }
 
   return (
-    <div className="flex items-center justify-center h-screen bg-background">
-      <Card className="p-8 w-96 max-w-[calc(100%-30px)]">
-        <Logo size={48} className="shadow-lg shadow-primary/30 rounded-[13px] mx-auto mb-5 block" />
+    <div className="relative flex items-center justify-center h-screen bg-background overflow-hidden">
+      <div
+        className="pointer-events-none absolute inset-0"
+        style={{
+          background:
+            "radial-gradient(45% 55% at 20% 80%, rgb(var(--primary) / 0.16), transparent 70%), radial-gradient(40% 50% at 85% 15%, rgb(var(--secondary) / 0.5), transparent 70%)",
+        }}
+      />
+      <Card className="relative p-9 w-96 max-w-[calc(100%-30px)] rounded-2xl shadow-strong">
+        <Logo
+          size={52}
+          className="rounded-2xl shadow-[0_10px_26px_rgb(var(--primary)/0.4)] mx-auto mb-5 block"
+        />
         <h2 className="text-xl font-bold text-center text-foreground mb-1.5">
           Welcome to WhatsGemini
         </h2>

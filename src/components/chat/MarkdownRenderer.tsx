@@ -66,20 +66,20 @@ const MarkdownRenderer = React.memo(({ msgText, isUser }: { msgText: string | an
         remarkPlugins={[remarkGfm]}
         components={{
           p: ({ node, ...props }) => <p className="mb-2 last:mb-0" {...props} />,
-          em: ({ node, ...props }) => <em className={cn("italic", isUser ? 'text-bubble-sentFg/80' : 'text-muted-foreground')} {...props} />,
+          em: ({ node, ...props }) => <em className={cn("italic", isUser ? 'text-foreground/80' : 'text-muted-foreground')} {...props} />,
           // eslint-disable-next-line jsx-a11y/anchor-has-content
-          a: ({ node, ...props }) => <a className={cn(isUser ? 'text-bubble-sentFg underline' : 'text-primary hover:underline')} target="_blank" rel="noopener noreferrer" {...props} aria-hidden="true" />,
+          a: ({ node, ...props }) => <a className={cn(isUser ? 'text-foreground underline' : 'text-primary hover:underline')} target="_blank" rel="noopener noreferrer" {...props} aria-hidden="true" />,
           ul: ({ node, ...props }) => <ul className="list-disc ml-5 mb-2" {...props} />,
           ol: ({ node, ...props }) => <ol className="list-decimal ml-5 mb-2" {...props} />,
           li: ({ node, ...props }) => <li className="mb-1" {...props} />,
           code: CodeBlock,
-          blockquote: ({ node, ...props }) => <blockquote className={cn("border-l-4 pl-4 py-1 my-2 italic", isUser ? 'border-bubble-sentFg/50' : 'border-border')} {...props} />,
+          blockquote: ({ node, ...props }) => <blockquote className={cn("border-l-4 pl-4 py-1 my-2 italic", isUser ? 'border-primary/40' : 'border-border')} {...props} />,
           table: ({ node, ...props }) => <div className="my-2"><Table {...props} /></div>,
           thead: ({ node, ...props }) => <TableHeader {...props} />,
           tbody: ({ node, ...props }) => <TableBody {...props} />,
-          tr: ({ node, ...props }) => <TableRow className={cn(isUser && "border-bubble-sentFg/20")} {...props} />,
-          th: ({ node, ...props }) => <TableHead className={cn(isUser && "bg-black/5 text-bubble-sentFg")} {...props} />,
-          td: ({ node, ...props }) => <TableCell className={cn(isUser && "text-bubble-sentFg")} {...props} />,
+          tr: ({ node, ...props }) => <TableRow className={cn(isUser && "border-primary/20")} {...props} />,
+          th: ({ node, ...props }) => <TableHead className={cn(isUser && "bg-primary/10 text-foreground")} {...props} />,
+          td: ({ node, ...props }) => <TableCell className={cn(isUser && "text-foreground")} {...props} />,
         }}
       >
         {safeText}

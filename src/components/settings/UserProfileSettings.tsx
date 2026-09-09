@@ -1,6 +1,8 @@
 import React from 'react';
+import { FaUser } from 'react-icons/fa';
 import { UserProfile } from '../../types';
-import { TextInput, TextArea, FieldLabel } from '../ui/FormControls';
+import { TextInput, TextArea } from '../ui/FormControls';
+import { SettingsCard, SettingsRow } from './SettingsCard';
 
 interface UserProfileSettingsProps {
   userProfile: UserProfile;
@@ -9,29 +11,36 @@ interface UserProfileSettingsProps {
 
 const UserProfileSettings: React.FC<UserProfileSettingsProps> = ({ userProfile, setUserProfile }) => {
   return (
-    <>
-      <div className="mb-4">
-        <FieldLabel>Your Name</FieldLabel>
+    <SettingsCard>
+      <div className="p-5 flex gap-5 items-center">
+        <div className="w-[72px] h-[72px] rounded-full bg-muted grid place-items-center text-muted-foreground flex-none">
+          <FaUser size={26} />
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="font-semibold text-[15px] text-foreground">Your persona</div>
+          <div className="text-[13px] text-muted-foreground mt-1 leading-relaxed">
+            How characters see and address you. Shared with every character to personalize the conversation.
+          </div>
+        </div>
+      </div>
+
+      <SettingsRow label="Your name" hint="How should characters address you?">
         <TextInput
           type="text"
-          placeholder="How should characters address you?"
+          placeholder="e.g. Pixel"
           value={userProfile.name}
           onChange={(e) => setUserProfile({ ...userProfile, name: e.target.value })}
         />
-      </div>
+      </SettingsRow>
 
-      <div className="mb-2">
-        <FieldLabel>About You (Bio/Preferences)</FieldLabel>
+      <SettingsRow label="About you" hint="Hobbies, communication style, anything a character should know." align="start">
         <TextArea
           placeholder="Tell characters a bit about yourself (e.g., your hobbies, communication style)..."
           value={userProfile.bio}
           onChange={(e) => setUserProfile({ ...userProfile, bio: e.target.value })}
         />
-      </div>
-      <p className="text-xs text-muted-foreground">
-        This information is shared with characters to personalize conversations.
-      </p>
-    </>
+      </SettingsRow>
+    </SettingsCard>
   );
 };
 

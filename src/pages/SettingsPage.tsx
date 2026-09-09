@@ -11,9 +11,8 @@ import {
   setTemperature, setSafetySettings, setFontSize, setImageResolution,
   setChatProvider, setImageProvider, setOllamaBaseUrl
 } from "../features/settingsSlice";
-import { FaDownload, FaUpload, FaInfoCircle, FaFileArchive, FaUser, FaMicrochip, FaImage, FaComments, FaShieldAlt, FaDatabase } from "react-icons/fa";
+import { FaInfoCircle, FaUser, FaMicrochip, FaImage, FaComments, FaShieldAlt, FaDatabase } from "react-icons/fa";
 import Header from "../components/Header";
-import InitialMessages from "../components/InitialMessages";
 import { toast } from "sonner";
 import UserProfileSettings from "../components/settings/UserProfileSettings";
 import TextModelSettings from "../components/settings/TextModelSettings";
@@ -29,7 +28,6 @@ import {
   // DEFAULT_OUTPUT_TOKENS,
   // DEFAULT_SAFETY_SETTINGS,
   // DEFAULT_TEMPRATURE,
-  harmThresholds,
   LS_AI_MODEL,
   LS_INITIAL_MESSAGES,
   LS_MAX_CHAT_LENGTH,
@@ -70,10 +68,11 @@ import {
 } from "../utils/constants";
 import { AISafetySettings } from "../types";
 import { dbService } from "../services/dbService";
-import { TextInput, Select, FieldLabel } from "../components/ui/FormControls";
-import { Button } from "../components/ui/button";
-import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "../components/ui/accordion";
+import ChatInterfaceSettings from "../components/settings/ChatInterfaceSettings";
+import SafetySettings from "../components/settings/SafetySettings";
+import DataBackupSettings from "../components/settings/DataBackupSettings";
 import { formatRelativeTime } from "../utils/formatRelativeTime";
+import { cn } from "../utils/cn";
 
 const SettingsPage = () => {
   const navigate = useNavigate();
@@ -241,7 +240,7 @@ const SettingsPage = () => {
   const currentImageModelList = imageProvider === "gemini" ? imageModelList : [];
   const openaiImageModelList = (PROVIDER_IMAGE_MODELS.openai || []).map((m) => ({ value: m, label: m }));
 
-  const [openSection, setOpenSection] = useState<string>(() => (location.state as { openSection?: string } | null)?.openSection || "profile");
+  const [selectedSection, setSelectedSection] = useState<string>(() => (location.state as { openSection?: string } | null)?.openSection || "profile");
   const [lastBackupAt, setLastBackupAt] = useState<number>(() => Number(localStorage.getItem(LS_LAST_BACKUP_AT) || 0));
 
   const [imageSaveDirName, setImageSaveDirName] = useState<string>("Not Selected");
@@ -511,202 +510,165 @@ const SettingsPage = () => {
     }
   };
 
-  const renderAccordion = (id: string, icon: React.ReactNode, title: string, subtitle: string, children: React.ReactNode) => (
-    <AccordionItem value={id}>
-      <AccordionTrigger className="gap-3">
-        <span className="w-[34px] h-[34px] rounded-[10px] bg-accent flex items-center justify-center text-primary flex-shrink-0">
-          {icon}
-        </span>
-        <span className="flex-1 min-w-0 text-left">
-          <span className="block text-[14px] font-semibold text-foreground">{title}</span>
-          <span className="block text-xs text-ink-faint mt-0.5">{subtitle}</span>
-        </span>
-      </AccordionTrigger>
-      <AccordionContent>{children}</AccordionContent>
-    </AccordionItem>
-  );
+  const sections: { id: string; icon: React.ReactNode; title: string; subtitle: string }[] = [
+    { id: "profile", icon: <FaUser size={13} />, title: "User Profile", subtitle: "Your name and bio" },
+    { id: "text", icon: <FaMicrochip size={13} />, title: "Text Generation Model", subtitle: "Provider, model, temperature, tokens" },
+    { id: "image", icon: <FaImage size={13} />, title: "Image Generation Settings", subtitle: "Provider, model, ratio, count" },
+    { id: "chat", icon: <FaComments size={13} />, title: "Chat Interface Settings", subtitle: "System prompt, bubbles, sending" },
+    { id: "safety", icon: <FaShieldAlt size={13} />, title: "Safety Settings", subtitle: chatProvider === "gemini" ? "Content filtering thresholds" : "Gemini only - not used by other providers" },
+    { id: "data", icon: <FaDatabase size={13} />, title: "Data & Import/Export", subtitle: "Import / export conversations" },
+  ];
+  const activeSection = sections.find((s) => s.id === selectedSection) || sections[0];
 
   return (
     <div className="w-full h-screen flex flex-col bg-background">
       <Header title="Settings" subtitle="Providers, chat behavior, and data" onBack={goBackOrHome} />
       <div className="flex-1 overflow-auto p-4 md:p-8 flex justify-center">
-      <div className="w-full max-w-[32rem] bg-transparent">
+      <div className="w-full max-w-5xl bg-transparent">
 
         <div className="mb-6 flex items-center justify-between">
           <h1 className="text-xl font-semibold tracking-tight text-foreground">AI Provider Settings</h1>
           <FaInfoCircle className="text-muted-foreground" size={18} />
         </div>
 
-        <Accordion type="single" collapsible value={openSection} onValueChange={setOpenSection}>
-        {renderAccordion("profile", <FaUser size={15} />, "User Profile", "Your name and bio",
-          <UserProfileSettings
-            userProfile={userProfile}
-            setUserProfile={(val) => dispatch(setUserProfile(val))}
-          />
-        )}
-
-        {renderAccordion("text", <FaMicrochip size={15} />, "Text Generation Model", "Provider, model, temperature, tokens",
-          <TextModelSettings
-            temperature={temperature}
-            setTemperature={(val) => dispatch(setTemperature(val))}
-            chatProvider={chatProvider}
-            setChatProvider={(val) => dispatch(setChatProvider(val))}
-            chatProviderCapabilities={chatProviderCapabilities}
-            providerApiKey={chatApiKey}
-            setProviderApiKey={handleSetChatApiKey}
-            ollamaBaseUrl={ollamaBaseUrl}
-            setOllamaBaseUrl={(val) => dispatch(setOllamaBaseUrl(val))}
-            ollamaModels={ollamaModelOptions}
-            fetchOllamaModels={fetchOllamaModels}
-            selectedModel={selectedModel}
-            setSelectedModel={(val) => dispatch(setSelectedModel(val))}
-            modelList={currentChatModelList}
-            replyLengthLimit={replyLengthLimit}
-            setReplyLengthLimit={(val) => dispatch(setReplyLengthLimit(val))}
-            compressThreshold={compressThreshold}
-            setCompressThreshold={(val) => dispatch(setCompressThreshold(val))}
-          />
-        )}
-
-        {renderAccordion("image", <FaImage size={15} />, "Image Generation Settings", "Provider, model, ratio, count",
-          <ImageGenerationSettings
-            imageProvider={imageProvider}
-            setImageProvider={(val) => dispatch(setImageProvider(val))}
-            openaiApiKey={openaiImageApiKey}
-            setOpenaiApiKey={handleSetOpenaiImageApiKey}
-            sdWebuiApiUrl={sdWebuiApiUrl}
-            setSdWebuiApiUrl={(val) => dispatch(setSdWebuiApiUrl(val))}
-            sdWebuiBatchSize={sdWebuiBatchSize}
-            setSdWebuiBatchSize={(val) => dispatch(setSdWebuiBatchSize(val))}
-            fetchSdModels={fetchSdModels}
-            sdWebuiModel={sdWebuiModel}
-            setSdWebuiModel={(val) => dispatch(setSdWebuiModel(val))}
-            sdWebuiModels={sdWebuiModels}
-            sdWebuiRefMode={sdWebuiRefMode}
-            setSdWebuiRefMode={(val) => dispatch(setSdWebuiRefMode(val))}
-            sdWebuiDenoising={sdWebuiDenoising}
-            setSdWebuiDenoising={(val) => dispatch(setSdWebuiDenoising(val))}
-            sdWebuiControlnetModel={sdWebuiControlnetModel}
-            setSdWebuiControlnetModel={(val) => dispatch(setSdWebuiControlnetModel(val))}
-            imageModel={imageModel}
-            setImageModel={(val) => dispatch(setImageModel(val))}
-            imageModelList={currentImageModelList}
-            openaiImageModelList={openaiImageModelList}
-            imageGenPrompt={imageGenPrompt}
-            setImageGenPrompt={(val) => dispatch(setImageGenPrompt(val))}
-            imageResolution={imageResolution}
-            setImageResolution={(val) => dispatch(setImageResolution(val))}
-            imageSaveDirName={imageSaveDirName}
-            handleSelectDirectory={handleSelectDirectory}
-            LS_SD_WEBUI_MODEL={LS_SD_WEBUI_MODEL}
-          />
-        )}
-
-        {renderAccordion("chat", <FaComments size={15} />, "Chat Interface Settings", "System prompt, bubbles, sending",
-          <>
-            <FieldLabel>Max Chat Length (0 for unlimited)</FieldLabel>
-            <TextInput
-              type="number"
-              value={maxChatLength}
-              onChange={(e) => dispatch(setMaxChatLength(Number(e.target.value)))}
-              className="mb-6"
-              min="1"
-            />
-
-            <FieldLabel>Chat Font Size</FieldLabel>
-            <Select
-              value={fontSize}
-              onChange={(e) => dispatch(setFontSize(e.target.value))}
-              className="mb-6"
-            >
-              <option value="14px">Small</option>
-              <option value="16px">Medium (Default)</option>
-              <option value="18px">Large</option>
-              <option value="20px">Extra Large</option>
-            </Select>
-
-            <div className="border-t border-border pt-4">
-              <InitialMessages
-                key={initialMessagesKey}
-                onSave={handleInitialMessagesSave}
-              />
-            </div>
-          </>
-        )}
-
-        {renderAccordion("safety", <FaShieldAlt size={15} />, "Safety Settings", chatProvider === "gemini" ? "Content filtering thresholds" : "Gemini only - not used by other providers",
-          <>
-            {chatProvider !== "gemini" && (
-              <p className="text-sm text-muted-foreground mb-4">
-                Safety settings only apply when Google Gemini is the selected chat provider - other providers don't expose an equivalent control.
-              </p>
-            )}
-            {safetyCategories.map((category) => (
-              <div key={category} className="mb-4">
-                <FieldLabel className="capitalize">Block {category.replace("_", " ")}</FieldLabel>
-                <Select
-                  value={safetySettings[category]}
-                  onChange={(e) => handleSafetyChange(category, e.target.value)}
-                  disabled={chatProvider !== "gemini"}
+        <div className="flex flex-col md:flex-row gap-8 items-start">
+          <nav className="w-full md:w-60 flex-none flex flex-col gap-0.5">
+            {sections.map((s) => {
+              const active = s.id === selectedSection;
+              return (
+                <button
+                  key={s.id}
+                  type="button"
+                  onClick={() => setSelectedSection(s.id)}
+                  className={cn(
+                    "flex items-center gap-3 h-11 px-3 rounded-lg text-sm text-left transition-colors",
+                    active
+                      ? "bg-card text-foreground font-semibold"
+                      : "text-muted-foreground font-normal hover:bg-card/60"
+                  )}
                 >
-                  {harmThresholds.map(({ label, value }: {label: string, value: string}) => (
-                    <option key={value} value={value}>
-                      {label}
-                    </option>
-                  ))}
-                </Select>
-              </div>
-            ))}
-          </>
-        )}
+                  <span className={cn("w-2 h-2 rounded-full flex-none", active ? "bg-primary" : "bg-muted")} />
+                  {s.title}
+                </button>
+              );
+            })}
 
-        {renderAccordion("data", <FaDatabase size={15} />, "Data & Import/Export", "Import / export conversations",
-          <>
-            <p className="text-sm font-medium text-foreground mb-1">Full Backup</p>
-            <p className="text-xs text-muted-foreground mb-1">
-              All chats, characters, settings, and locally-saved images (if you've picked a save folder) in one zip - everything lives only in this browser, so it's worth keeping a copy. Restoring always adds to your existing library, never overwrites it.
-            </p>
-            <p className="text-xs text-ink-faint mb-3">
-              Last backup: {lastBackupAt ? formatRelativeTime(lastBackupAt) : "never"}
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 mb-6">
-               <Button onClick={handleExportFullBackup} className="flex-1">
-                  <FaFileArchive /> Export Full Backup
-               </Button>
-               <Button onClick={handleImportBackupClick} variant="panel" className="flex-1">
-                  <FaUpload /> Restore Backup
-               </Button>
-               <input
-                  type="file"
-                  ref={backupFileInputRef}
-                  onChange={handleBackupFileChange}
-                  accept=".zip,.json"
-                  style={{ display: "none" }}
-               />
+            <div className="mt-5 p-3.5 rounded-lg bg-card border border-border/50 text-xs text-muted-foreground leading-relaxed">
+              <span className="text-foreground font-semibold">Everything lives in this browser.</span>{" "}
+              Last backup {lastBackupAt ? formatRelativeTime(lastBackupAt) : "never"}.{" "}
+              <button type="button" onClick={() => setSelectedSection("data")} className="font-medium text-primary hover:underline">
+                Back up now
+              </button>
+            </div>
+          </nav>
+
+          <div className="flex-1 min-w-0 max-w-[720px] flex flex-col gap-5">
+            <div>
+              <div className="text-[22px] font-bold tracking-tight text-foreground">{activeSection.title}</div>
+              <div className="text-sm text-muted-foreground mt-1">{activeSection.subtitle}</div>
             </div>
 
-            <p className="text-sm font-medium text-foreground mb-1">Settings Only</p>
-            <p className="text-xs text-muted-foreground mb-3">
-              Just your model/generation preferences - no chats or characters.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 mb-2">
-               <Button onClick={handleExportSettings} variant="secondary" className="flex-1">
-                  <FaDownload /> Export Settings
-               </Button>
-               <Button onClick={handleImportSettingsClick} variant="panel" className="flex-1">
-                  <FaUpload /> Import Settings
-               </Button>
-               <input
-                  type="file"
-                  ref={settingsFileInputRef}
-                  onChange={handleSettingsFileChange}
-                  accept=".json"
-                  style={{ display: "none" }}
-               />
-            </div>
-          </>
-        )}
-        </Accordion>
+            <>
+                {selectedSection === "profile" && (
+                  <UserProfileSettings
+                    userProfile={userProfile}
+                    setUserProfile={(val) => dispatch(setUserProfile(val))}
+                  />
+                )}
+
+                {selectedSection === "text" && (
+                  <TextModelSettings
+                    temperature={temperature}
+                    setTemperature={(val) => dispatch(setTemperature(val))}
+                    chatProvider={chatProvider}
+                    setChatProvider={(val) => dispatch(setChatProvider(val))}
+                    chatProviderCapabilities={chatProviderCapabilities}
+                    providerApiKey={chatApiKey}
+                    setProviderApiKey={handleSetChatApiKey}
+                    ollamaBaseUrl={ollamaBaseUrl}
+                    setOllamaBaseUrl={(val) => dispatch(setOllamaBaseUrl(val))}
+                    ollamaModels={ollamaModelOptions}
+                    fetchOllamaModels={fetchOllamaModels}
+                    selectedModel={selectedModel}
+                    setSelectedModel={(val) => dispatch(setSelectedModel(val))}
+                    modelList={currentChatModelList}
+                    replyLengthLimit={replyLengthLimit}
+                    setReplyLengthLimit={(val) => dispatch(setReplyLengthLimit(val))}
+                    compressThreshold={compressThreshold}
+                    setCompressThreshold={(val) => dispatch(setCompressThreshold(val))}
+                  />
+                )}
+
+                {selectedSection === "image" && (
+                  <ImageGenerationSettings
+                    imageProvider={imageProvider}
+                    setImageProvider={(val) => dispatch(setImageProvider(val))}
+                    openaiApiKey={openaiImageApiKey}
+                    setOpenaiApiKey={handleSetOpenaiImageApiKey}
+                    sdWebuiApiUrl={sdWebuiApiUrl}
+                    setSdWebuiApiUrl={(val) => dispatch(setSdWebuiApiUrl(val))}
+                    sdWebuiBatchSize={sdWebuiBatchSize}
+                    setSdWebuiBatchSize={(val) => dispatch(setSdWebuiBatchSize(val))}
+                    fetchSdModels={fetchSdModels}
+                    sdWebuiModel={sdWebuiModel}
+                    setSdWebuiModel={(val) => dispatch(setSdWebuiModel(val))}
+                    sdWebuiModels={sdWebuiModels}
+                    sdWebuiRefMode={sdWebuiRefMode}
+                    setSdWebuiRefMode={(val) => dispatch(setSdWebuiRefMode(val))}
+                    sdWebuiDenoising={sdWebuiDenoising}
+                    setSdWebuiDenoising={(val) => dispatch(setSdWebuiDenoising(val))}
+                    sdWebuiControlnetModel={sdWebuiControlnetModel}
+                    setSdWebuiControlnetModel={(val) => dispatch(setSdWebuiControlnetModel(val))}
+                    imageModel={imageModel}
+                    setImageModel={(val) => dispatch(setImageModel(val))}
+                    imageModelList={currentImageModelList}
+                    openaiImageModelList={openaiImageModelList}
+                    imageGenPrompt={imageGenPrompt}
+                    setImageGenPrompt={(val) => dispatch(setImageGenPrompt(val))}
+                    imageResolution={imageResolution}
+                    setImageResolution={(val) => dispatch(setImageResolution(val))}
+                    imageSaveDirName={imageSaveDirName}
+                    handleSelectDirectory={handleSelectDirectory}
+                    LS_SD_WEBUI_MODEL={LS_SD_WEBUI_MODEL}
+                  />
+                )}
+
+                {selectedSection === "chat" && (
+                  <ChatInterfaceSettings
+                    maxChatLength={maxChatLength}
+                    setMaxChatLength={(val) => dispatch(setMaxChatLength(val))}
+                    fontSize={fontSize}
+                    setFontSize={(val) => dispatch(setFontSize(val))}
+                    initialMessagesKey={initialMessagesKey}
+                    onInitialMessagesSave={handleInitialMessagesSave}
+                  />
+                )}
+
+                {selectedSection === "safety" && (
+                  <SafetySettings
+                    chatProvider={chatProvider}
+                    safetySettings={safetySettings}
+                    safetyCategories={safetyCategories}
+                    onSafetyChange={handleSafetyChange}
+                  />
+                )}
+
+                {selectedSection === "data" && (
+                  <DataBackupSettings
+                    lastBackupAt={lastBackupAt}
+                    onExportFullBackup={handleExportFullBackup}
+                    onImportBackupClick={handleImportBackupClick}
+                    backupFileInputRef={backupFileInputRef}
+                    onBackupFileChange={handleBackupFileChange}
+                    onExportSettings={handleExportSettings}
+                    onImportSettingsClick={handleImportSettingsClick}
+                    settingsFileInputRef={settingsFileInputRef}
+                    onSettingsFileChange={handleSettingsFileChange}
+                  />
+                )}
+            </>
+          </div>
+        </div>
       </div>
       </div>
     </div>

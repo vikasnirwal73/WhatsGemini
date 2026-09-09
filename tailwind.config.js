@@ -7,7 +7,8 @@ module.exports = {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['Geist', '-apple-system', 'system-ui', 'sans-serif'],
+        sans: ['Outfit', '-apple-system', 'system-ui', 'sans-serif'],
+        serif: ['Lora', 'Georgia', 'serif'],
         mono: ['Geist Mono', 'ui-monospace', 'monospace'],
       },
       colors: {
@@ -59,6 +60,12 @@ module.exports = {
           DEFAULT: 'rgb(var(--destructive) / <alpha-value>)',
           foreground: 'rgb(var(--destructive-foreground) / <alpha-value>)',
         },
+        success: {
+          DEFAULT: 'rgb(var(--success) / <alpha-value>)',
+          foreground: 'rgb(var(--success-foreground) / <alpha-value>)',
+        },
+        overlay: 'rgb(var(--overlay) / <alpha-value>)',
+        subtle: 'rgb(var(--subtle) / <alpha-value>)',
         border: 'rgb(var(--border) / <alpha-value>)',
         input: 'rgb(var(--input) / <alpha-value>)',
         ring: 'rgb(var(--ring) / <alpha-value>)',
@@ -77,20 +84,17 @@ module.exports = {
         // Chat area background, distinct from --background - no bridge
         // counterpart, kept as its own token.
         chat: 'rgb(var(--color-chat-bg) / <alpha-value>)',
-
-        // Chat Bubbles
-        bubble: {
-          sent: 'rgb(var(--color-bubble-sent-bg) / <alpha-value>)',
-          sentFg: 'rgb(var(--color-bubble-sent-text) / <alpha-value>)',
-          received: 'rgb(var(--color-bubble-received-bg) / <alpha-value>)',
-          receivedFg: 'rgb(var(--color-bubble-received-text) / <alpha-value>)',
-        },
       },
       borderRadius: {
         'bubble': '1.5rem',
         lg: 'var(--radius)',
         md: 'calc(var(--radius) - 2px)',
         sm: 'calc(var(--radius) - 4px)',
+      },
+      boxShadow: {
+        soft: '0 14px 34px var(--shadow-soft)',
+        mid: '0 20px 50px var(--shadow-mid)',
+        strong: '0 30px 80px var(--shadow-strong)',
       },
       backgroundImage: {
         'gemini-gradient': 'linear-gradient(135deg, #10b981 0%, #3b82f6 50%, #8b5cf6 100%)',

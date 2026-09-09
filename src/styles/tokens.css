@@ -3,26 +3,20 @@
  * =============
  * Two coexisting vocabularies live here, both as CSS custom properties:
  *
- *   1. --color-*                 This app's own "Persona Chat" brand palette.
- *                                 Unchanged from before this file was split out
- *                                 of index.css. Consumed via
+ *   1. --color-*                 This app's own brand palette. Consumed via
  *                                 rgb(var(--color-x) / <alpha-value>) through
  *                                 the app-specific Tailwind color keys that have
  *                                 no shadcn-canonical equivalent (ink.faint,
- *                                 hover, chat, bubble, etc. - see
- *                                 tailwind.config.js). Tokens that DO have a
- *                                 shadcn equivalent (panel/panel2/panel3/ink/
- *                                 ink-muted/line/app) were mechanically renamed
- *                                 to their canonical names (card/muted/accent/
- *                                 foreground/muted-foreground/border/background)
- *                                 across the codebase in Phase 7 - the bridge
- *                                 variables below are what makes that rename
- *                                 value-identical to before.
+ *                                 hover, chat, etc. - see tailwind.config.js).
  *
  *   2. --background, --foreground, --card, --popover, --primary,
- *      --secondary, --muted, --accent, --destructive, --border, --input,
- *      --ring, --radius (+ -foreground pairs)
- *                                 shadcn/ui's canonical token names. Under
+ *      --secondary, --muted, --accent, --destructive, --success, --overlay,
+ *      --subtle, --border, --input, --ring, --radius (+ -foreground pairs)
+ *                                 shadcn/ui's canonical token names (plus a
+ *                                 few app-specific additions - success/overlay/
+ *                                 subtle - added in the same bridge-literal
+ *                                 style as --destructive, since none of them
+ *                                 have a natural --color-* counterpart). Under
  *                                 :root/.dark below they're *bridged* to this
  *                                 app's own palette (so any shadcn component
  *                                 dropped in later looks native immediately,
@@ -32,6 +26,16 @@
  *                                 variables (not directly through --color-*)
  *                                 specifically so they can be re-themed later
  *                                 - see "Additional themes" below.
+ *
+ * Phase 10 palette: warm terracotta/brown "cozy" theme (Outfit + Lora
+ * typography), replacing the earlier dark-neutral/emerald-teal-purple scheme,
+ * sourced from the "WhatsGemini Redesign" Claude Design canvas. --border/
+ * --input intentionally sit close to --muted rather than at the canvas's
+ * literal near-white/near-black extremes, so stock shadcn primitives that use
+ * bare `border`/`border-border` (full opacity, not `/NN`-suffixed) still read
+ * as a subtle hairline instead of a bright/dark line - hand-styled surfaces
+ * that want the canvas's softer look use explicit `border-border/NN` opacity
+ * modifiers instead.
  *
  * Multi-theme ready: nothing here wires up an actual theme switcher yet (no
  * JS/localStorage/attribute toggling exists in the app) - this file only
@@ -44,35 +48,30 @@
 
 :root {
   /* ============================================================
-     App tokens - "Persona Chat" brand palette (light)
+     App tokens - brand palette (light)
      ============================================================ */
-  --color-app-bg: 235 238 243; /* #EBEEF3 */
-  --color-panel-bg: 255 255 255; /* #FFFFFF */
-  --color-panel2-bg: 244 246 249; /* #F4F6F9 */
-  --color-panel3-bg: 233 237 242; /* #E9EDF2 */
-  --color-hover-bg: 241 244 248; /* #F1F4F8 */
-  --color-chat-bg: 217 224 232; /* #D9E0E8 */
+  --color-app-bg: 247 241 236; /* #F7F1EC */
+  --color-panel-bg: 255 251 248; /* #FFFBF8 */
+  --color-panel2-bg: 230 219 210; /* #E6DBD2 */
+  --color-panel3-bg: 230 219 210; /* #E6DBD2, same as panel2 - the redesign doesn't distinguish them */
+  --color-hover-bg: 240 231 224; /* #F0E7E0 */
+  --color-chat-bg: 247 241 236; /* #F7F1EC, same as app-bg - chat area uses a portrait overlay instead of a distinct bg */
 
-  --color-text-main: 15 22 32; /* #0F1620 */
-  --color-text-muted: 90 102 117; /* #5A6675 */
-  --color-text-faint: 139 152 166; /* #8B98A6 */
+  --color-text-main: 42 30 26; /* #2A1E1A */
+  --color-text-muted: 120 100 90; /* #78645A */
+  --color-text-faint: 160 142 132; /* #A08E84 */
 
-  --color-primary: 14 163 114; /* #0EA372 */
-  --color-primary-hover: 12 143 99; /* #0C8F63, darkened for hover */
-  --color-accent: 14 163 114; /* #0EA372, same as primary */
-  --color-accent-2: 12 156 147; /* #0C9C93 */
-  --color-on-accent: 255 255 255; /* #FFFFFF */
+  --color-primary: 224 86 46; /* #E0562E */
+  --color-primary-hover: 200 72 36; /* #C84824 */
+  --color-accent: 224 86 46; /* #E0562E, same as primary */
+  --color-accent-2: 200 72 36; /* #C84824, same as primary-hover - used as the 2nd gradient stop */
+  --color-on-accent: 255 250 246; /* #FFFAF6 */
 
-  --color-secondary: 122 92 192; /* Plume (#7A5CC0) */
-  --color-secondary-hover: 104 73 168; /* Plume, darkened */
-  --color-on-secondary: 255 255 255; /* #FFFFFF - Plume is dark enough for white text */
+  --color-secondary: 240 231 224; /* #F0E7E0 - a neutral surface, not a distinct brand hue */
+  --color-secondary-hover: 230 219 210; /* #E6DBD2 */
+  --color-on-secondary: 42 30 26; /* #2A1E1A */
 
-  --color-bubble-sent-bg: 213 247 206; /* #D5F7CE */
-  --color-bubble-sent-text: 11 46 34; /* #0B2E22 */
-  --color-bubble-received-bg: 255 255 255; /* #FFFFFF */
-  --color-bubble-received-text: 15 22 32; /* #0F1620 */
-
-  --color-border-main: 222 227 234; /* #DEE3EA */
+  --color-border-main: 214 199 188; /* #D6C7BC */
 
   /* ============================================================
      shadcn/ui canonical tokens (light) - bridged to the palette above
@@ -85,51 +84,54 @@
   --popover-foreground: var(--color-text-main);
   --primary: var(--color-primary);
   --primary-foreground: var(--color-on-accent);
+  --primary-hover: var(--color-primary-hover);
   --secondary: var(--color-secondary);
   --secondary-foreground: var(--color-on-secondary);
   --muted: var(--color-panel2-bg);
   --muted-foreground: var(--color-text-muted);
   --accent: var(--color-panel3-bg);
   --accent-foreground: var(--color-text-main);
-  --destructive: 239 68 68; /* red-500 - no existing app token for this */
+  --destructive: 200 50 55; /* no existing app token for this */
   --destructive-foreground: 255 255 255;
+  --success: 80 150 40; /* no existing app token for this */
+  --success-foreground: 255 255 255;
+  --overlay: 60 40 32; /* modal-backdrop tint - no existing app token for this */
+  --subtle: var(--color-text-faint);
   --border: var(--color-border-main);
   --input: var(--color-border-main);
   --ring: var(--color-primary);
-  --radius: 0.75rem;
+  --radius: 0.5rem;
+  --shadow-soft: rgba(60, 36, 24, 0.1);
+  --shadow-mid: rgba(60, 36, 24, 0.16);
+  --shadow-strong: rgba(60, 36, 24, 0.22);
 }
 
 .dark {
   /* ============================================================
-     App tokens - "Persona Chat" brand palette (dark)
+     App tokens - brand palette (dark)
      ============================================================ */
-  --color-app-bg: 11 14 19; /* #0B0E13 */
-  --color-panel-bg: 20 26 34; /* #141A22 */
-  --color-panel2-bg: 28 36 47; /* #1C242F */
-  --color-panel3-bg: 37 47 60; /* #252F3C */
-  --color-hover-bg: 26 34 44; /* #1A222C */
-  --color-chat-bg: 9 12 17; /* #090C11 */
+  --color-app-bg: 26 20 18; /* #1A1412 */
+  --color-panel-bg: 36 28 25; /* #241C19 */
+  --color-panel2-bg: 58 45 41; /* #3A2D29 */
+  --color-panel3-bg: 58 45 41; /* #3A2D29, same as panel2 - the redesign doesn't distinguish them */
+  --color-hover-bg: 46 36 33; /* #2E2421 */
+  --color-chat-bg: 26 20 18; /* #1A1412, same as app-bg - chat area uses a portrait overlay instead of a distinct bg */
 
-  --color-text-main: 234 240 246; /* #EAF0F6 */
-  --color-text-muted: 147 161 176; /* #93A1B0 */
-  --color-text-faint: 94 107 122; /* #5E6B7A */
+  --color-text-main: 244 235 228; /* #F4EBE4 */
+  --color-text-muted: 184 166 156; /* #B8A69C */
+  --color-text-faint: 125 108 100; /* #7D6C64 */
 
-  --color-primary: 16 185 129; /* #10B981 */
-  --color-primary-hover: 20 201 143; /* #14C98F, lightened for hover */
-  --color-accent: 16 185 129; /* #10B981, same as primary */
-  --color-accent-2: 14 165 160; /* #0EA5A0 */
-  --color-on-accent: 4 20 15; /* #04140F */
+  --color-primary: 242 103 63; /* #F2673F */
+  --color-primary-hover: 255 127 90; /* #FF7F5A */
+  --color-accent: 242 103 63; /* #F2673F, same as primary */
+  --color-accent-2: 255 127 90; /* #FF7F5A, same as primary-hover - used as the 2nd gradient stop */
+  --color-on-accent: 26 20 18; /* #1A1412 */
 
-  --color-secondary: 178 156 230; /* Plume (#B29CE6) */
-  --color-secondary-hover: 196 176 238; /* Plume, lightened */
-  --color-on-secondary: 27 20 46; /* #1B142E - Plume is light in dark mode, needs dark text for contrast */
+  --color-secondary: 46 36 33; /* #2E2421 - a neutral surface, not a distinct brand hue */
+  --color-secondary-hover: 58 45 41; /* #3A2D29 */
+  --color-on-secondary: 244 235 228; /* #F4EBE4 */
 
-  --color-bubble-sent-bg: 11 93 74; /* #0B5D4A */
-  --color-bubble-sent-text: 234 251 244; /* #EAFBF4 */
-  --color-bubble-received-bg: 28 36 47; /* #1C242F */
-  --color-bubble-received-text: 234 240 246; /* #EAF0F6 */
-
-  --color-border-main: 40 50 63; /* #28323F */
+  --color-border-main: 70 56 50; /* #463832 */
 
   /* ============================================================
      shadcn/ui canonical tokens (dark) - bridged to the palette above
@@ -138,21 +140,29 @@
   --foreground: var(--color-text-main);
   --card: var(--color-panel-bg);
   --card-foreground: var(--color-text-main);
-  --popover: var(--color-panel-bg);
+  --popover: 46 36 33; /* #2E2421 - one step up from --card, matches the canvas's popover token */
   --popover-foreground: var(--color-text-main);
   --primary: var(--color-primary);
   --primary-foreground: var(--color-on-accent);
+  --primary-hover: var(--color-primary-hover);
   --secondary: var(--color-secondary);
   --secondary-foreground: var(--color-on-secondary);
   --muted: var(--color-panel2-bg);
   --muted-foreground: var(--color-text-muted);
   --accent: var(--color-panel3-bg);
   --accent-foreground: var(--color-text-main);
-  --destructive: 220 38 38; /* red-600, a touch deeper for dark mode */
+  --destructive: 229 72 77; /* no existing app token for this */
   --destructive-foreground: 255 255 255;
+  --success: 143 209 79; /* no existing app token for this */
+  --success-foreground: 15 15 10;
+  --overlay: 16 12 11; /* modal-backdrop tint - no existing app token for this */
+  --subtle: var(--color-text-faint);
   --border: var(--color-border-main);
   --input: var(--color-border-main);
   --ring: var(--color-primary);
+  --shadow-soft: rgba(0, 0, 0, 0.35);
+  --shadow-mid: rgba(0, 0, 0, 0.5);
+  --shadow-strong: rgba(0, 0, 0, 0.65);
 }
 
 /* ================================================================

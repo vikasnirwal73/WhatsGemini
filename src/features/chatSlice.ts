@@ -180,6 +180,36 @@ export const updateChatPinned = createAsyncThunk(
   }
 );
 
+// Updates just a chat's author's note (Scene panel), leaving content and tree untouched.
+export const updateChatAuthorNote = createAsyncThunk(
+  "chat/updateChatAuthorNote",
+  async ({ chatId, authorNote }: { chatId: number; authorNote: Chat["authorNote"] }, { rejectWithValue }) => {
+    try {
+      const chat = await dbService.getChatById(chatId);
+      chat.authorNote = authorNote;
+      await dbService.updateChat(chat);
+      return { chatId, authorNote };
+    } catch (error) {
+      return handleDbError(error, rejectWithValue);
+    }
+  }
+);
+
+// Updates just a chat's world tags (Scene panel), leaving content and tree untouched.
+export const updateChatWorldTags = createAsyncThunk(
+  "chat/updateChatWorldTags",
+  async ({ chatId, worldTags }: { chatId: number; worldTags: Chat["worldTags"] }, { rejectWithValue }) => {
+    try {
+      const chat = await dbService.getChatById(chatId);
+      chat.worldTags = worldTags;
+      await dbService.updateChat(chat);
+      return { chatId, worldTags };
+    } catch (error) {
+      return handleDbError(error, rejectWithValue);
+    }
+  }
+);
+
 export const importChat = createAsyncThunk("chat/import", async (chatData: any, { rejectWithValue }) => {
   try {
     const isArray = Array.isArray(chatData);
@@ -192,11 +222,16 @@ export const importChat = createAsyncThunk("chat/import", async (chatData: any, 
       throw new Error("Invalid chat data format.");
     }
 
+    const authorNote = !isArray && chatData.authorNote ? chatData.authorNote : undefined;
+    const worldTags = !isArray && Array.isArray(chatData.worldTags) ? chatData.worldTags : undefined;
+
     const newChat = {
       title,
       content,
       characterId,
       timestamp,
+      authorNote,
+      worldTags,
     };
 
     const id = await dbService.addChat(newChat);
@@ -286,6 +321,24 @@ const chatSlice = createSlice({
         }
       })
       .addCase(updateChatPinned.rejected, (state, action) => {
+        state.error = action.payload as string;
+      })
+      .addCase(updateChatAuthorNote.fulfilled, (state, action) => {
+        const chat = state.chats.find((c) => c.id === action.payload.chatId);
+        if (chat) {
+          chat.authorNote = action.payload.authorNote;
+        }
+      })
+      .addCase(updateChatAuthorNote.rejected, (state, action) => {
+        state.error = action.payload as string;
+      })
+      .addCase(updateChatWorldTags.fulfilled, (state, action) => {
+        const chat = state.chats.find((c) => c.id === action.payload.chatId);
+        if (chat) {
+          chat.worldTags = action.payload.worldTags;
+        }
+      })
+      .addCase(updateChatWorldTags.rejected, (state, action) => {
         state.error = action.payload as string;
       })
       .addCase(updateMessages.rejected, (state, action) => {

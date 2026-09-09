@@ -60,6 +60,8 @@ export interface Chat {
     followupCount: number;
   };
   pinned?: boolean;
+  authorNote?: string; // freeform per-chat note injected into every reply
+  worldTags?: string[]; // short user-authored lore/setting tags for this chat
 }
 
 export interface Character {

@@ -12,10 +12,10 @@ export const DEFAULT_COMPRESS_THRESHOLD = 0; // 0 means do not compress automati
 export const DEFAULT_REPLY_LENGTH_LIMIT = 0; // 0 means no target length
 export const DEFAULT_AUTO_SELFIE_FREQUENCY = 15; // % chance, once a character's auto-selfie is enabled
 export const harmThresholds = [
-    { label: "None", value: "BLOCK_NONE" },
-    { label: "Low", value: "BLOCK_LOW_AND_ABOVE" },
-    { label: "Medium", value: "BLOCK_MEDIUM_AND_ABOVE" },
-    { label: "High", value: "BLOCK_ONLY_HIGH" },
+    { label: "Off", value: "BLOCK_NONE" },
+    { label: "Block high", value: "BLOCK_ONLY_HIGH" },
+    { label: "Block medium+", value: "BLOCK_MEDIUM_AND_ABOVE" },
+    { label: "Block low+", value: "BLOCK_LOW_AND_ABOVE" },
   ];
 export const DEFAULT_SAFETY_SETTINGS = {
     harassment: "BLOCK_NONE",

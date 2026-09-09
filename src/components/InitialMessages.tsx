@@ -1,8 +1,7 @@
 import React, { useEffect, useState, useCallback } from "react";
-import { FaPlus, FaTrash } from "react-icons/fa";
+import { FaPlus, FaTimes, FaPencilAlt, FaCheck } from "react-icons/fa";
 import { AI, LS_INITIAL_MESSAGES, YOU } from "../utils/constants";
-import { Select, TextArea } from "./ui/FormControls";
-import { Card } from "./ui/card";
+import { TextArea } from "./ui/FormControls";
 import { Button } from "./ui/button";
 
 interface InitialMessage {
@@ -27,6 +26,10 @@ const InitialMessages: React.FC<InitialMessagesProps> = ({ onSave }) => {
   };
 
   const [initialMessages, setInitialMessages] = useState<InitialMessage[]>(getSavedMessages);
+  // Which row is expanded for editing - role is implied by position (alternating
+  // You/Model, see handleAddMessage) rather than user-editable, matching the
+  // redesign's collapsed one-line-per-message list.
+  const [editingIdx, setEditingIdx] = useState<number | null>(null);
   const isFirstRender = React.useRef(true);
 
   // Save messages to localStorage on state change
@@ -44,12 +47,12 @@ const InitialMessages: React.FC<InitialMessagesProps> = ({ onSave }) => {
       ]);
       return; // Re-run effect after state update
     }
-    
+
     const timeoutId = setTimeout(() => {
       localStorage.setItem(LS_INITIAL_MESSAGES, JSON.stringify(nonEmptyMessages));
       if (onSave) onSave();
     }, 1000);
-    
+
     return () => clearTimeout(timeoutId);
   }, [initialMessages, onSave]);
 
@@ -60,7 +63,7 @@ const InitialMessages: React.FC<InitialMessagesProps> = ({ onSave }) => {
     );
   }, []);
 
-  // Add a new message
+  // Add a new message, opened straight into edit mode
   const handleAddMessage = useCallback(() => {
     setInitialMessages((prevMessages) => [
       ...prevMessages,
@@ -69,53 +72,80 @@ const InitialMessages: React.FC<InitialMessagesProps> = ({ onSave }) => {
         message: "",
       },
     ]);
-  }, []);
+    setEditingIdx(initialMessages.length);
+  }, [initialMessages.length]);
 
   // Delete a message
   const handleDeleteMessage = useCallback((idx: number) => {
     setInitialMessages((prevMessages) => prevMessages.filter((_, i) => i !== idx));
+    setEditingIdx(null);
   }, []);
 
   return (
-    <div>
-      <label className="block font-semibold text-foreground mb-5">
-        {initialMessages.length === 0 ? "Add a predefined system message" : "Predefined System Messages"}
-      </label>
+    <div className="flex flex-col gap-2">
       {initialMessages.map((msg, idx) => (
-        <Card
+        <div
           key={idx}
-          className="mb-5 p-3 flex flex-col gap-2 relative"
+          className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg bg-background border border-input"
         >
-          <Select
-            value={msg.role}
-            onChange={(e) => handleChange(e.target.value, idx, "role")}
-          >
-            <option value={YOU}>You</option>
-            <option value={AI}>Model</option>
-          </Select>
-          <TextArea
-            value={msg.message}
-            onChange={(e) => handleChange(e.target.value, idx, "message")}
-            placeholder="Enter a message that will be sent as the first message in any new chat..."
-          />
+          {editingIdx === idx ? (
+            <>
+              <TextArea
+                autoFocus
+                value={msg.message}
+                onChange={(e) => handleChange(e.target.value, idx, "message")}
+                placeholder="Enter a message that will be sent as the first message in any new chat..."
+                className="flex-1 font-serif min-h-[40px]"
+              />
+              <Button
+                onClick={() => setEditingIdx(null)}
+                variant="ghost"
+                size="icon"
+                title="Done"
+                aria-label="Done editing"
+                className="h-7 w-7 rounded-md text-muted-foreground hover:text-foreground flex-none"
+              >
+                <FaCheck size={12} />
+              </Button>
+            </>
+          ) : (
+            <>
+              <span className="flex-1 min-w-0 font-serif text-sm text-foreground truncate">
+                {msg.message || <span className="text-subtle italic">Empty message</span>}
+              </span>
+              <Button
+                onClick={() => setEditingIdx(idx)}
+                variant="ghost"
+                size="icon"
+                title="Edit"
+                aria-label="Edit message"
+                className="h-7 w-7 rounded-md text-subtle hover:text-foreground flex-none"
+              >
+                <FaPencilAlt size={12} />
+              </Button>
+            </>
+          )}
           {initialMessages.length > 1 && (
             <Button
-              variant="destructive"
-              size="icon"
               onClick={() => handleDeleteMessage(idx)}
-              className="absolute -top-4 right-2 h-8 w-8 rounded-full shadow-md opacity-90 hover:opacity-100 border-2 border-card"
+              variant="ghost"
+              size="icon"
+              title="Delete"
+              aria-label="Delete message"
+              className="h-7 w-7 rounded-md text-subtle hover:text-destructive hover:bg-destructive/10 flex-none"
             >
-              <FaTrash size={14} />
+              <FaTimes size={12} />
             </Button>
           )}
-        </Card>
+        </div>
       ))}
-      <Button
+      <button
+        type="button"
         onClick={handleAddMessage}
-        className="mx-auto mt-4 rounded-full shadow-md w-max"
+        className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg border border-dashed border-border text-subtle hover:text-primary hover:border-primary transition-colors text-sm"
       >
-        <FaPlus /> Add Message
-      </Button>
+        <FaPlus size={12} /> Add an opening line
+      </button>
     </div>
   );
 };

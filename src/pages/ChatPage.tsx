@@ -9,7 +9,7 @@ import Header, { HeaderAction } from "../components/Header";
 import Modal from "../components/Modal";
 import ToggleSwitch from "../components/ToggleSwitch";
 import { TextInput, FieldLabel } from "../components/ui/FormControls";
-import { FaCompressArrowsAlt, FaDownload, FaClock, FaBolt } from "react-icons/fa";
+import { FaCompressArrowsAlt, FaDownload, FaClock, FaBolt, FaBookOpen } from "react-icons/fa";
 import { AI, YOU, MEMORY_EXTRACTION_INTERVAL, DEFAULT_AUTO_SELFIE_FREQUENCY } from "../utils/constants";
 import { useAppDispatch, useAppSelector } from "../store/hooks";
 import { Message, Chat } from "../types";
@@ -152,6 +152,7 @@ const ChatPage = () => {
   // Only runs for the chat currently open in this tab - no cross-chat background
   // scanning, and nothing fires once the tab/app is closed.
   const [isAutoReplyModalOpen, setIsAutoReplyModalOpen] = useState(false);
+  const [sceneOpen, setSceneOpen] = useState(false);
   const autoReplySettings = currentChat?.autoReply || DEFAULT_AUTO_REPLY;
   const autoReplyInFlightRef = useRef(false);
 
@@ -576,6 +577,7 @@ const ChatPage = () => {
       ? [{ icon: FaBolt, label: `Make ${characterData?.name || "them"} send a follow-up now`, onClick: handleManualFollowup, disabled: aiLoading }]
       : []),
     { icon: FaClock, label: "Auto follow-up settings", onClick: () => setIsAutoReplyModalOpen(true), active: autoReplySettings.enabled },
+    { icon: FaBookOpen, label: "Scene panel", onClick: () => setSceneOpen((v) => !v), active: sceneOpen },
   ];
 
   return (
@@ -631,7 +633,7 @@ const ChatPage = () => {
 
       {/* Chat Messages */}
       <div className="flex-1 overflow-hidden relative">
-        <ChatWindow characterName={character} character={characterData} messages={messages} tree={currentChat?.tree} onSwitchBranch={handleSwitchBranch} onDeleteBranch={handleDeleteBranch} onRegenerate={handleRegenerate} onEdit={handleEditMessage} aiLoading={aiLoading} onSend={handleSend} />
+        <ChatWindow characterName={character} character={characterData} messages={messages} tree={currentChat?.tree} onSwitchBranch={handleSwitchBranch} onDeleteBranch={handleDeleteBranch} onRegenerate={handleRegenerate} onEdit={handleEditMessage} aiLoading={aiLoading} onSend={handleSend} chatId={chatIdNum ?? undefined} sceneOpen={sceneOpen} onCloseScene={() => setSceneOpen(false)} authorNote={currentChat?.authorNote} worldTags={currentChat?.worldTags} />
       </div>
 
       {/* Message Input Floating */}

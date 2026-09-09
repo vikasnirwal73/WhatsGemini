@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import { fetchCharacters, addCharacter, deleteCharacter, updateCharacter } from "../features/characterSlice";
 import { addChat } from "../features/chatSlice";
 import { useNavigate } from "react-router-dom";
-import { FaTrash, FaEdit, FaTimes, FaDownload, FaUpload, FaCopy, FaImages, FaPlus, FaComment, FaEllipsisV, FaPlay } from "react-icons/fa";
+import { FaTrash, FaEdit, FaTimes, FaDownload, FaUpload, FaCopy, FaImages, FaPlus, FaComment, FaEllipsisV, FaPlay, FaSearch } from "react-icons/fa";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "../components/ui/dropdown-menu";
 import { useAppDispatch, useAppSelector } from "../store/hooks";
 import { Character, Chat } from "../types";
@@ -14,6 +14,7 @@ import { CharacterAvatar } from "../components/ui/CharacterAvatar";
 import { Button } from "../components/ui/button";
 import { Badge } from "../components/ui/badge";
 import { Card } from "../components/ui/card";
+import { Input } from "../components/ui/input";
 import ToggleSwitch from "../components/ToggleSwitch";
 import Header from "../components/Header";
 import { CHARACTER_SWATCHES, MEMORY_EXTRACTION_INTERVAL, SAMPLE_CHARACTER, DEFAULT_AUTO_SELFIE_FREQUENCY } from "../utils/constants";
@@ -42,6 +43,7 @@ const CharacterPage = () => {
   const [autoSelfieEnabled, setAutoSelfieEnabled] = useState(false);
   const [autoSelfieFrequency, setAutoSelfieFrequency] = useState(DEFAULT_AUTO_SELFIE_FREQUENCY);
   const [editCharacter, setEditCharacter] = useState<Character | null>(null);
+  const [gallerySearch, setGallerySearch] = useState("");
 
   useEffect(() => {
     dispatch(fetchCharacters());
@@ -278,35 +280,53 @@ const CharacterPage = () => {
     }
   };
 
+  const filteredCharacters = useMemo(() => {
+    const q = gallerySearch.trim().toLowerCase();
+    if (!q) return characters;
+    return characters.filter(
+      (c) => c.name.toLowerCase().includes(q) || c.description?.toLowerCase().includes(q)
+    );
+  }, [characters, gallerySearch]);
+
+  const accent = CHARACTER_SWATCHES[accentIndex];
+
   return (
     <div className="w-full h-screen flex flex-col bg-background">
       <Header title="Characters" onBack={goBackOrHome} />
       <div className="flex-1 overflow-auto p-4 md:p-8">
-      <div className="w-full max-w-[1060px] mx-auto">
+      <div className="w-full max-w-[1180px] mx-auto flex flex-col gap-10">
 
-        <div className="mb-6">
-          <h1 className="text-xl font-semibold tracking-tight text-foreground">Characters</h1>
-          <p className="text-sm text-muted-foreground mt-1.5">Craft a persona for Gemini to embody, or open one you've already made.</p>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-[360px_1fr] gap-6 items-start">
-
-          {/* Create / Edit form */}
-          <Card className="overflow-hidden lg:sticky lg:top-0">
-            <div className="px-[18px] py-4 border-b border-border flex items-center gap-2.5">
-              <span className="w-8 h-8 rounded-[9px] bg-gemini-logo flex items-center justify-center text-onAccent flex-shrink-0">
-                {editCharacter ? <FaEdit size={13} /> : <FaPlus size={13} />}
-              </span>
-              <div className="min-w-0">
-                <div className="text-[14.5px] font-bold text-foreground">{editCharacter ? "Edit character" : "New character"}</div>
-                <div className="text-[11.5px] text-ink-faint">{editCharacter ? "Update who Gemini becomes" : "Define who Gemini becomes"}</div>
-              </div>
+        {/* Create / Edit character */}
+        <div>
+          <div className="mb-5 flex items-center gap-3">
+            <span className="w-9 h-9 rounded-xl bg-gemini-logo flex items-center justify-center text-onAccent flex-shrink-0">
+              {editCharacter ? <FaEdit size={14} /> : <FaPlus size={14} />}
+            </span>
+            <div className="min-w-0">
+              <h2 className="text-lg font-semibold text-foreground">{editCharacter ? "Edit character" : "New character"}</h2>
+              <p className="text-xs text-subtle">{editCharacter ? "Update who Gemini becomes" : "Define who Gemini becomes"}</p>
             </div>
+          </div>
 
-            <div className="p-[18px] flex flex-col gap-[15px]">
-              <div className="flex items-center gap-[13px]">
-                <CharacterAvatar name={name || "?"} accent={CHARACTER_SWATCHES[accentIndex]} size={56} className="text-xl flex-shrink-0" />
-                <div className="flex-1 min-w-0">
+          <div className="grid grid-cols-1 lg:grid-cols-[300px_minmax(0,1fr)] gap-6 items-start">
+
+            {/* Persistent left rail: portrait + accent/voice/auto-selfie */}
+            <div className="flex flex-col gap-4 lg:sticky lg:top-0">
+              <Card className="overflow-hidden">
+                <div
+                  className="relative aspect-[3/4] flex items-center justify-center"
+                  style={!appearanceImages[0] ? { background: `linear-gradient(135deg, ${accent[0]}26, ${accent[1]}26)` } : undefined}
+                >
+                  {appearanceImages[0] ? (
+                    <DisplayImage srcContext={appearanceImages[0]} alt="Portrait" className="w-full h-full object-cover" />
+                  ) : (
+                    <CharacterAvatar name={name || "?"} accent={accent} size={96} />
+                  )}
+                </div>
+              </Card>
+
+              <Card className="p-4 flex flex-col gap-4">
+                <div>
                   <label className="block text-[11.5px] text-muted-foreground mb-1.5">Accent</label>
                   <div className="flex gap-[7px]">
                     {CHARACTER_SWATCHES.map((sw, i) => (
@@ -316,166 +336,181 @@ const CharacterPage = () => {
                         onClick={() => setAccentIndex(i)}
                         title="Choose accent color"
                         aria-label={`Accent color ${i + 1}`}
-                        className="w-[26px] h-[26px] rounded-lg flex-shrink-0 transition transform hover:scale-110"
+                        className="w-[26px] h-[26px] rounded-full flex-shrink-0 transition transform hover:scale-110"
                         style={{
                           background: `linear-gradient(135deg, ${sw[0]}, ${sw[1]})`,
-                          border: `2px solid ${accentIndex === i ? "rgb(var(--color-text-main))" : "transparent"}`,
+                          boxShadow: accentIndex === i ? `0 0 0 2px rgb(var(--card)), 0 0 0 4px ${sw[0]}` : undefined,
                         }}
                       />
                     ))}
                   </div>
                 </div>
-              </div>
 
-              {isSpeechSynthesisSupported() && (
-                <div>
-                  <FieldLabel hint="Used to read this character's replies aloud with the speak button in chat.">Voice (optional)</FieldLabel>
-                  <div className="flex gap-2">
-                    <Select value={voiceURI} onChange={(e) => setVoiceURI(e.target.value)} className="flex-1">
-                      <option value="">Browser default</option>
-                      {voices.map((v) => (
-                        <option key={v.voiceURI} value={v.voiceURI}>{v.name} ({v.lang})</option>
-                      ))}
-                    </Select>
-                    <Button
-                      type="button"
-                      variant="panel"
-                      onClick={() => speak(`Hi, I'm ${name || "your character"}.`, voiceURI || undefined)}
-                      disabled={voices.length === 0}
-                      className="w-11 h-11 flex-shrink-0 border border-border hover:border-primary hover:text-primary"
-                      title="Preview voice"
-                      aria-label="Preview voice"
-                    >
-                      <FaPlay size={12} />
-                    </Button>
-                  </div>
-                </div>
-              )}
-
-              <div>
-                <ToggleSwitch
-                  checked={autoSelfieEnabled}
-                  onChange={setAutoSelfieEnabled}
-                  label="Sends selfies on their own"
-                  title="Let this character spontaneously attach a selfie-style picture to their replies, without you asking for one."
-                />
-                {autoSelfieEnabled && (
-                  <div className="mt-3">
-                    <div className="flex justify-between text-xs text-muted-foreground mb-2">
-                      <span>Frequency</span>
-                      <span className="font-mono">{autoSelfieFrequency}%</span>
-                    </div>
-                    <Slider value={autoSelfieFrequency} min={5} max={100} step={5} onChange={setAutoSelfieFrequency} />
-                    <p className="text-xs text-ink-faint mt-1.5">Chance each of their replies includes a spontaneous selfie - lower saves AI credits.</p>
-                  </div>
-                )}
-              </div>
-
-              <TextInput
-                type="text"
-                placeholder="Character Name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-              />
-              <TextInput
-                type="text"
-                placeholder="Tagline / Relationship with User (e.g. Best Friend, Enemy)"
-                value={relationship}
-                onChange={(e) => setRelationship(e.target.value)}
-              />
-              <TextArea
-                placeholder="Description (Optional)"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                className="resize-none"
-              />
-              <TextArea
-                placeholder="Character Appearance/Looks (e.g. Blonde hair, wears a red jacket) (Optional)"
-                value={appearance}
-                onChange={(e) => setAppearance(e.target.value)}
-                className="resize-none"
-              />
-
-              <div>
-                <label className="block text-sm text-foreground font-medium mb-2">Character Reference Images</label>
-                <div className="flex flex-wrap gap-2 mb-2">
-                  {appearanceImages.map((src, idx) => (
-                    <div key={idx} className="relative w-20 h-20 rounded-lg overflow-hidden border border-border bg-muted">
-                      <DisplayImage srcContext={src} alt="Appearance Reference" className="w-full h-full object-cover" />
-                      <Button
-                        onClick={() => removeAppearanceImage(idx)}
-                        variant="destructive"
-                        className="absolute top-1 right-1 h-auto w-auto rounded-full p-1"
-                      >
-                        <FaTimes size={10} />
-                      </Button>
-                    </div>
-                  ))}
-                  <button
-                    onClick={() => imageInputRef.current?.click()}
-                    className="w-20 h-20 flex flex-col justify-center items-center rounded-lg border-2 border-dashed border-border text-muted-foreground hover:text-primary hover:border-primary transition-colors"
-                  >
-                    <FaUpload size={16} />
-                    <span className="text-[10px] mt-1 text-center font-medium">Add Image</span>
-                  </button>
-                </div>
-                <p className="text-xs text-ink-faint">Provided to image-capable models to keep generated appearance consistent.</p>
-                <input
-                  type="file"
-                  ref={imageInputRef}
-                  onChange={handleImageUpload}
-                  accept="image/*"
-                  multiple
-                  style={{ display: "none" }}
-                />
-              </div>
-
-              {editCharacter && editCharacter.memory && editCharacter.memory.length > 0 && (
-                <div>
-                  <label className="block text-sm text-foreground font-medium mb-2">
-                    Memory <span className="text-ink-faint font-normal">({editCharacter.memory.length} facts remembered)</span>
-                  </label>
-                  <div className="flex flex-col gap-1.5 max-h-48 overflow-y-auto pr-1">
-                    {editCharacter.memory.map((fact, idx) => (
-                      <div key={idx} className="flex items-start gap-2 text-xs text-muted-foreground bg-muted border border-border rounded-lg px-2.5 py-2">
-                        <span className="flex-1">{fact}</span>
+                {isSpeechSynthesisSupported() && (
+                  <>
+                    <div className="h-px bg-border" />
+                    <div>
+                      <FieldLabel hint="Used to read this character's replies aloud with the speak button in chat.">Voice (optional)</FieldLabel>
+                      <div className="flex gap-2">
+                        <Select value={voiceURI} onChange={(e) => setVoiceURI(e.target.value)} className="flex-1">
+                          <option value="">Browser default</option>
+                          {voices.map((v) => (
+                            <option key={v.voiceURI} value={v.voiceURI}>{v.name} ({v.lang})</option>
+                          ))}
+                        </Select>
                         <Button
-                          onClick={() => handleRemoveMemoryFact(idx)}
-                          variant="ghost"
-                          className="h-auto w-auto p-0 text-ink-faint hover:bg-transparent hover:text-red-500 flex-shrink-0"
-                          title="Forget this fact"
-                          aria-label="Forget this fact"
+                          type="button"
+                          variant="panel"
+                          onClick={() => speak(`Hi, I'm ${name || "your character"}.`, voiceURI || undefined)}
+                          disabled={voices.length === 0}
+                          className="w-11 h-11 flex-shrink-0 border border-border hover:border-primary hover:text-primary"
+                          title="Preview voice"
+                          aria-label="Preview voice"
+                        >
+                          <FaPlay size={12} />
+                        </Button>
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                <div className="h-px bg-border" />
+
+                <div>
+                  <ToggleSwitch
+                    checked={autoSelfieEnabled}
+                    onChange={setAutoSelfieEnabled}
+                    label="Sends selfies on their own"
+                    title="Let this character spontaneously attach a selfie-style picture to their replies, without you asking for one."
+                  />
+                  {autoSelfieEnabled && (
+                    <div className="mt-3">
+                      <div className="flex justify-between text-xs text-muted-foreground mb-2">
+                        <span>Frequency</span>
+                        <span className="font-mono">{autoSelfieFrequency}%</span>
+                      </div>
+                      <Slider value={autoSelfieFrequency} min={5} max={100} step={5} onChange={setAutoSelfieFrequency} />
+                      <p className="text-xs text-subtle mt-1.5">Chance each of their replies includes a spontaneous selfie - lower saves AI credits.</p>
+                    </div>
+                  )}
+                </div>
+              </Card>
+            </div>
+
+            {/* Grouped field cards */}
+            <div className="flex flex-col gap-4">
+              <Card className="p-5 flex flex-col gap-3">
+                <h3 className="font-semibold text-[15px] text-foreground">Identity</h3>
+                <TextInput
+                  type="text"
+                  placeholder="Character Name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                />
+                <TextInput
+                  type="text"
+                  placeholder="Tagline / Relationship with User (e.g. Best Friend, Enemy)"
+                  value={relationship}
+                  onChange={(e) => setRelationship(e.target.value)}
+                />
+                <TextArea
+                  placeholder="Description (Optional)"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  className="resize-none"
+                />
+              </Card>
+
+              <Card className="p-5 flex flex-col gap-3">
+                <h3 className="font-semibold text-[15px] text-foreground">Appearance</h3>
+                <TextArea
+                  placeholder="Character Appearance/Looks (e.g. Blonde hair, wears a red jacket) (Optional)"
+                  value={appearance}
+                  onChange={(e) => setAppearance(e.target.value)}
+                  className="resize-none"
+                />
+                <div>
+                  <label className="block text-sm text-foreground font-medium mb-2">Reference Images</label>
+                  <div className="flex flex-wrap gap-2 mb-2">
+                    {appearanceImages.map((src, idx) => (
+                      <div key={idx} className="relative w-20 h-20 rounded-lg overflow-hidden border border-border bg-muted">
+                        <DisplayImage srcContext={src} alt="Appearance Reference" className="w-full h-full object-cover" />
+                        <Button
+                          onClick={() => removeAppearanceImage(idx)}
+                          variant="destructive"
+                          className="absolute top-1 right-1 h-auto w-auto rounded-full p-1"
                         >
                           <FaTimes size={10} />
                         </Button>
                       </div>
                     ))}
+                    <button
+                      onClick={() => imageInputRef.current?.click()}
+                      className="w-20 h-20 flex flex-col justify-center items-center rounded-lg border-2 border-dashed border-border text-muted-foreground hover:text-primary hover:border-primary transition-colors"
+                    >
+                      <FaUpload size={16} />
+                      <span className="text-[10px] mt-1 text-center font-medium">Add Image</span>
+                    </button>
                   </div>
-                  <p className="text-xs text-ink-faint mt-1.5">Automatically learned from your conversations, every {MEMORY_EXTRACTION_INTERVAL} messages or so.</p>
+                  <p className="text-xs text-subtle">Provided to image-capable models to keep generated appearance consistent.</p>
+                  <input
+                    type="file"
+                    ref={imageInputRef}
+                    onChange={handleImageUpload}
+                    accept="image/*"
+                    multiple
+                    style={{ display: "none" }}
+                  />
                 </div>
+              </Card>
+
+              <Card className="p-5 flex flex-col gap-3">
+                <h3 className="font-semibold text-[15px] text-foreground">Personality</h3>
+                <TextArea
+                  placeholder="Character Prompt (Personality, Style, etc.)"
+                  value={prompt}
+                  onChange={(e) => setPrompt(e.target.value)}
+                  className="resize-none min-h-[120px]"
+                />
+              </Card>
+
+              {editCharacter && (
+                <Card className="p-5 flex flex-col gap-3">
+                  <h3 className="font-semibold text-[15px] text-foreground">
+                    Memory {editCharacter.memory && editCharacter.memory.length > 0 && (
+                      <span className="text-subtle font-normal text-xs">({editCharacter.memory.length} facts remembered)</span>
+                    )}
+                  </h3>
+                  {editCharacter.memory && editCharacter.memory.length > 0 ? (
+                    <div className="flex flex-col gap-1.5 max-h-48 overflow-y-auto pr-1">
+                      {editCharacter.memory.map((fact, idx) => (
+                        <div key={idx} className="flex items-start gap-2 text-xs text-muted-foreground bg-muted border border-border rounded-lg px-2.5 py-2">
+                          <span className="flex-1">{fact}</span>
+                          <Button
+                            onClick={() => handleRemoveMemoryFact(idx)}
+                            variant="ghost"
+                            className="h-auto w-auto p-0 text-subtle hover:bg-transparent hover:text-destructive flex-shrink-0"
+                            title="Forget this fact"
+                            aria-label="Forget this fact"
+                          >
+                            <FaTimes size={10} />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-subtle">No facts remembered yet.</p>
+                  )}
+                  <p className="text-xs text-subtle">Automatically learned from your conversations, every {MEMORY_EXTRACTION_INTERVAL} messages or so.</p>
+                </Card>
               )}
 
-              <TextArea
-                placeholder="Character Prompt (Personality, Style, etc.)"
-                value={prompt}
-                onChange={(e) => setPrompt(e.target.value)}
-                className="resize-none min-h-[120px]"
-              />
-
-              <div className="flex gap-3">
-                <Button
-                  onClick={editCharacter ? handleSaveEdit : handleCreateCharacter}
-                  variant="default"
-                  className="flex-1 h-auto px-4 py-3 font-semibold"
-                  disabled={loading}
-                >
-                  {loading ? "Saving..." : editCharacter ? "Save Changes" : "Create Character"}
-                </Button>
+              <div className="sticky bottom-0 pt-6 pb-1 bg-gradient-to-t from-background via-background to-transparent flex gap-3 justify-end">
                 {!editCharacter && (
                   <Button
                     onClick={handleImportClick}
                     variant="panel"
-                    className="h-auto px-4 py-3 border border-border hover:border-primary font-medium"
+                    className="h-auto px-4 py-2.5 border border-border hover:border-primary font-medium"
                     title="Import Character from JSON"
                   >
                     <FaUpload size={14} />
@@ -486,11 +521,19 @@ const CharacterPage = () => {
                   <Button
                     onClick={resetForm}
                     variant="panel"
-                    className="h-auto px-4 py-3 border border-border hover:border-primary"
+                    className="h-auto px-4 py-2.5 border border-border hover:border-primary font-medium"
                   >
-                    <FaTimes size={16} />
+                    Cancel
                   </Button>
                 )}
+                <Button
+                  onClick={editCharacter ? handleSaveEdit : handleCreateCharacter}
+                  variant="default"
+                  className="h-auto px-5 py-2.5 font-semibold"
+                  disabled={loading}
+                >
+                  {loading ? "Saving..." : editCharacter ? "Save Changes" : "Create Character"}
+                </Button>
               </div>
               <input
                 type="file"
@@ -500,53 +543,90 @@ const CharacterPage = () => {
                 style={{ display: "none" }}
               />
             </div>
-          </Card>
+          </div>
+        </div>
 
-          {/* Saved Characters */}
-          <div>
-            <div className="flex items-center justify-between mb-3.5">
-              <div className="text-[12.5px] text-muted-foreground">
+        {/* Saved Characters */}
+        <div>
+          <div className="flex items-center justify-between gap-4 mb-4">
+            <div>
+              <h2 className="text-lg font-semibold text-foreground">Your cast</h2>
+              <p className="text-xs text-subtle mt-0.5">
                 {loading ? "Loading..." : `${characters.length} character${characters.length === 1 ? "" : "s"}`}
-              </div>
+              </p>
             </div>
-            {!loading && characters.length === 0 ? (
-              <Card className="p-6 text-center flex flex-col items-center gap-3">
-                <p className="text-muted-foreground">No characters created yet.</p>
-                <p className="text-sm text-muted-foreground">Fill out the form to build your own, or jump straight into a chat with a ready-made one.</p>
-                <Button
-                  onClick={handleTrySampleCharacter}
-                  variant="default"
-                  className="h-auto px-4 py-2.5 font-semibold text-sm"
+            {characters.length > 0 && (
+              <div className="relative w-full max-w-[220px]">
+                <FaSearch size={12} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  value={gallerySearch}
+                  onChange={(e) => setGallerySearch(e.target.value)}
+                  placeholder="Search characters"
+                  aria-label="Search characters"
+                  className="pl-8 text-[12.5px]"
+                />
+              </div>
+            )}
+          </div>
+          {!loading && characters.length === 0 ? (
+            <Card className="p-6 text-center flex flex-col items-center gap-3">
+              <p className="text-muted-foreground">No characters created yet.</p>
+              <p className="text-sm text-muted-foreground">Fill out the form to build your own, or jump straight into a chat with a ready-made one.</p>
+              <Button
+                onClick={handleTrySampleCharacter}
+                variant="default"
+                className="h-auto px-4 py-2.5 font-semibold text-sm"
+              >
+                Try a sample character
+              </Button>
+            </Card>
+          ) : filteredCharacters.length === 0 ? (
+            <Card className="p-6 text-center text-muted-foreground text-sm">No characters match "{gallerySearch}".</Card>
+          ) : (
+            <div className="grid gap-4" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))" }}>
+              {filteredCharacters.map((char) => {
+                const charAccent = char.accent ?? CHARACTER_SWATCHES[0];
+                return (
+                <Card
+                  key={char.id}
+                  className="relative overflow-hidden rounded-xl border hover:border-primary/40 transition shadow-soft flex flex-col justify-end"
+                  style={{ aspectRatio: "3 / 3.9" }}
                 >
-                  Try a sample character
-                </Button>
-              </Card>
-            ) : (
-              <div className="grid gap-4" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(232px, 1fr))" }}>
-                {characters.map((char) => (
-                  <Card
-                    key={char.id}
-                    className="p-[18px] flex flex-col gap-3 hover:border-primary transition"
-                  >
-                    <div className="flex items-start gap-3">
-                      <CharacterAvatar name={char.name} accent={char.accent} size={44} />
-                      <div className="min-w-0 flex-1">
-                        <h4 className="text-[15px] font-bold text-foreground truncate">{char.name}</h4>
-                        {char.relationship && (
-                          <Badge variant="outline" className="mt-1 max-w-full truncate border-primary/20 bg-primary/10 font-medium text-primary">
-                            {char.relationship}
-                          </Badge>
-                        )}
+                  <div className="absolute inset-0">
+                    {char.appearanceImages?.[0] ? (
+                      <DisplayImage srcContext={char.appearanceImages[0]} alt={char.name} className="w-full h-full object-cover" />
+                    ) : (
+                      <div
+                        className="w-full h-full flex items-center justify-center"
+                        style={{ background: `linear-gradient(135deg, ${charAccent[0]}26, ${charAccent[1]}26)` }}
+                      >
+                        <CharacterAvatar name={char.name} accent={char.accent} size={72} />
                       </div>
-                    </div>
-                    <p className="text-[12.5px] text-muted-foreground leading-relaxed line-clamp-3 flex-1">
+                    )}
+                  </div>
+                  <div
+                    className="absolute inset-0 pointer-events-none"
+                    style={{ background: "linear-gradient(180deg, transparent 20%, rgb(var(--background) / 0.7) 55%, rgb(var(--background) / 0.98) 100%)" }}
+                  />
+                  <div
+                    className="absolute top-3 right-3 w-2.5 h-2.5 rounded-full"
+                    style={{ background: charAccent[0], boxShadow: `0 0 0 3px rgb(var(--background) / 0.6), 0 0 14px ${charAccent[0]}` }}
+                  />
+                  <div className="relative flex flex-col gap-1.5 p-4">
+                    {char.relationship && (
+                      <Badge variant="outline" className="self-start max-w-full truncate border-primary/20 bg-primary/10 font-medium text-primary text-[11px]">
+                        {char.relationship}
+                      </Badge>
+                    )}
+                    <h4 className="font-semibold text-lg text-foreground truncate leading-tight">{char.name}</h4>
+                    <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2">
                       {truncateText(char.description, 140)}
                     </p>
-                    <div className="flex gap-2 mt-1 pt-3 border-t border-border">
+                    <div className="flex gap-1.5 mt-2">
                       <Button
                         onClick={() => handleChatWithCharacter(char)}
-                        variant="panel"
-                        className="flex-1 h-auto py-2 text-[12.5px] font-semibold hover:bg-primary hover:text-onAccent"
+                        variant="default"
+                        className="flex-1 h-9 text-xs font-semibold"
                       >
                         <FaComment size={11} /> Chat
                       </Button>
@@ -554,7 +634,7 @@ const CharacterPage = () => {
                         onClick={() => handleEditCharacter(char)}
                         variant="outline"
                         size="icon"
-                        className="w-9 rounded-[10px] bg-transparent hover:border-primary hover:text-primary"
+                        className="h-9 w-9 bg-card/70 hover:border-primary hover:text-primary"
                         title="Edit Character"
                       >
                         <FaEdit size={13} />
@@ -564,7 +644,7 @@ const CharacterPage = () => {
                           <Button
                             variant="outline"
                             size="icon"
-                            className="rounded-[10px] bg-transparent hover:bg-hover hover:text-foreground"
+                            className="h-9 w-9 bg-card/70 hover:bg-hover hover:text-foreground"
                             title="More options"
                             aria-label="More options"
                           >
@@ -594,13 +674,13 @@ const CharacterPage = () => {
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </div>
-                  </Card>
-                ))}
-              </div>
-            )}
-          </div>
-
+                  </div>
+                </Card>
+              )})}
+            </div>
+          )}
         </div>
+
       </div>
       </div>
     </div>
