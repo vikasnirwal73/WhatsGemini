@@ -16,7 +16,7 @@ import Header from "./components/Header";
 import ServiceWorkerUpdater from "./components/ServiceWorkerUpdater";
 import BackupReminderBanner from "./components/BackupReminderBanner";
 import Logo from "./components/ui/Logo";
-import { TooltipProvider } from "./components/ui/Tooltip";
+import { TooltipProvider } from "./components/ui/tooltip";
 import { Toaster } from "./components/ui/sonner";
 import { Button } from "./components/ui/button";
 
@@ -77,17 +77,17 @@ const EmptyChatState = () => {
             </div>
             <div className="flex flex-col sm:flex-row gap-2.5 mt-1">
               <Button
-                variant="gradient"
+                variant="default"
                 onClick={handleTrySample}
                 disabled={creatingSample}
-                className="rounded-xl px-4 py-2.5 h-auto"
+                className="px-4 py-2.5 h-auto"
               >
                 {creatingSample ? "Creating..." : "Try a sample character"}
               </Button>
               <Button
                 variant="outline"
                 onClick={() => navigate("/characters")}
-                className="rounded-xl px-4 py-2.5 h-auto bg-muted hover:border-primary hover:text-primary hover:bg-muted"
+                className="px-4 py-2.5 h-auto bg-muted hover:border-primary hover:text-primary hover:bg-muted"
               >
                 Create your own
               </Button>
@@ -97,9 +97,9 @@ const EmptyChatState = () => {
           <>
             <p className="text-sm">Select a chat from the sidebar to continue a conversation.</p>
             <Button
-              variant="gradient"
+              variant="default"
               onClick={open}
-              className="md:hidden rounded-xl px-4 py-2.5 h-auto"
+              className="md:hidden px-4 py-2.5 h-auto"
             >
               Browse chats
             </Button>

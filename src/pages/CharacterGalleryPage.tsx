@@ -5,7 +5,7 @@ import { fetchCharacterById } from "../features/characterSlice";
 import { fetchChats } from "../features/chatSlice";
 import { FaTimes, FaChevronLeft, FaChevronRight } from "react-icons/fa";
 import { DisplayImage } from "../components/DisplayImage";
-import { DialogRoot, DialogContent, DialogTitle, DialogClose } from "../components/ui/Dialog";
+import { Dialog, DialogContent, DialogTitle, DialogClose } from "../components/ui/dialog";
 import Header from "../components/Header";
 import { CharacterAvatar } from "../components/ui/CharacterAvatar";
 import { Button } from "../components/ui/button";
@@ -103,8 +103,8 @@ const CharacterGalleryPage = () => {
         onBack={goBackInfo}
       />
       {/* Fullscreen Image Viewer */}
-      <DialogRoot open={selectedImage !== null} onOpenChange={(open) => !open && setSelectedImage(null)}>
-        <DialogContent size="full" className="!bg-transparent !border-none !shadow-none flex items-center justify-center">
+      <Dialog open={selectedImage !== null} onOpenChange={(open) => !open && setSelectedImage(null)}>
+        <DialogContent size="full">
           <DialogTitle asChild>
             <span className="sr-only">{character.name}'s gallery image</span>
           </DialogTitle>
@@ -150,7 +150,7 @@ const CharacterGalleryPage = () => {
             </Button>
           )}
         </DialogContent>
-      </DialogRoot>
+      </Dialog>
 
       <div className="flex-1 overflow-auto p-4 md:p-8">
       <div className="w-full max-w-5xl mx-auto bg-transparent">
@@ -172,7 +172,7 @@ const CharacterGalleryPage = () => {
             {images.map((src, idx) => (
               <div
                 key={idx}
-                className="relative aspect-square w-full rounded-xl overflow-hidden bg-muted border border-border shadow-sm cursor-pointer hover:opacity-90 transition-opacity"
+                className="relative aspect-square w-full rounded-lg overflow-hidden bg-muted border border-border shadow-sm cursor-pointer hover:opacity-90 transition-opacity"
                 onClick={() => setSelectedImage(src)}
               >
                 <DisplayImage srcContext={src} alt={`${character.name} generated image ${idx + 1}`} className="w-full h-full object-cover" />

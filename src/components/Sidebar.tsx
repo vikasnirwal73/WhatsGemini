@@ -12,6 +12,7 @@ import { Chat, Character } from "../types";
 import { cn } from "../utils/cn";
 import { CharacterAvatar } from "./ui/CharacterAvatar";
 import { Button } from "./ui/button";
+import { Input } from "./ui/input";
 import Logo from "./ui/Logo";
 import { stripLeakedBase64 } from "../features/ai/utils/apiUtils";
 
@@ -179,8 +180,8 @@ const Sidebar = () => {
         <div className="px-3.5 pt-3 pb-2.5 flex flex-col gap-2 flex-shrink-0">
           <Button
             onClick={() => setIsNewChatModalOpen(true)}
-            variant="gradient"
-            className="w-full h-auto py-[11px] rounded-[11px] text-[13.5px] font-semibold"
+            variant="default"
+            className="w-full h-auto py-[11px] text-[13.5px] font-semibold"
           >
             <FaPlus size={12} />
             <span>New chat</span>
@@ -188,7 +189,7 @@ const Sidebar = () => {
           <Button
             onClick={handleImportClick}
             variant="panel"
-            className="w-full h-auto py-2.5 rounded-[11px] border border-border text-muted-foreground text-[13px] font-medium hover:border-primary hover:text-foreground"
+            className="w-full h-auto py-2.5 border border-border text-muted-foreground text-[13px] font-medium hover:border-primary hover:text-foreground"
           >
             <FaFileImport size={13} />
             <span>Import chat</span>
@@ -204,14 +205,14 @@ const Sidebar = () => {
 
         {/* Search */}
         <div className="px-3.5 pb-2.5 flex-shrink-0">
-          <div className="flex items-center gap-2 bg-muted border border-border rounded-[10px] px-[11px] py-[9px]">
-            <FaSearch size={12} className="text-ink-faint flex-shrink-0" />
-            <input
+          <div className="relative">
+            <FaSearch size={12} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+            <Input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search chats and messages"
               aria-label="Search chats and messages"
-              className="flex-1 min-w-0 bg-transparent text-[12.5px] text-foreground placeholder-ink-faint outline-none"
+              className="pl-8 text-[12.5px]"
             />
           </div>
         </div>
@@ -274,7 +275,7 @@ const Sidebar = () => {
                 handleCharacterClick(char.id, char.name);
               }}
               variant="ghost"
-              className="w-full h-auto justify-start gap-3 p-3 rounded-xl text-left font-normal"
+              className="w-full h-auto justify-start gap-3 p-3 rounded-lg text-left font-normal"
             >
               <CharacterAvatar name={char.name} accent={char.accent} size={40} />
               <div>
@@ -302,7 +303,7 @@ const ChatList = ({ items, characters, onDeleteChat, onTogglePin, onNavigate, qu
             to={`/chat/${chat.id}`}
             key={chat.id}
             onClick={onNavigate}
-            className="flex items-center gap-3 p-2.5 rounded-xl cursor-pointer group hover:bg-hover transition"
+            className="flex items-center gap-3 p-2.5 rounded-lg cursor-pointer group hover:bg-hover transition"
           >
             <CharacterAvatar name={character?.name || chat.title} accent={character?.accent} size={34} />
             <div className="flex-1 flex flex-col overflow-hidden min-w-0">

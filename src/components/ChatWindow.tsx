@@ -9,7 +9,7 @@ import { stripImageContextTag } from "../features/ai/utils/imageGeneration";
 import { DisplayImage } from "./DisplayImage";
 import ToggleSwitch from "./ToggleSwitch";
 import ChatMessage from "./chat/ChatMessage";
-import { DialogRoot, DialogContent, DialogTitle, DialogClose } from "./ui/Dialog";
+import { Dialog, DialogContent, DialogTitle, DialogClose } from "./ui/dialog";
 import { CharacterAvatar } from "./ui/CharacterAvatar";
 import { Button } from "./ui/button";
 import { Card } from "./ui/card";
@@ -238,7 +238,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ messages = [], tree, onSwitchBr
     >
       {filteredMessages.length === 0 ? (
         <div className="flex flex-col items-center h-full w-full px-4 pt-10">
-          <Card className="flex flex-col items-center text-center gap-3 w-full max-w-[440px] px-5 py-8 rounded-2xl shadow-sm">
+          <Card className="flex flex-col items-center text-center gap-3 w-full max-w-[440px] px-5 py-8">
             <CharacterAvatar name={charInitials} accent={character?.accent} size={64} className="text-2xl" />
             <div>
               <div className="text-[19px] font-bold tracking-tight text-foreground">{characterName || "New Conversation"}</div>
@@ -294,8 +294,8 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ messages = [], tree, onSwitchBr
       )}
 
       {/* Full Screen Edit Modal */}
-      <DialogRoot open={editingIndex !== null} onOpenChange={(open) => !open && cancelEdit()}>
-        <DialogContent size="lg" className="h-[80vh] md:h-[70vh]">
+      <Dialog open={editingIndex !== null} onOpenChange={(open) => !open && cancelEdit()}>
+        <DialogContent size="lg" className="h-[80vh] md:h-[70vh] p-0">
           <div className="flex items-center justify-between p-4 border-b border-border flex-shrink-0">
             <DialogTitle asChild>
               <h3 className="text-lg font-semibold text-foreground">Edit Message</h3>
@@ -312,7 +312,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ messages = [], tree, onSwitchBr
               ref={(el) => { if (el) el.focus() }}
               value={editText}
               onChange={(e) => setEditText(e.target.value)}
-              className="flex-1 w-full p-4 rounded-xl border border-border bg-background text-foreground focus:ring-2 focus:ring-primary focus:border-transparent outline-none resize-none text-base disabled:opacity-50"
+              className="flex-1 w-full p-4 rounded-md border border-border bg-background text-foreground focus:ring-2 focus:ring-primary focus:border-transparent outline-none resize-none text-base disabled:opacity-50"
               placeholder="Type your message here..."
               onKeyDown={(e) => {
                 if (e.key === "Enter" && !e.shiftKey) {
@@ -339,14 +339,14 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ messages = [], tree, onSwitchBr
               <Button
                 onClick={cancelEdit}
                 variant="ghost"
-                className="flex-1 sm:flex-none h-auto px-5 py-2.5 rounded-xl font-medium text-muted-foreground hover:bg-muted"
+                className="flex-1 sm:flex-none h-auto px-5 py-2.5 font-medium text-muted-foreground hover:bg-muted"
               >
                 Cancel
               </Button>
               <Button
                 onClick={saveEdit}
                 disabled={!editText.trim()}
-                className="flex-1 sm:flex-none h-auto px-5 py-2.5 rounded-xl font-medium shadow-sm"
+                className="flex-1 sm:flex-none h-auto px-5 py-2.5 font-medium shadow-sm"
               >
                 <FaCheck size={14} />
                 Save Changes
@@ -354,11 +354,11 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ messages = [], tree, onSwitchBr
             </div>
           </div>
         </DialogContent>
-      </DialogRoot>
+      </Dialog>
 
       {/* Fullscreen Image Modal */}
-      <DialogRoot open={fullscreenImage !== null} onOpenChange={(open) => !open && setFullscreenImage(null)}>
-        <DialogContent size="full" className="!bg-transparent !border-none !shadow-none flex items-center justify-center">
+      <Dialog open={fullscreenImage !== null} onOpenChange={(open) => !open && setFullscreenImage(null)}>
+        <DialogContent size="full">
           <DialogTitle asChild>
             <span className="sr-only">Fullscreen image</span>
           </DialogTitle>
@@ -380,7 +380,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ messages = [], tree, onSwitchBr
             />
           )}
         </DialogContent>
-      </DialogRoot>
+      </Dialog>
     </div>
   );
 };

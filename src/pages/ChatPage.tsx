@@ -18,6 +18,7 @@ import { buildChatHistory, buildSystemInstruction, buildTurnContext } from "../f
 import { mergeMemory } from "../features/ai/utils/memoryExtraction";
 import { migrateToTree, addChildNode, flattenPath, getPathToNode, updateNodeMessage, findDefaultLeafFrom, deleteBranch, getSiblingInfo } from "../features/chat/messageTree";
 import { CharacterAvatar } from "../components/ui/CharacterAvatar";
+import { Alert, AlertDescription } from "../components/ui/alert";
 import { useModal } from "../contexts/ModalContext";
 
 const DEFAULT_AUTO_REPLY = { enabled: false, cooldownMinutes: 3, maxFollowups: 2, followupCount: 0 };
@@ -620,7 +621,13 @@ const ChatPage = () => {
       </Modal>
 
       {/* Error Message */}
-      {error && <p className="text-red-500 text-center p-2 absolute top-16 w-full z-20">{error}</p>}
+      {error && (
+        <div className="absolute top-16 w-full z-20 px-4 flex justify-center">
+          <Alert variant="destructive" className="max-w-md">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        </div>
+      )}
 
       {/* Chat Messages */}
       <div className="flex-1 overflow-hidden relative">

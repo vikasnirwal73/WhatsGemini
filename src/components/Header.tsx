@@ -6,8 +6,8 @@ import { ThemeContext } from "../contexts/ThemeContext";
 import { AuthContext } from "../contexts/AuthContext";
 import { DARK } from "../utils/constants";
 import { cn } from "../utils/cn";
-import { Tooltip } from "./ui/Tooltip";
-import { DropdownMenu, DropdownMenuItem, DropdownMenuSeparator } from "./ui/DropdownMenu";
+import { Tooltip, TooltipTrigger, TooltipContent } from "./ui/tooltip";
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator } from "./ui/dropdown-menu";
 import { Button } from "./ui/button";
 import KeyboardShortcutsModal from "./KeyboardShortcutsModal";
 
@@ -16,7 +16,7 @@ import KeyboardShortcutsModal from "./KeyboardShortcutsModal";
 // mobile "more" menu - so page-specific actions (e.g. ChatPage's Export/
 // Compress/Follow-up) don't need to hand-build both layouts themselves.
 export interface HeaderAction {
-  icon: React.ComponentType<{ size?: number }>;
+  icon: React.ComponentType<{ size?: number; className?: string }>;
   label: string;
   onClick: () => void;
   disabled?: boolean;
@@ -112,20 +112,23 @@ const Header: React.FC<HeaderProps> = ({ title, subtitle, avatar, onBack, action
           <React.Fragment key={gi}>
             {gi > 0 && <div className="w-px h-6 bg-border mx-1 flex-shrink-0" />}
             {group.map((action, ai) => (
-              <Tooltip key={ai} label={action.label}>
-                <Button
-                  onClick={action.onClick}
-                  disabled={action.disabled}
-                  variant="outline"
-                  size="icon"
-                  aria-label={action.label}
-                  className={cn(
-                    action.danger ? iconBtnDangerClass : action.active ? iconBtnActiveClass : iconBtnClass,
-                    action.disabled && "opacity-50 cursor-not-allowed"
-                  )}
-                >
-                  <action.icon size={15} />
-                </Button>
+              <Tooltip key={ai}>
+                <TooltipTrigger asChild>
+                  <Button
+                    onClick={action.onClick}
+                    disabled={action.disabled}
+                    variant="outline"
+                    size="icon"
+                    aria-label={action.label}
+                    className={cn(
+                      action.danger ? iconBtnDangerClass : action.active ? iconBtnActiveClass : iconBtnClass,
+                      action.disabled && "opacity-50 cursor-not-allowed"
+                    )}
+                  >
+                    <action.icon size={15} />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>{action.label}</TooltipContent>
               </Tooltip>
             ))}
           </React.Fragment>
@@ -134,29 +137,33 @@ const Header: React.FC<HeaderProps> = ({ title, subtitle, avatar, onBack, action
 
       {/* Mobile: everything above collapses into one menu so buttons stop crowding the header */}
       <div className="md:hidden">
-        <DropdownMenu
-          trigger={
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
             <Button variant="outline" size="icon" aria-label="More options" className={iconBtnClass}>
               <FaEllipsisV size={15} />
             </Button>
-          }
-        >
-          {groups.map((group, gi) => (
-            <React.Fragment key={gi}>
-              {gi > 0 && <DropdownMenuSeparator />}
-              {group.map((action, ai) => (
-                <DropdownMenuItem
-                  key={ai}
-                  icon={action.icon}
-                  label={action.label}
-                  onClick={action.onClick}
-                  disabled={action.disabled}
-                  active={action.active}
-                  danger={action.danger}
-                />
-              ))}
-            </React.Fragment>
-          ))}
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            {groups.map((group, gi) => (
+              <React.Fragment key={gi}>
+                {gi > 0 && <DropdownMenuSeparator />}
+                {group.map((action, ai) => (
+                  <DropdownMenuItem
+                    key={ai}
+                    onSelect={action.onClick}
+                    disabled={action.disabled}
+                    className={cn(
+                      action.danger && "text-destructive focus:text-destructive",
+                      action.active && "text-primary focus:text-primary"
+                    )}
+                  >
+                    <action.icon className="mr-2 h-4 w-4" />
+                    <span>{action.label}</span>
+                  </DropdownMenuItem>
+                ))}
+              </React.Fragment>
+            ))}
+          </DropdownMenuContent>
         </DropdownMenu>
       </div>
 

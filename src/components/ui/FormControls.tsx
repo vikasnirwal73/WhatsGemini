@@ -6,7 +6,7 @@ import { Textarea } from "./textarea";
 import { Label } from "./label";
 import { Slider as ShadcnSlider } from "./slider";
 
-const fieldBase = "w-full p-3 bg-muted text-foreground placeholder-ink-faint rounded-xl border border-border focus:border-primary outline-none transition-all disabled:opacity-50";
+const fieldBase = "flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-50 md:text-sm";
 
 export const TextInput = Input;
 

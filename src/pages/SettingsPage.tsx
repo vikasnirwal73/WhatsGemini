@@ -513,11 +513,11 @@ const SettingsPage = () => {
 
   const renderAccordion = (id: string, icon: React.ReactNode, title: string, subtitle: string, children: React.ReactNode) => (
     <AccordionItem value={id}>
-      <AccordionTrigger>
+      <AccordionTrigger className="gap-3">
         <span className="w-[34px] h-[34px] rounded-[10px] bg-accent flex items-center justify-center text-primary flex-shrink-0">
           {icon}
         </span>
-        <span className="flex-1 min-w-0">
+        <span className="flex-1 min-w-0 text-left">
           <span className="block text-[14px] font-semibold text-foreground">{title}</span>
           <span className="block text-xs text-ink-faint mt-0.5">{subtitle}</span>
         </span>

@@ -3,6 +3,7 @@ import { IMAGE_RESOLUTIONS } from '../../utils/constants';
 import { TextInput, TextArea, Select, FieldLabel, Slider } from '../ui/FormControls';
 import { IMAGE_PROVIDER_META } from '../../features/ai/providers/registry';
 import { Button } from '../ui/button';
+import { Card, CardContent } from '../ui/card';
 
 interface ImageGenerationSettingsProps {
   imageProvider: string;
@@ -226,14 +227,16 @@ const ImageGenerationSettings: React.FC<ImageGenerationSettingsProps> = ({
         </Select>
 
         <FieldLabel>Save Generated Images To:</FieldLabel>
-        <div className="flex items-center justify-between bg-background p-3 rounded-xl border border-border mb-2">
-          <span className="text-foreground text-sm truncate pr-2">
-            {imageSaveDirName}
-          </span>
-          <Button onClick={handleSelectDirectory} className="h-auto px-3 py-1.5 whitespace-nowrap">
-            Select Folder
-          </Button>
-        </div>
+        <Card className="mb-2">
+          <CardContent className="flex items-center justify-between p-3">
+            <span className="text-foreground text-sm truncate pr-2">
+              {imageSaveDirName}
+            </span>
+            <Button onClick={handleSelectDirectory} className="h-auto px-3 py-1.5 whitespace-nowrap">
+              Select Folder
+            </Button>
+          </CardContent>
+        </Card>
         <p className="text-xs text-muted-foreground">
           Note: Browsers may prompt you to re-approve write permissions to this folder when resuming
           the app.

@@ -8,6 +8,7 @@ import {
   BACKUP_REMINDER_INTERVAL_DAYS,
 } from "../utils/constants";
 import { Button } from "./ui/button";
+import { Alert, AlertDescription } from "./ui/alert";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const REMINDER_INTERVAL_MS = BACKUP_REMINDER_INTERVAL_DAYS * DAY_MS;
@@ -45,13 +46,13 @@ const BackupReminderBanner = () => {
   };
 
   return (
-    <div className="flex items-center gap-3 px-4 py-2.5 bg-primary/10 border-b border-primary/30 text-[13px] flex-shrink-0">
-      <FaFileArchive className="text-primary flex-shrink-0" size={14} />
-      <span className="flex-1 text-foreground font-medium min-w-0">
+    <Alert className="flex items-center gap-3 rounded-none border-x-0 border-t-0 border-primary/30 bg-primary/10 px-4 py-2.5 text-[13px] flex-shrink-0">
+      <span className="flex text-primary flex-shrink-0"><FaFileArchive size={14} /></span>
+      <AlertDescription className="flex-1 text-foreground font-medium min-w-0">
         {lastBackupAt
           ? "It's been a while since your last backup - everything here only lives in this browser."
           : "You haven't backed up yet - everything here only lives in this browser."}
-      </span>
+      </AlertDescription>
       <Button
         onClick={handleBackupNow}
         className="h-auto px-3 py-1.5 text-[12.5px] flex-shrink-0"
@@ -68,7 +69,7 @@ const BackupReminderBanner = () => {
       >
         <FaTimes size={12} />
       </Button>
-    </div>
+    </Alert>
   );
 };
 

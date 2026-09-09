@@ -530,6 +530,98 @@ and a triggered toast renders with the correct green success color/text (confirm
 computed styles when screenshots wouldn't cooperate), `Badge` role tags and the new
 `Card` panels render correctly in dark mode, and no new console errors.
 
+## Phase 9 — Full stock shadcn/ui look, colors preserved ✅ Done
+
+A follow-up pass, requested explicitly, that reverses the "preserve the app's bespoke
+look" call every earlier phase made on purpose: restyle every component back to
+shadcn's literal stock ("new-york") geometry - radii, shadows, spacing, variant sets -
+while keeping only this app's own color tokens (the `--color-*` → shadcn-canonical
+bridge from Phase 1, untouched). Also replaces the three hand-kept Radix+Framer-Motion
+wrappers (`Dialog.tsx`/`DropdownMenu.tsx`/`Tooltip.tsx`) with shadcn's own generated
+files, and claims the last few hand-rolled UI blocks app-wide.
+
+**Primitives restyled to literal stock**: `button.tsx` (`rounded-lg`→`rounded-md`;
+dropped the custom `gradient` CTA variant entirely, mapping its ~5 call sites to
+`default`; kept the `panel` variant - no stock equivalent exists since this app's
+`secondary` is already brand-purple - but switched its hover to stock's opacity-fade
+convention), `card.tsx` (`rounded-xl`→`rounded-lg`; restored `CardTitle`'s stock
+`text-2xl`), `accordion.tsx` (item/trigger/content all back to stock's bare
+`border-b` / `py-4 justify-between` / `pb-4 pt-0` - the old card-per-item look is gone),
+`alert-dialog.tsx` (stock overlay/content colors, `sm:rounded-lg`, `shadow-lg`,
+`max-w-lg`), `checkbox.tsx`, `input.tsx`/`textarea.tsx` (+ `FormControls.tsx`'s
+`fieldBase`, which mirrors them), `label.tsx`, `sonner.tsx`, and `CharacterAvatar.tsx`
+(dropped the inline squircle `borderRadius` override, now a plain stock circle).
+`badge.tsx`/`avatar.tsx`/`separator.tsx`/`slider.tsx`/`switch.tsx`/`select.tsx` were
+already stock, untouched. Every other non-stock `rounded-2xl`/`rounded-xl`/`shadow-2xl`/
+`shadow-xl` override sitting on a `Card`/`Button`/panel elsewhere in the app (Login,
+ServiceWorkerUpdater, ChatWindow's empty-state card, Sidebar list rows, MessageInput,
+CharacterPage, CharacterGalleryPage, InitialMessages) was swept to match, **except**
+chat-bubble tail shapes (`rounded-2xl rounded-bl-[5px]`-style), which are a deliberate
+messaging-app affordance, not a shadcn concern.
+
+**`Dialog`/`DropdownMenu`/`Tooltip` replaced with shadcn's real generated files**
+(`npx shadcn@latest add dialog dropdown-menu tooltip`, same icon-library swap
+convention as every earlier phase - `lucide-react` isn't a dependency here, so
+`X`/`Check`/`ChevronRight`/`Circle` became `react-icons/fa` equivalents). Dropped Framer
+Motion for these three - Radix's own `data-[state=open]:animate-in` Tailwind animation
+(already proven elsewhere via Select/Accordion) is the literal-stock way to animate, one
+less pattern to maintain. `DialogContent` keeps a small `size` prop
+(`"default"|"lg"|"full"`) as a thin addition on top of stock, since this app genuinely
+needs 3 dialog sizes (edit-message modal, two fullscreen image viewers) that stock's
+single fixed size doesn't cover; no built-in close button is rendered since every call
+site already supplies its own explicit `DialogClose`. All 7 call sites migrated to
+shadcn's real compositional API (`Dialog`/`DialogTrigger`/`DialogContent`/`DialogHeader`/
+`DialogTitle`/`DialogClose`, `DropdownMenu`/`DropdownMenuTrigger`/`DropdownMenuContent`/
+`DropdownMenuItem`/`DropdownMenuSeparator`, `Tooltip`/`TooltipTrigger`/`TooltipContent`):
+`App.tsx` (`TooltipProvider`), `Modal.tsx` (generic wrapper, same public props),
+`ChatWindow.tsx` (edit-message dialog + fullscreen image viewer),
+`CharacterGalleryPage.tsx` (fullscreen viewer), `Header.tsx` (desktop tooltip row +
+mobile "more" dropdown, still fully data-driven off `HeaderAction[]`),
+`chat/ChatMessage.tsx` (per-message dropdown), `CharacterPage.tsx` (per-character-card
+dropdown, `Delete` styled via `text-destructive` className instead of a custom `danger`
+prop, since stock `DropdownMenuItem` has none). Old capitalized `Dialog.tsx`/
+`DropdownMenu.tsx`/`Tooltip.tsx` deleted; the new files are lowercase
+(`dialog.tsx`/`dropdown-menu.tsx`/`tooltip.tsx`), matching shadcn's own naming
+convention - required a two-step `git mv` since `Dialog.tsx`↔`dialog.tsx` collide on
+macOS's case-insensitive filesystem.
+
+**Remaining hand-rolled UI claimed**: pulled `alert` and `table` (new primitives, not
+in the repo before this phase). `BackupReminderBanner.tsx` → `Alert`/`AlertDescription`
+(kept its full-bleed top-bar shape via a className override, since it's a dismissible
+announcement bar, not a boxed alert - stock's `[&>svg]` absolute-positioning rule doesn't
+apply since the icon is wrapped in a plain `span`). `ChatMessage.tsx`'s
+compression-summary block and `settings/ImageGenerationSettings.tsx`'s save-folder row →
+`Card`/`CardContent`. `ErrorBoundary.tsx`'s fallback → `Card`, recolored from hardcoded
+`red-*`/`dark:` classes to this app's real `destructive` tokens (now theme-reactive).
+`MarkdownRenderer.tsx`'s hand-styled `<table>` renderer → `Table`/`TableHeader`/
+`TableBody`/`TableRow`/`TableHead`/`TableCell` (added `thead`/`tbody`/`tr` overrides
+that didn't exist before, alongside the existing `table`/`th`/`td` ones), keeping the
+existing user-message-bubble color variant via conditional `className`s.
+`Sidebar.tsx`'s hand-styled search box → the existing `Input` component with an
+absolutely-positioned icon overlay (the standard shadcn search-input idiom), replacing
+a hand-rolled bordered flex row that duplicated `Input`'s own styling.
+`ChatPage.tsx`'s inline raw error text → `Alert variant="destructive"` (kept inline/
+persistent rather than routed through `sonner`, which this app reserves for transient
+toasts). Left alone, confirmed still the only 2 deliberate exceptions via a final
+`<button\b` grep: `CharacterPage.tsx`'s accent-swatch picker and "Add Image" dropzone.
+
+One real lint fix needed along the way: shadcn's stock `alert.tsx` defines `AlertTitle`
+as a bare `<h5 {...props} />`, which trips `jsx-a11y/heading-has-content` under this
+repo's strict `CI=true` build (the rule can't see that content arrives via
+`props.children` at each call site) - silenced with a targeted
+`eslint-disable-next-line` comment, the same class of pre-existing-tooling friction
+noted in earlier phases (e.g. Phase 6's `tailwind.config.js` merge bug).
+
+Verified: `tsc --noEmit` and a `CI=true npm run build` both clean; a live Chrome pass
+(both themes) covering Header tooltips + mobile dropdown, Sidebar search/New Chat
+(now `default` variant)/panel buttons, ChatWindow's edit-message dialog (header/body/
+footer regions render flush, no stray stock `p-6` padding) and per-message dropdown,
+Settings' accordion (icon+title+subtitle trigger layout re-verified after reverting to
+stock's bare `py-4` trigger - fixed by adding `gap-3`/`text-left` at the call site rather
+than clawing back the removed bespoke padding), Characters page (circular avatar, card
+dropdown, `AlertDialog` delete confirmation in stock styling), and no new console
+errors.
+
 ---
 
 ## Suggested execution order / sizing
@@ -547,7 +639,9 @@ Each phase above is meant to be its own session/PR. Rough sizing:
 | 6 - Accordion/Toast/Avatar/Card | Low, optional | Medium | ✅ Done (Accordion only - Toast/Avatar/Card deliberately skipped, see Phase 6) |
 | 7 - Cleanup + optional rename | Low, optional | Small–Large depending on rename | ✅ Done, including the optional rename |
 | 8 - Broader component adoption (Toast/Avatar/Card revisit, Badge, button-sweep gaps) | Low-Medium | Large | ✅ Done |
+| 9 - Full stock shadcn/ui look, colors preserved | Medium-High | Large | ✅ Done |
 
-The migration is complete end-to-end, including the fully optional full token rename
-and a broader Phase 8 adoption pass - nothing left on the plan. `Checkbox` is pulled and
-available but intentionally unwired (no checkbox-shaped UI exists in the app yet).
+The migration is complete end-to-end, including the fully optional full token rename,
+a broader Phase 8 adoption pass, and Phase 9's reversal to shadcn's literal stock look -
+nothing left on the plan. `Checkbox` is pulled and available but intentionally unwired
+(no checkbox-shaped UI exists in the app yet).

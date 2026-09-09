@@ -84,7 +84,7 @@ const InitialMessages: React.FC<InitialMessagesProps> = ({ onSave }) => {
       {initialMessages.map((msg, idx) => (
         <Card
           key={idx}
-          className="mb-5 p-3 shadow-sm rounded-2xl flex flex-col gap-2 relative"
+          className="mb-5 p-3 flex flex-col gap-2 relative"
         >
           <Select
             value={msg.role}

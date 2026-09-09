@@ -31,7 +31,7 @@ const ServiceWorkerUpdater: React.FC = () => {
   if (!waitingWorker) return null;
 
   return (
-    <Card className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[300] flex items-center gap-3 px-4 py-3 rounded-xl shadow-2xl">
+    <Card className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[300] flex items-center gap-3 px-4 py-3">
       <FaSyncAlt size={14} className="text-primary flex-shrink-0" />
       <span className="text-sm text-foreground">A new version is available.</span>
       <Button onClick={applyUpdate} className="h-auto px-3 py-1.5 flex-shrink-0">

@@ -6,10 +6,11 @@ import { Message } from "../../types";
 import { AI, YOU } from "../../utils/constants";
 import { stripImageContextTag } from "../../features/ai/utils/imageGeneration";
 import MarkdownRenderer from "./MarkdownRenderer";
-import { DropdownMenu, DropdownMenuItem } from "../ui/DropdownMenu";
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "../ui/dropdown-menu";
 import { DisplayImage } from "../DisplayImage";
 import { CharacterAvatar } from "../ui/CharacterAvatar";
 import { Button } from "../ui/button";
+import { Card, CardContent } from "../ui/card";
 import { isSpeechSynthesisSupported } from "../../utils/speech";
 
 interface SiblingInfo {
@@ -66,13 +67,15 @@ const ChatMessage = React.memo(({
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.2, ease: "easeOut" }}
       >
-        <div className="max-w-[90%] md:max-w-[70%] rounded-2xl border border-border bg-muted px-4 py-3 text-center">
-          <div className="flex items-center justify-center gap-2 text-xs font-semibold text-muted-foreground mb-1.5">
-            <FaCompressArrowsAlt size={11} />
-            Compressed history
-          </div>
-          <p className="text-xs text-ink-faint whitespace-pre-wrap text-left">{msg.txt}</p>
-        </div>
+        <Card className="max-w-[90%] md:max-w-[70%] bg-muted text-center">
+          <CardContent className="px-4 py-3">
+            <div className="flex items-center justify-center gap-2 text-xs font-semibold text-muted-foreground mb-1.5">
+              <FaCompressArrowsAlt size={11} />
+              Compressed history
+            </div>
+            <p className="text-xs text-ink-faint whitespace-pre-wrap text-left">{msg.txt}</p>
+          </CardContent>
+        </Card>
       </motion.div>
     );
   }
@@ -164,8 +167,8 @@ const ChatMessage = React.memo(({
 
         {/* Always visible (not hover-gated) so the menu is reachable on touch devices */}
         <div className="absolute top-2 right-2">
-          <DropdownMenu
-            trigger={
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
               <Button
                 variant="ghost"
                 size="icon"
@@ -180,16 +183,29 @@ const ChatMessage = React.memo(({
               >
                 <FaEllipsisV size={12} />
               </Button>
-            }
-          >
-            <DropdownMenuItem icon={FaCopy} label="Copy" onClick={handleCopy} />
-            {msg.role === AI && (
-              <DropdownMenuItem icon={FaRedo} label="Regenerate" onClick={handleRegenerate} disabled={aiLoading} />
-            )}
-            {msg.role === AI && speechSupported && (
-              <DropdownMenuItem icon={isSpeaking ? FaStop : FaVolumeUp} label={isSpeaking ? "Stop speaking" : "Speak"} onClick={handleToggleSpeak} />
-            )}
-            <DropdownMenuItem icon={FaEdit} label="Edit" onClick={handleEdit} disabled={aiLoading} />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onSelect={handleCopy}>
+                <FaCopy className="mr-2 h-4 w-4" />
+                <span>Copy</span>
+              </DropdownMenuItem>
+              {msg.role === AI && (
+                <DropdownMenuItem onSelect={handleRegenerate} disabled={aiLoading}>
+                  <FaRedo className="mr-2 h-4 w-4" />
+                  <span>Regenerate</span>
+                </DropdownMenuItem>
+              )}
+              {msg.role === AI && speechSupported && (
+                <DropdownMenuItem onSelect={handleToggleSpeak}>
+                  {isSpeaking ? <FaStop className="mr-2 h-4 w-4" /> : <FaVolumeUp className="mr-2 h-4 w-4" />}
+                  <span>{isSpeaking ? "Stop speaking" : "Speak"}</span>
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuItem onSelect={handleEdit} disabled={aiLoading}>
+                <FaEdit className="mr-2 h-4 w-4" />
+                <span>Edit</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
           </DropdownMenu>
         </div>
 

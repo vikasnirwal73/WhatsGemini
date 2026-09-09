@@ -3,7 +3,7 @@ import { fetchCharacters, addCharacter, deleteCharacter, updateCharacter } from 
 import { addChat } from "../features/chatSlice";
 import { useNavigate } from "react-router-dom";
 import { FaTrash, FaEdit, FaTimes, FaDownload, FaUpload, FaCopy, FaImages, FaPlus, FaComment, FaEllipsisV, FaPlay } from "react-icons/fa";
-import { DropdownMenu, DropdownMenuItem } from "../components/ui/DropdownMenu";
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "../components/ui/dropdown-menu";
 import { useAppDispatch, useAppSelector } from "../store/hooks";
 import { Character, Chat } from "../types";
 import { useModal } from "../contexts/ModalContext";
@@ -342,7 +342,7 @@ const CharacterPage = () => {
                       variant="panel"
                       onClick={() => speak(`Hi, I'm ${name || "your character"}.`, voiceURI || undefined)}
                       disabled={voices.length === 0}
-                      className="w-11 h-11 flex-shrink-0 rounded-xl border border-border hover:border-primary hover:text-primary"
+                      className="w-11 h-11 flex-shrink-0 border border-border hover:border-primary hover:text-primary"
                       title="Preview voice"
                       aria-label="Preview voice"
                     >
@@ -465,8 +465,8 @@ const CharacterPage = () => {
               <div className="flex gap-3">
                 <Button
                   onClick={editCharacter ? handleSaveEdit : handleCreateCharacter}
-                  variant="gradient"
-                  className="flex-1 h-auto px-4 py-3 rounded-xl font-semibold"
+                  variant="default"
+                  className="flex-1 h-auto px-4 py-3 font-semibold"
                   disabled={loading}
                 >
                   {loading ? "Saving..." : editCharacter ? "Save Changes" : "Create Character"}
@@ -475,7 +475,7 @@ const CharacterPage = () => {
                   <Button
                     onClick={handleImportClick}
                     variant="panel"
-                    className="h-auto px-4 py-3 rounded-xl border border-border hover:border-primary font-medium"
+                    className="h-auto px-4 py-3 border border-border hover:border-primary font-medium"
                     title="Import Character from JSON"
                   >
                     <FaUpload size={14} />
@@ -486,7 +486,7 @@ const CharacterPage = () => {
                   <Button
                     onClick={resetForm}
                     variant="panel"
-                    className="h-auto px-4 py-3 rounded-xl border border-border hover:border-primary"
+                    className="h-auto px-4 py-3 border border-border hover:border-primary"
                   >
                     <FaTimes size={16} />
                   </Button>
@@ -515,8 +515,8 @@ const CharacterPage = () => {
                 <p className="text-sm text-muted-foreground">Fill out the form to build your own, or jump straight into a chat with a ready-made one.</p>
                 <Button
                   onClick={handleTrySampleCharacter}
-                  variant="gradient"
-                  className="h-auto px-4 py-2.5 rounded-xl font-semibold text-sm"
+                  variant="default"
+                  className="h-auto px-4 py-2.5 font-semibold text-sm"
                 >
                   Try a sample character
                 </Button>
@@ -546,7 +546,7 @@ const CharacterPage = () => {
                       <Button
                         onClick={() => handleChatWithCharacter(char)}
                         variant="panel"
-                        className="flex-1 h-auto py-2 rounded-[10px] text-[12.5px] font-semibold hover:bg-primary hover:text-onAccent"
+                        className="flex-1 h-auto py-2 text-[12.5px] font-semibold hover:bg-primary hover:text-onAccent"
                       >
                         <FaComment size={11} /> Chat
                       </Button>
@@ -559,8 +559,8 @@ const CharacterPage = () => {
                       >
                         <FaEdit size={13} />
                       </Button>
-                      <DropdownMenu
-                        trigger={
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
                           <Button
                             variant="outline"
                             size="icon"
@@ -570,12 +570,28 @@ const CharacterPage = () => {
                           >
                             <FaEllipsisV size={13} />
                           </Button>
-                        }
-                      >
-                        <DropdownMenuItem icon={FaImages} label="View Gallery" onClick={() => navigate(`/characters/${char.id}/gallery`)} />
-                        <DropdownMenuItem icon={FaDownload} label="Export" onClick={() => handleExportCharacter(char)} />
-                        <DropdownMenuItem icon={FaCopy} label="Duplicate" onClick={() => handleDuplicateCharacter(char)} />
-                        <DropdownMenuItem icon={FaTrash} label="Delete" onClick={() => handleDeleteCharacter(char.id)} danger />
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onSelect={() => navigate(`/characters/${char.id}/gallery`)}>
+                            <FaImages className="mr-2 h-4 w-4" />
+                            <span>View Gallery</span>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onSelect={() => handleExportCharacter(char)}>
+                            <FaDownload className="mr-2 h-4 w-4" />
+                            <span>Export</span>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onSelect={() => handleDuplicateCharacter(char)}>
+                            <FaCopy className="mr-2 h-4 w-4" />
+                            <span>Duplicate</span>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onSelect={() => handleDeleteCharacter(char.id)}
+                            className="text-destructive focus:text-destructive"
+                          >
+                            <FaTrash className="mr-2 h-4 w-4" />
+                            <span>Delete</span>
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
                       </DropdownMenu>
                     </div>
                   </Card>

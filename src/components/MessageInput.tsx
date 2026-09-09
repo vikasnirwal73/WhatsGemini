@@ -124,7 +124,7 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSend, disabled = false, o
       )}
 
       {isImageRequest && (
-        <div className="flex items-center gap-2.5 px-3 py-2 bg-primary/10 border border-primary rounded-xl">
+        <div className="flex items-center gap-2.5 px-3 py-2 bg-primary/10 border border-primary rounded-lg">
           <span className="text-primary flex-shrink-0 flex"><FaImage size={13} /></span>
           <span className="flex-1 text-[12.5px] text-foreground font-medium">
             Image generation on — a picture will be created alongside the reply.
@@ -142,7 +142,7 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSend, disabled = false, o
       )}
 
       {isListening && (
-        <div className="flex items-center gap-2.5 px-3 py-2 bg-red-500/10 border border-red-500/50 rounded-xl">
+        <div className="flex items-center gap-2.5 px-3 py-2 bg-red-500/10 border border-red-500/50 rounded-lg">
           <span className="relative flex-shrink-0 w-2.5 h-2.5">
             <span className="absolute inset-0 rounded-full bg-red-500 animate-ping opacity-75" />
             <span className="absolute inset-0 rounded-full bg-red-500" />
@@ -235,7 +235,7 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSend, disabled = false, o
               onClick={onStop}
               variant="destructive"
               size="icon"
-              className="h-9 w-9 flex-shrink-0 rounded-xl shadow-md hover:scale-105"
+              className="h-9 w-9 flex-shrink-0 shadow-md hover:scale-105"
               title="Stop Generating"
               aria-label="Stop Generating"
             >
@@ -247,7 +247,7 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSend, disabled = false, o
               variant="ghost"
               size="icon"
               className={cn(
-                "h-9 w-9 flex-shrink-0 rounded-xl shadow-md",
+                "h-9 w-9 flex-shrink-0 shadow-md",
                 canSend
                   ? "bg-gemini-logo text-onAccent hover:scale-105 hover:brightness-105"
                   : "bg-accent text-ink-faint cursor-not-allowed hover:bg-accent"

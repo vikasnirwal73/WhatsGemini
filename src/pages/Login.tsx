@@ -51,7 +51,7 @@ const Login = () => {
 
   return (
     <div className="flex items-center justify-center h-screen bg-background">
-      <Card className="p-8 rounded-2xl shadow-xl w-96 max-w-[calc(100%-30px)]">
+      <Card className="p-8 w-96 max-w-[calc(100%-30px)]">
         <Logo size={48} className="shadow-lg shadow-primary/30 rounded-[13px] mx-auto mb-5 block" />
         <h2 className="text-xl font-bold text-center text-foreground mb-1.5">
           Welcome to WhatsGemini
@@ -120,7 +120,7 @@ const Login = () => {
             <Button
               onClick={handleLogin}
               size="lg"
-              className="w-full rounded-xl shadow-lg transition-all hover:scale-[1.02]"
+              className="w-full shadow-lg transition-all hover:scale-[1.02]"
               disabled={loading || !key.trim()}
             >
               {loading ? "Saving..." : "Save & Continue"}

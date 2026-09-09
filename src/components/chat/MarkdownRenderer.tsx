@@ -6,6 +6,7 @@ import remarkGfm from 'remark-gfm';
 import { FaCheck, FaCopy } from 'react-icons/fa';
 import { cn } from '../../utils/cn';
 import { Button } from '../ui/button';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../ui/table';
 
 // CodeBlock Component to handle syntax highlighting and copying
 const CodeBlock = ({ node, className, children, ...props }: any) => {
@@ -73,9 +74,12 @@ const MarkdownRenderer = React.memo(({ msgText, isUser }: { msgText: string | an
           li: ({ node, ...props }) => <li className="mb-1" {...props} />,
           code: CodeBlock,
           blockquote: ({ node, ...props }) => <blockquote className={cn("border-l-4 pl-4 py-1 my-2 italic", isUser ? 'border-bubble-sentFg/50' : 'border-border')} {...props} />,
-          table: ({ node, ...props }) => <div className="overflow-x-auto my-2"><table className={cn("min-w-full divide-y border", isUser ? 'divide-bubble-sentFg/20 border-bubble-sentFg/20' : 'divide-border border-border')} {...props} /></div>,
-          th: ({ node, ...props }) => <th className={cn("px-3 py-2 text-left text-xs font-medium uppercase tracking-wider border-b", isUser ? 'bg-black/5 border-bubble-sentFg/20 text-bubble-sentFg' : 'bg-muted border-border text-muted-foreground')} {...props} />,
-          td: ({ node, ...props }) => <td className={cn("px-3 py-2 whitespace-nowrap text-sm border-b", isUser ? 'border-bubble-sentFg/20 text-bubble-sentFg' : 'border-border text-muted-foreground')} {...props} />,
+          table: ({ node, ...props }) => <div className="my-2"><Table {...props} /></div>,
+          thead: ({ node, ...props }) => <TableHeader {...props} />,
+          tbody: ({ node, ...props }) => <TableBody {...props} />,
+          tr: ({ node, ...props }) => <TableRow className={cn(isUser && "border-bubble-sentFg/20")} {...props} />,
+          th: ({ node, ...props }) => <TableHead className={cn(isUser && "bg-black/5 text-bubble-sentFg")} {...props} />,
+          td: ({ node, ...props }) => <TableCell className={cn(isUser && "text-bubble-sentFg")} {...props} />,
         }}
       >
         {safeText}

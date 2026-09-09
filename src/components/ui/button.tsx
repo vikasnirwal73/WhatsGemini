@@ -5,7 +5,7 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "src/utils/cn"
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
   {
     variants: {
       variant: {
@@ -17,13 +17,11 @@ const buttonVariants = cva(
           "bg-secondary text-secondary-foreground shadow-sm hover:bg-secondary-hover",
         // Neutral/muted action button (Import/Restore-style secondary actions) -
         // this app's most common "less prominent than primary" button, distinct
-        // from the brand-colored `secondary` variant above.
+        // from the brand-colored `secondary` variant above. No shadcn stock
+        // equivalent (stock's own `secondary` is already claimed above), so this
+        // stays custom but follows stock's own opacity-fade hover convention.
         panel:
-          "bg-muted text-foreground shadow-sm hover:bg-border",
-        // The recurring gemini-gradient CTA (Sidebar's "New Chat", CharacterPage's
-        // "Create Character") - doesn't fit any shadcn stock variant.
-        gradient:
-          "bg-gemini-logo text-onAccent shadow-lg shadow-primary/20 hover:brightness-105",
+          "bg-muted text-foreground shadow-sm hover:bg-muted/80",
         destructive:
           "bg-destructive text-destructive-foreground shadow-sm hover:bg-destructive/90",
         outline:
