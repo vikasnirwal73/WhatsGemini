@@ -11,6 +11,7 @@ import { dbService } from "../services/dbService";
 import { DisplayImage } from "../components/DisplayImage";
 import { TextInput, TextArea, Select, FieldLabel, Slider } from "../components/ui/FormControls";
 import { CharacterAvatar } from "../components/ui/CharacterAvatar";
+import { Button } from "../components/ui/button";
 import ToggleSwitch from "../components/ToggleSwitch";
 import Header from "../components/Header";
 import { CHARACTER_SWATCHES, MEMORY_EXTRACTION_INTERVAL, SAMPLE_CHARACTER, DEFAULT_AUTO_SELFIE_FREQUENCY } from "../utils/constants";
@@ -334,16 +335,17 @@ const CharacterPage = () => {
                         <option key={v.voiceURI} value={v.voiceURI}>{v.name} ({v.lang})</option>
                       ))}
                     </Select>
-                    <button
+                    <Button
                       type="button"
+                      variant="panel"
                       onClick={() => speak(`Hi, I'm ${name || "your character"}.`, voiceURI || undefined)}
                       disabled={voices.length === 0}
-                      className="w-11 h-11 flex-shrink-0 rounded-xl border border-line bg-panel2 text-ink-muted hover:border-primary hover:text-primary transition flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="w-11 h-11 flex-shrink-0 rounded-xl border border-line hover:border-primary hover:text-primary"
                       title="Preview voice"
                       aria-label="Preview voice"
                     >
                       <FaPlay size={12} />
-                    </button>
+                    </Button>
                   </div>
                 </div>
               )}
@@ -398,12 +400,13 @@ const CharacterPage = () => {
                   {appearanceImages.map((src, idx) => (
                     <div key={idx} className="relative w-20 h-20 rounded-lg overflow-hidden border border-line bg-panel2">
                       <DisplayImage srcContext={src} alt="Appearance Reference" className="w-full h-full object-cover" />
-                      <button
+                      <Button
                         onClick={() => removeAppearanceImage(idx)}
-                        className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
+                        variant="destructive"
+                        className="absolute top-1 right-1 h-auto w-auto rounded-full p-1"
                       >
                         <FaTimes size={10} />
-                      </button>
+                      </Button>
                     </div>
                   ))}
                   <button
@@ -434,14 +437,15 @@ const CharacterPage = () => {
                     {editCharacter.memory.map((fact, idx) => (
                       <div key={idx} className="flex items-start gap-2 text-xs text-ink-muted bg-panel2 border border-line rounded-lg px-2.5 py-2">
                         <span className="flex-1">{fact}</span>
-                        <button
+                        <Button
                           onClick={() => handleRemoveMemoryFact(idx)}
-                          className="text-ink-faint hover:text-red-500 transition flex-shrink-0"
+                          variant="ghost"
+                          className="h-auto w-auto p-0 text-ink-faint hover:bg-transparent hover:text-red-500 flex-shrink-0"
                           title="Forget this fact"
                           aria-label="Forget this fact"
                         >
                           <FaTimes size={10} />
-                        </button>
+                        </Button>
                       </div>
                     ))}
                   </div>
@@ -457,30 +461,33 @@ const CharacterPage = () => {
               />
 
               <div className="flex gap-3">
-                <button
+                <Button
                   onClick={editCharacter ? handleSaveEdit : handleCreateCharacter}
-                  className="flex-1 flex items-center justify-center gap-2 bg-gemini-logo text-onAccent px-4 py-3 rounded-xl hover:brightness-105 transition font-semibold shadow-lg shadow-primary/20"
+                  variant="gradient"
+                  className="flex-1 h-auto px-4 py-3 rounded-xl font-semibold"
                   disabled={loading}
                 >
                   {loading ? "Saving..." : editCharacter ? "Save Changes" : "Create Character"}
-                </button>
+                </Button>
                 {!editCharacter && (
-                  <button
+                  <Button
                     onClick={handleImportClick}
-                    className="bg-panel2 border border-line text-ink px-4 py-3 rounded-xl hover:border-primary transition flex items-center justify-center gap-2 font-medium"
+                    variant="panel"
+                    className="h-auto px-4 py-3 rounded-xl border border-line hover:border-primary font-medium"
                     title="Import Character from JSON"
                   >
                     <FaUpload size={14} />
                     <span className="hidden sm:inline">Import</span>
-                  </button>
+                  </Button>
                 )}
                 {editCharacter && (
-                  <button
+                  <Button
                     onClick={resetForm}
-                    className="bg-panel2 border border-line text-ink px-4 py-3 rounded-xl hover:border-primary transition"
+                    variant="panel"
+                    className="h-auto px-4 py-3 rounded-xl border border-line hover:border-primary"
                   >
                     <FaTimes size={16} />
-                  </button>
+                  </Button>
                 )}
               </div>
               <input
@@ -504,12 +511,13 @@ const CharacterPage = () => {
               <div className="bg-panel border border-line rounded-2xl p-6 text-center flex flex-col items-center gap-3">
                 <p className="text-ink-muted">No characters created yet.</p>
                 <p className="text-sm text-ink-muted">Fill out the form to build your own, or jump straight into a chat with a ready-made one.</p>
-                <button
+                <Button
                   onClick={handleTrySampleCharacter}
-                  className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gemini-logo text-onAccent font-semibold text-sm shadow-lg shadow-primary/20 hover:brightness-105 transition"
+                  variant="gradient"
+                  className="h-auto px-4 py-2.5 rounded-xl font-semibold text-sm"
                 >
                   Try a sample character
-                </button>
+                </Button>
               </div>
             ) : (
               <div className="grid gap-4" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(232px, 1fr))" }}>
@@ -529,28 +537,33 @@ const CharacterPage = () => {
                       {truncateText(char.description, 140)}
                     </p>
                     <div className="flex gap-2 mt-1 pt-3 border-t border-line">
-                      <button
+                      <Button
                         onClick={() => handleChatWithCharacter(char)}
-                        className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-[10px] bg-panel3 text-ink text-[12.5px] font-semibold hover:bg-primary hover:text-onAccent transition"
+                        variant="panel"
+                        className="flex-1 h-auto py-2 rounded-[10px] text-[12.5px] font-semibold hover:bg-primary hover:text-onAccent"
                       >
                         <FaComment size={11} /> Chat
-                      </button>
-                      <button
+                      </Button>
+                      <Button
                         onClick={() => handleEditCharacter(char)}
-                        className="w-9 flex items-center justify-center border border-line rounded-[10px] text-ink-muted hover:text-primary hover:border-primary transition"
+                        variant="outline"
+                        size="icon"
+                        className="w-9 rounded-[10px] bg-transparent hover:border-primary hover:text-primary"
                         title="Edit Character"
                       >
                         <FaEdit size={13} />
-                      </button>
+                      </Button>
                       <DropdownMenu
                         trigger={
-                          <button
-                            className="w-9 h-9 flex items-center justify-center border border-line rounded-[10px] text-ink-muted hover:text-ink hover:bg-hover transition"
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            className="rounded-[10px] bg-transparent hover:bg-hover hover:text-ink"
                             title="More options"
                             aria-label="More options"
                           >
                             <FaEllipsisV size={13} />
-                          </button>
+                          </Button>
                         }
                       >
                         <DropdownMenuItem icon={FaImages} label="View Gallery" onClick={() => navigate(`/characters/${char.id}/gallery`)} />

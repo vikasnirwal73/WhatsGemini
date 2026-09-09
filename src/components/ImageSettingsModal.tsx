@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import Modal from "./Modal";
 import ToggleSwitch from "./ToggleSwitch";
 import { TextInput, TextArea, Select, FieldLabel, Slider } from "./ui/FormControls";
+import { Button } from "./ui/button";
 import {
   LS_IMAGE_MODEL,
   DEFAULT_IMAGE_MODEL,
@@ -161,9 +162,9 @@ const ImageSettingsModal: React.FC<ImageSettingsModalProps> = ({ isOpen, onClose
             <div>
               <div className="flex justify-between items-center mb-1.5">
                 <label className="block text-sm font-medium text-ink">SD Model</label>
-                <button type="button" onClick={fetchSdModels} className="text-xs text-primary hover:text-primary-hover">
+                <Button type="button" variant="link" onClick={fetchSdModels} className="h-auto p-0 text-xs text-primary hover:text-primary-hover no-underline hover:no-underline">
                   Refresh Models
-                </button>
+                </Button>
               </div>
               <Select
                 value={sdWebuiModel}

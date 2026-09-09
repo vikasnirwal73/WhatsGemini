@@ -11,6 +11,7 @@ import Modal from "./Modal";
 import { Chat, Character } from "../types";
 import { cn } from "../utils/cn";
 import { CharacterAvatar } from "./ui/CharacterAvatar";
+import { Button } from "./ui/button";
 import Logo from "./ui/Logo";
 import { stripLeakedBase64 } from "../features/ai/utils/apiUtils";
 
@@ -176,20 +177,22 @@ const Sidebar = () => {
 
         {/* New chat / Import */}
         <div className="px-3.5 pt-3 pb-2.5 flex flex-col gap-2 flex-shrink-0">
-          <button
+          <Button
             onClick={() => setIsNewChatModalOpen(true)}
-            className="w-full flex items-center justify-center gap-2 py-[11px] rounded-[11px] bg-gemini-logo text-onAccent text-[13.5px] font-semibold shadow-lg shadow-primary/25 hover:brightness-105 transition"
+            variant="gradient"
+            className="w-full h-auto py-[11px] rounded-[11px] text-[13.5px] font-semibold"
           >
             <FaPlus size={12} />
             <span>New chat</span>
-          </button>
-          <button
+          </Button>
+          <Button
             onClick={handleImportClick}
-            className="w-full flex items-center justify-center gap-2 py-2.5 rounded-[11px] border border-line bg-panel2 text-ink-muted text-[13px] font-medium hover:border-primary hover:text-ink transition"
+            variant="panel"
+            className="w-full h-auto py-2.5 rounded-[11px] border border-line text-ink-muted text-[13px] font-medium hover:border-primary hover:text-ink"
           >
             <FaFileImport size={13} />
             <span>Import chat</span>
-          </button>
+          </Button>
           <input
             type="file"
             ref={fileInputRef}
@@ -264,13 +267,14 @@ const Sidebar = () => {
           <p className="text-ink-muted text-center py-4">No characters available.</p>
         ) : (
           characters.map((char: Character) => (
-            <button
+            <Button
               key={char.id}
               onClick={() => {
                 setIsNewChatModalOpen(false);
                 handleCharacterClick(char.id, char.name);
               }}
-              className="flex items-center gap-3 p-3 rounded-xl hover:bg-panel2 text-left transition"
+              variant="ghost"
+              className="w-full h-auto justify-start gap-3 p-3 rounded-xl text-left font-normal"
             >
               <CharacterAvatar name={char.name} accent={char.accent} size={40} />
               <div>
@@ -279,7 +283,7 @@ const Sidebar = () => {
                   <p className="text-xs text-ink-muted line-clamp-1">{char.description}</p>
                 )}
               </div>
-            </button>
+            </Button>
           ))
         )}
       </Modal>
@@ -316,27 +320,31 @@ const ChatList = ({ items, characters, onDeleteChat, onTogglePin, onNavigate, qu
                 <span className="text-xs text-ink-muted truncate">{character.description}</span>
               ) : null}
             </div>
-            <button
+            <Button
               onClick={(e) => { e.preventDefault(); onTogglePin(chat.id, Boolean(chat.pinned)); }}
+              variant="ghost"
+              size="icon"
               className={cn(
-                "p-1.5 transition rounded-lg flex-shrink-0",
+                "h-auto w-auto p-1.5 rounded-lg flex-shrink-0",
                 chat.pinned
-                  ? "text-primary"
+                  ? "text-primary hover:bg-transparent"
                   : "text-ink-faint opacity-0 group-hover:opacity-100 hover:text-primary hover:bg-primary/10"
               )}
               title={chat.pinned ? "Unpin chat" : "Pin chat"}
               aria-label={chat.pinned ? `Unpin chat with ${chat.title}` : `Pin chat with ${chat.title}`}
             >
               <FaThumbtack size={12} />
-            </button>
-            <button
+            </Button>
+            <Button
               onClick={(e) => { e.preventDefault(); onDeleteChat(chat.id); }}
-              className="p-1.5 text-ink-faint hover:text-red-500 hover:bg-red-500/10 transition rounded-lg flex-shrink-0"
+              variant="ghost"
+              size="icon"
+              className="h-auto w-auto p-1.5 rounded-lg text-ink-faint hover:text-red-500 hover:bg-red-500/10 flex-shrink-0"
               title="Delete Chat"
               aria-label={`Delete chat with ${chat.title}`}
             >
               <FaTrash size={12} />
-            </button>
+            </Button>
           </Link>
         );
       })}

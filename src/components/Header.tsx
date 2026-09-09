@@ -8,6 +8,7 @@ import { DARK } from "../utils/constants";
 import { cn } from "../utils/cn";
 import { Tooltip } from "./ui/Tooltip";
 import { DropdownMenu, DropdownMenuItem, DropdownMenuSeparator } from "./ui/DropdownMenu";
+import { Button } from "./ui/button";
 import KeyboardShortcutsModal from "./KeyboardShortcutsModal";
 
 // A single header icon action, described once and rendered two ways: as a
@@ -79,19 +80,20 @@ const Header: React.FC<HeaderProps> = ({ title, subtitle, avatar, onBack, action
 
   return (
     <header className="h-[60px] flex-shrink-0 border-b border-line bg-panel flex items-center gap-2.5 px-3 md:px-4 z-20">
-      <button onClick={open} title="Menu" aria-label="Open menu" className={cn(iconBtnClass, "md:hidden")}>
+      <Button onClick={open} variant="outline" size="icon" title="Menu" aria-label="Open menu" className={cn(iconBtnClass, "md:hidden")}>
         <FaBars size={16} />
-      </button>
+      </Button>
 
       {onBack && (
-        <button
+        <Button
           onClick={onBack}
+          variant="outline"
           title="Back"
           aria-label="Back"
-          className="flex items-center gap-2 h-9 px-3 rounded-[10px] border border-line bg-panel2 text-ink-muted hover:text-ink hover:border-primary transition text-[13px] font-medium flex-shrink-0"
+          className="h-9 px-3 rounded-[10px] bg-panel2 text-ink-muted hover:text-ink hover:border-primary text-[13px] font-medium flex-shrink-0"
         >
           <FaArrowLeft size={13} /> <span className="hidden sm:inline">Back</span>
-        </button>
+        </Button>
       )}
 
       <div className="flex items-center gap-2.5 min-w-0">
@@ -111,9 +113,11 @@ const Header: React.FC<HeaderProps> = ({ title, subtitle, avatar, onBack, action
             {gi > 0 && <div className="w-px h-6 bg-line mx-1 flex-shrink-0" />}
             {group.map((action, ai) => (
               <Tooltip key={ai} label={action.label}>
-                <button
+                <Button
                   onClick={action.onClick}
                   disabled={action.disabled}
+                  variant="outline"
+                  size="icon"
                   aria-label={action.label}
                   className={cn(
                     action.danger ? iconBtnDangerClass : action.active ? iconBtnActiveClass : iconBtnClass,
@@ -121,7 +125,7 @@ const Header: React.FC<HeaderProps> = ({ title, subtitle, avatar, onBack, action
                   )}
                 >
                   <action.icon size={15} />
-                </button>
+                </Button>
               </Tooltip>
             ))}
           </React.Fragment>
@@ -132,9 +136,9 @@ const Header: React.FC<HeaderProps> = ({ title, subtitle, avatar, onBack, action
       <div className="md:hidden">
         <DropdownMenu
           trigger={
-            <button aria-label="More options" className={iconBtnClass}>
+            <Button variant="outline" size="icon" aria-label="More options" className={iconBtnClass}>
               <FaEllipsisV size={15} />
-            </button>
+            </Button>
           }
         >
           {groups.map((group, gi) => (

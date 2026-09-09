@@ -1,4 +1,5 @@
-import React from 'react';
+import React from "react";
+import { Switch } from "./ui/switch";
 
 interface ToggleSwitchProps {
   checked: boolean;
@@ -22,16 +23,7 @@ const ToggleSwitch: React.FC<ToggleSwitchProps> = ({
       title={title}
       className={`flex items-center gap-2 cursor-pointer text-sm transition select-none ${disabled ? 'opacity-50 pointer-events-none' : ''} ${checked ? 'text-primary font-medium' : 'text-ink-muted hover:text-ink'} ${className}`}
     >
-      <input
-        type="checkbox"
-        checked={checked}
-        onChange={(e) => onChange(e.target.checked)}
-        disabled={disabled}
-        className="sr-only"
-      />
-      <div className={`flex-shrink-0 w-9 h-5 rounded-full flex items-center px-0.5 transition-colors duration-300 ease-in-out ${checked ? 'bg-primary' : 'bg-line'}`}>
-        <div className={`w-4 h-4 rounded-full bg-white shadow-sm transform transition-transform duration-300 ease-in-out ${checked ? 'translate-x-4' : 'translate-x-0'}`}></div>
-      </div>
+      <Switch checked={checked} onCheckedChange={onChange} disabled={disabled} />
       {label && <span>{label}</span>}
     </label>
   );

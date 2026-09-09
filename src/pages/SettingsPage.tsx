@@ -11,7 +11,7 @@ import {
   setTemperature, setSafetySettings, setFontSize, setImageResolution,
   setChatProvider, setImageProvider, setOllamaBaseUrl
 } from "../features/settingsSlice";
-import { FaDownload, FaUpload, FaInfoCircle, FaChevronDown, FaFileArchive, FaUser, FaMicrochip, FaImage, FaComments, FaShieldAlt, FaDatabase } from "react-icons/fa";
+import { FaDownload, FaUpload, FaInfoCircle, FaFileArchive, FaUser, FaMicrochip, FaImage, FaComments, FaShieldAlt, FaDatabase } from "react-icons/fa";
 import Header from "../components/Header";
 import InitialMessages from "../components/InitialMessages";
 import { ToastContainer, ToastData } from "../components/Toast";
@@ -71,6 +71,8 @@ import {
 import { AISafetySettings } from "../types";
 import { dbService } from "../services/dbService";
 import { TextInput, Select, FieldLabel } from "../components/ui/FormControls";
+import { Button } from "../components/ui/button";
+import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "../components/ui/accordion";
 import { formatRelativeTime } from "../utils/formatRelativeTime";
 
 const SettingsPage = () => {
@@ -110,15 +112,25 @@ const SettingsPage = () => {
         if (!response.ok) throw new Error("Failed to fetch models");
         const data = await response.json();
         
+        const seenModelValues = new Set<string>();
         const validModels = data.models
-          .filter((model: any) => 
-            model.supportedGenerationMethods && 
+          .filter((model: any) =>
+            model.supportedGenerationMethods &&
             model.supportedGenerationMethods.includes("generateContent")
           )
           .map((model: any) => ({
             value: model.name.replace("models/", ""),
             label: model.displayName || model.name.replace("models/", "")
-          }));
+          }))
+          // The API can list the same model under more than one resource name
+          // (e.g. a "-preview" alias alongside the canonical one) that both
+          // simplify to the same value once "models/" is stripped - dedupe so
+          // <option key={value}> doesn't collide.
+          .filter((model: { value: string }) => {
+            if (seenModelValues.has(model.value)) return false;
+            seenModelValues.add(model.value);
+            return true;
+          });
 
         if (validModels.length > 0) {
           setModelList(validModels);
@@ -242,10 +254,6 @@ const SettingsPage = () => {
 
   const [openSection, setOpenSection] = useState<string>(() => (location.state as { openSection?: string } | null)?.openSection || "profile");
   const [lastBackupAt, setLastBackupAt] = useState<number>(() => Number(localStorage.getItem(LS_LAST_BACKUP_AT) || 0));
-
-  const toggleSection = (section: string) => {
-    setOpenSection(prev => prev === section ? "" : section);
-  };
 
   const [imageSaveDirName, setImageSaveDirName] = useState<string>("Not Selected");
 
@@ -525,33 +533,20 @@ const SettingsPage = () => {
     }
   };
 
-  const renderAccordion = (id: string, icon: React.ReactNode, title: string, subtitle: string, children: React.ReactNode) => {
-    const isOpen = openSection === id;
-    return (
-      <div className="bg-panel rounded-2xl mb-3 border border-line overflow-hidden transition-all duration-200">
-        <button
-          className="w-full flex items-center gap-[13px] p-4 text-left"
-          onClick={() => toggleSection(id)}
-        >
-          <span className="w-[34px] h-[34px] rounded-[10px] bg-panel3 flex items-center justify-center text-primary flex-shrink-0">
-            {icon}
-          </span>
-          <span className="flex-1 min-w-0">
-            <span className="block text-[14px] font-semibold text-ink">{title}</span>
-            <span className="block text-xs text-ink-faint mt-0.5">{subtitle}</span>
-          </span>
-          <span className={`text-ink-muted transition-transform duration-200 flex-shrink-0 ${isOpen ? "rotate-180" : ""}`}>
-            <FaChevronDown size={13} />
-          </span>
-        </button>
-        {isOpen && (
-          <div className="px-5 pb-5 border-t border-line pt-4">
-            {children}
-          </div>
-        )}
-      </div>
-    );
-  };
+  const renderAccordion = (id: string, icon: React.ReactNode, title: string, subtitle: string, children: React.ReactNode) => (
+    <AccordionItem value={id}>
+      <AccordionTrigger>
+        <span className="w-[34px] h-[34px] rounded-[10px] bg-panel3 flex items-center justify-center text-primary flex-shrink-0">
+          {icon}
+        </span>
+        <span className="flex-1 min-w-0">
+          <span className="block text-[14px] font-semibold text-ink">{title}</span>
+          <span className="block text-xs text-ink-faint mt-0.5">{subtitle}</span>
+        </span>
+      </AccordionTrigger>
+      <AccordionContent>{children}</AccordionContent>
+    </AccordionItem>
+  );
 
   return (
     <div className="w-full h-screen flex flex-col bg-app">
@@ -567,6 +562,7 @@ const SettingsPage = () => {
         {/* Toast Notifications */}
         <ToastContainer toasts={toasts} removeToast={removeToast} />
 
+        <Accordion type="single" collapsible value={openSection} onValueChange={setOpenSection}>
         {renderAccordion("profile", <FaUser size={15} />, "User Profile", "Your name and bio",
           <UserProfileSettings
             userProfile={userProfile}
@@ -699,18 +695,12 @@ const SettingsPage = () => {
               Last backup: {lastBackupAt ? formatRelativeTime(lastBackupAt) : "never"}
             </p>
             <div className="flex flex-col sm:flex-row gap-4 mb-6">
-               <button
-                  onClick={handleExportFullBackup}
-                  className="flex-1 bg-primary text-onAccent py-2 px-4 rounded-lg hover:bg-primary-hover transition flex items-center justify-center gap-2"
-               >
+               <Button onClick={handleExportFullBackup} className="flex-1">
                   <FaFileArchive /> Export Full Backup
-               </button>
-               <button
-                  onClick={handleImportBackupClick}
-                  className="flex-1 bg-panel2 text-ink py-2 px-4 rounded-lg hover:bg-line transition flex items-center justify-center gap-2"
-               >
+               </Button>
+               <Button onClick={handleImportBackupClick} variant="panel" className="flex-1">
                   <FaUpload /> Restore Backup
-               </button>
+               </Button>
                <input
                   type="file"
                   ref={backupFileInputRef}
@@ -725,18 +715,12 @@ const SettingsPage = () => {
               Just your model/generation preferences - no chats or characters.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 mb-2">
-               <button
-                  onClick={handleExportSettings}
-                  className="flex-1 bg-secondary text-onSecondary py-2 px-4 rounded-lg hover:bg-secondary-hover transition flex items-center justify-center gap-2"
-               >
+               <Button onClick={handleExportSettings} variant="secondary" className="flex-1">
                   <FaDownload /> Export Settings
-               </button>
-               <button
-                  onClick={handleImportSettingsClick}
-                  className="flex-1 bg-panel2 text-ink py-2 px-4 rounded-lg hover:bg-line transition flex items-center justify-center gap-2"
-               >
+               </Button>
+               <Button onClick={handleImportSettingsClick} variant="panel" className="flex-1">
                   <FaUpload /> Import Settings
-               </button>
+               </Button>
                <input
                   type="file"
                   ref={settingsFileInputRef}
@@ -747,6 +731,7 @@ const SettingsPage = () => {
             </div>
           </>
         )}
+        </Accordion>
       </div>
       </div>
     </div>

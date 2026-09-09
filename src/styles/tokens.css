@@ -1,0 +1,204 @@
+/*
+ * Design tokens
+ * =============
+ * Two coexisting vocabularies live here, both as CSS custom properties:
+ *
+ *   1. --color-*                 This app's own "Persona Chat" brand palette.
+ *                                 Unchanged from before this file was split out
+ *                                 of index.css. Consumed via
+ *                                 rgb(var(--color-x) / <alpha-value>) through
+ *                                 the app-specific Tailwind color keys (ink,
+ *                                 panel, line, app, bubble, etc. - see
+ *                                 tailwind.config.js).
+ *
+ *   2. --background, --foreground, --card, --popover, --primary,
+ *      --secondary, --muted, --accent, --destructive, --border, --input,
+ *      --ring, --radius (+ -foreground pairs)
+ *                                 shadcn/ui's canonical token names. Under
+ *                                 :root/.dark below they're *bridged* to this
+ *                                 app's own palette (so any shadcn component
+ *                                 dropped in later looks native immediately,
+ *                                 no per-component restyling needed).
+ *                                 tailwind.config.js's `primary`/`secondary`/
+ *                                 `accent` keys resolve through these bridge
+ *                                 variables (not directly through --color-*)
+ *                                 specifically so they can be re-themed later
+ *                                 - see "Additional themes" below.
+ *
+ * Multi-theme ready: nothing here wires up an actual theme switcher yet (no
+ * JS/localStorage/attribute toggling exists in the app) - this file only
+ * prepares the variable surface for one. To add a real theme later, add a
+ * new [data-theme="name"] (+ [data-theme="name"].dark) block redefining
+ * whichever of the vocabulary-2 variables that theme wants to change, and
+ * set data-theme="name" on <html> (or wherever) from app code. Anything a
+ * theme doesn't override falls back to :root/.dark.
+ */
+
+:root {
+  /* ============================================================
+     App tokens - "Persona Chat" brand palette (light)
+     ============================================================ */
+  --color-app-bg: 235 238 243; /* #EBEEF3 */
+  --color-panel-bg: 255 255 255; /* #FFFFFF */
+  --color-panel2-bg: 244 246 249; /* #F4F6F9 */
+  --color-panel3-bg: 233 237 242; /* #E9EDF2 */
+  --color-hover-bg: 241 244 248; /* #F1F4F8 */
+  --color-chat-bg: 217 224 232; /* #D9E0E8 */
+
+  --color-text-main: 15 22 32; /* #0F1620 */
+  --color-text-muted: 90 102 117; /* #5A6675 */
+  --color-text-faint: 139 152 166; /* #8B98A6 */
+
+  --color-primary: 14 163 114; /* #0EA372 */
+  --color-primary-hover: 12 143 99; /* #0C8F63, darkened for hover */
+  --color-accent: 14 163 114; /* #0EA372, same as primary */
+  --color-accent-2: 12 156 147; /* #0C9C93 */
+  --color-on-accent: 255 255 255; /* #FFFFFF */
+
+  --color-secondary: 122 92 192; /* Plume (#7A5CC0) */
+  --color-secondary-hover: 104 73 168; /* Plume, darkened */
+  --color-on-secondary: 255 255 255; /* #FFFFFF - Plume is dark enough for white text */
+
+  --color-bubble-sent-bg: 213 247 206; /* #D5F7CE */
+  --color-bubble-sent-text: 11 46 34; /* #0B2E22 */
+  --color-bubble-received-bg: 255 255 255; /* #FFFFFF */
+  --color-bubble-received-text: 15 22 32; /* #0F1620 */
+
+  --color-border-main: 222 227 234; /* #DEE3EA */
+
+  /* ============================================================
+     shadcn/ui canonical tokens (light) - bridged to the palette above
+     ============================================================ */
+  --background: var(--color-app-bg);
+  --foreground: var(--color-text-main);
+  --card: var(--color-panel-bg);
+  --card-foreground: var(--color-text-main);
+  --popover: var(--color-panel-bg);
+  --popover-foreground: var(--color-text-main);
+  --primary: var(--color-primary);
+  --primary-foreground: var(--color-on-accent);
+  --secondary: var(--color-secondary);
+  --secondary-foreground: var(--color-on-secondary);
+  --muted: var(--color-panel2-bg);
+  --muted-foreground: var(--color-text-muted);
+  --accent: var(--color-panel3-bg);
+  --accent-foreground: var(--color-text-main);
+  --destructive: 239 68 68; /* red-500 - no existing app token for this */
+  --destructive-foreground: 255 255 255;
+  --border: var(--color-border-main);
+  --input: var(--color-border-main);
+  --ring: var(--color-primary);
+  --radius: 0.75rem;
+}
+
+.dark {
+  /* ============================================================
+     App tokens - "Persona Chat" brand palette (dark)
+     ============================================================ */
+  --color-app-bg: 11 14 19; /* #0B0E13 */
+  --color-panel-bg: 20 26 34; /* #141A22 */
+  --color-panel2-bg: 28 36 47; /* #1C242F */
+  --color-panel3-bg: 37 47 60; /* #252F3C */
+  --color-hover-bg: 26 34 44; /* #1A222C */
+  --color-chat-bg: 9 12 17; /* #090C11 */
+
+  --color-text-main: 234 240 246; /* #EAF0F6 */
+  --color-text-muted: 147 161 176; /* #93A1B0 */
+  --color-text-faint: 94 107 122; /* #5E6B7A */
+
+  --color-primary: 16 185 129; /* #10B981 */
+  --color-primary-hover: 20 201 143; /* #14C98F, lightened for hover */
+  --color-accent: 16 185 129; /* #10B981, same as primary */
+  --color-accent-2: 14 165 160; /* #0EA5A0 */
+  --color-on-accent: 4 20 15; /* #04140F */
+
+  --color-secondary: 178 156 230; /* Plume (#B29CE6) */
+  --color-secondary-hover: 196 176 238; /* Plume, lightened */
+  --color-on-secondary: 27 20 46; /* #1B142E - Plume is light in dark mode, needs dark text for contrast */
+
+  --color-bubble-sent-bg: 11 93 74; /* #0B5D4A */
+  --color-bubble-sent-text: 234 251 244; /* #EAFBF4 */
+  --color-bubble-received-bg: 28 36 47; /* #1C242F */
+  --color-bubble-received-text: 234 240 246; /* #EAF0F6 */
+
+  --color-border-main: 40 50 63; /* #28323F */
+
+  /* ============================================================
+     shadcn/ui canonical tokens (dark) - bridged to the palette above
+     ============================================================ */
+  --background: var(--color-app-bg);
+  --foreground: var(--color-text-main);
+  --card: var(--color-panel-bg);
+  --card-foreground: var(--color-text-main);
+  --popover: var(--color-panel-bg);
+  --popover-foreground: var(--color-text-main);
+  --primary: var(--color-primary);
+  --primary-foreground: var(--color-on-accent);
+  --secondary: var(--color-secondary);
+  --secondary-foreground: var(--color-on-secondary);
+  --muted: var(--color-panel2-bg);
+  --muted-foreground: var(--color-text-muted);
+  --accent: var(--color-panel3-bg);
+  --accent-foreground: var(--color-text-main);
+  --destructive: 220 38 38; /* red-600, a touch deeper for dark mode */
+  --destructive-foreground: 255 255 255;
+  --border: var(--color-border-main);
+  --input: var(--color-border-main);
+  --ring: var(--color-primary);
+}
+
+/* ================================================================
+   Additional themes
+   ================================================================
+   shadcn/ui's own stock "Neutral" default theme, kept as a literal,
+   independent reference palette (converted from their published hsl()
+   triples to this file's rgb() convention - values are exact, just a
+   different number format). Not wired to anything yet: set
+   data-theme="shadcn-default" on an ancestor element (e.g. <html>) once a
+   theme switcher exists to activate it. Add further themes the same way,
+   under their own [data-theme="name"] name.
+   ================================================================ */
+[data-theme="shadcn-default"] {
+  --background: 255 255 255; /* hsl(0 0% 100%) */
+  --foreground: 10 10 10; /* hsl(0 0% 3.9%) */
+  --card: 255 255 255; /* hsl(0 0% 100%) */
+  --card-foreground: 10 10 10; /* hsl(0 0% 3.9%) */
+  --popover: 255 255 255; /* hsl(0 0% 100%) */
+  --popover-foreground: 10 10 10; /* hsl(0 0% 3.9%) */
+  --primary: 23 23 23; /* hsl(0 0% 9%) */
+  --primary-foreground: 250 250 250; /* hsl(0 0% 98%) */
+  --secondary: 245 245 245; /* hsl(0 0% 96.1%) */
+  --secondary-foreground: 23 23 23; /* hsl(0 0% 9%) */
+  --muted: 245 245 245; /* hsl(0 0% 96.1%) */
+  --muted-foreground: 115 115 115; /* hsl(0 0% 45.1%) */
+  --accent: 245 245 245; /* hsl(0 0% 96.1%) */
+  --accent-foreground: 23 23 23; /* hsl(0 0% 9%) */
+  --destructive: 239 68 68; /* hsl(0 84.2% 60.2%) */
+  --destructive-foreground: 250 250 250; /* hsl(0 0% 98%) */
+  --border: 229 229 229; /* hsl(0 0% 89.8%) */
+  --input: 229 229 229; /* hsl(0 0% 89.8%) */
+  --ring: 10 10 10; /* hsl(0 0% 3.9%) */
+  --radius: 0.5rem;
+}
+
+[data-theme="shadcn-default"].dark {
+  --background: 10 10 10; /* hsl(0 0% 3.9%) */
+  --foreground: 250 250 250; /* hsl(0 0% 98%) */
+  --card: 10 10 10; /* hsl(0 0% 3.9%) */
+  --card-foreground: 250 250 250; /* hsl(0 0% 98%) */
+  --popover: 10 10 10; /* hsl(0 0% 3.9%) */
+  --popover-foreground: 250 250 250; /* hsl(0 0% 98%) */
+  --primary: 250 250 250; /* hsl(0 0% 98%) */
+  --primary-foreground: 23 23 23; /* hsl(0 0% 9%) */
+  --secondary: 38 38 38; /* hsl(0 0% 14.9%) */
+  --secondary-foreground: 250 250 250; /* hsl(0 0% 98%) */
+  --muted: 38 38 38; /* hsl(0 0% 14.9%) */
+  --muted-foreground: 163 163 163; /* hsl(0 0% 63.9%) */
+  --accent: 38 38 38; /* hsl(0 0% 14.9%) */
+  --accent-foreground: 250 250 250; /* hsl(0 0% 98%) */
+  --destructive: 127 29 29; /* hsl(0 62.8% 30.6%) */
+  --destructive-foreground: 250 250 250; /* hsl(0 0% 98%) */
+  --border: 38 38 38; /* hsl(0 0% 14.9%) */
+  --input: 38 38 38; /* hsl(0 0% 14.9%) */
+  --ring: 212 212 212; /* hsl(0 0% 83.1%) */
+}

@@ -1,6 +1,7 @@
 import React, { ReactNode } from "react";
 import { FaTimes } from "react-icons/fa";
 import { DialogRoot, DialogContent, DialogTitle, DialogClose } from "./ui/Dialog";
+import { Button } from "./ui/button";
 
 interface ModalProps {
   isOpen: boolean;
@@ -18,9 +19,9 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }) => {
             <h2 className="text-lg font-bold text-ink">{title}</h2>
           </DialogTitle>
           <DialogClose asChild>
-            <button className="text-ink-muted hover:text-ink transition p-1 -m-1 rounded-full" aria-label="Close">
+            <Button variant="ghost" size="icon" className="h-auto w-auto p-1 -m-1 rounded-full text-ink-muted hover:text-ink" aria-label="Close">
               <FaTimes />
-            </button>
+            </Button>
           </DialogClose>
         </div>
         <div className="p-4 overflow-y-auto flex-1 flex flex-col gap-2">

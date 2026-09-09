@@ -11,6 +11,7 @@ import ToggleSwitch from "./ToggleSwitch";
 import ChatMessage from "./chat/ChatMessage";
 import { DialogRoot, DialogContent, DialogTitle, DialogClose } from "./ui/Dialog";
 import { CharacterAvatar } from "./ui/CharacterAvatar";
+import { Button } from "./ui/button";
 
 interface ChatWindowProps {
   messages: Message[];
@@ -274,17 +275,18 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ messages = [], tree, onSwitchBr
       {aiLoading && <TypingIndicator charInitials={charInitials} accent={character?.accent} />}
       <div ref={chatEndRef} />
       {isScrolledUp && (
-        <button
+        <Button
           onClick={() => {
             setIsScrolledUp(false);
             chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
           }}
-          className="fixed bottom-24 right-6 z-50 p-3 bg-primary text-onAccent rounded-full shadow-lg hover:bg-primary-hover transition transform hover:scale-105 flex items-center justify-center opacity-80 hover:opacity-100"
+          size="icon"
+          className="fixed bottom-24 right-6 z-50 h-11 w-11 rounded-full shadow-lg hover:scale-105 opacity-80 hover:opacity-100"
           title="Scroll to bottom"
           aria-label="Scroll to bottom"
         >
           <FaArrowDown size={16} />
-        </button>
+        </Button>
       )}
 
       {/* Full Screen Edit Modal */}
@@ -295,9 +297,9 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ messages = [], tree, onSwitchBr
               <h3 className="text-lg font-semibold text-ink">Edit Message</h3>
             </DialogTitle>
             <DialogClose asChild>
-              <button className="text-ink-muted hover:text-ink transition p-2 -m-2 rounded-full hover:bg-app">
+              <Button variant="ghost" size="icon" className="h-auto w-auto p-2 -m-2 rounded-full text-ink-muted hover:bg-app hover:text-ink">
                 <FaTimes size={18} />
-              </button>
+              </Button>
             </DialogClose>
           </div>
 
@@ -330,20 +332,21 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ messages = [], tree, onSwitchBr
             />
 
             <div className="flex gap-3">
-              <button
+              <Button
                 onClick={cancelEdit}
-                className="flex-1 sm:flex-none px-5 py-2.5 rounded-xl font-medium text-ink-muted hover:bg-panel2 transition"
+                variant="ghost"
+                className="flex-1 sm:flex-none h-auto px-5 py-2.5 rounded-xl font-medium text-ink-muted hover:bg-panel2"
               >
                 Cancel
-              </button>
-              <button
+              </Button>
+              <Button
                 onClick={saveEdit}
                 disabled={!editText.trim()}
-                className="flex-1 sm:flex-none px-5 py-2.5 rounded-xl font-medium bg-primary text-onAccent hover:bg-primary-hover transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-sm"
+                className="flex-1 sm:flex-none h-auto px-5 py-2.5 rounded-xl font-medium shadow-sm"
               >
                 <FaCheck size={14} />
                 Save Changes
-              </button>
+              </Button>
             </div>
           </div>
         </DialogContent>
@@ -356,12 +359,14 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ messages = [], tree, onSwitchBr
             <span className="sr-only">Fullscreen image</span>
           </DialogTitle>
           <DialogClose asChild>
-            <button
-              className="absolute top-4 right-4 p-3 text-white/70 hover:text-white bg-black/50 hover:bg-black/80 rounded-full transition z-10"
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute top-4 right-4 h-auto w-auto p-3 rounded-full text-white/70 hover:bg-black/80 hover:text-white bg-black/50 z-10"
               title="Close"
             >
               <FaTimes size={20} />
-            </button>
+            </Button>
           </DialogClose>
           {fullscreenImage && (
             <DisplayImage

@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import { FaPaperPlane, FaStop, FaCog, FaImage, FaTimes, FaMicrophone } from "react-icons/fa";
 import { cn } from "../utils/cn";
+import { Button } from "./ui/button";
 import ImageSettingsModal from "./ImageSettingsModal";
 import { isSpeechRecognitionSupported, createSpeechRecognition } from "../utils/speech";
 
@@ -128,13 +129,15 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSend, disabled = false, o
           <span className="flex-1 text-[12.5px] text-ink font-medium">
             Image generation on — a picture will be created alongside the reply.
           </span>
-          <button
+          <Button
             onClick={() => setIsImageRequest(false)}
-            className="w-6 h-6 rounded-md flex items-center justify-center text-ink-muted hover:bg-panel3 hover:text-ink transition flex-shrink-0"
+            variant="ghost"
+            size="icon"
+            className="h-6 w-6 rounded-md text-ink-muted hover:bg-panel3 hover:text-ink flex-shrink-0"
             aria-label="Turn off image generation"
           >
             <FaTimes size={11} />
-          </button>
+          </Button>
         </div>
       )}
 
@@ -147,59 +150,64 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSend, disabled = false, o
           <span className="flex-1 text-[12.5px] text-ink font-medium">
             Listening… speak, then tap the mic to stop.
           </span>
-          <button
+          <Button
             onClick={stopListening}
-            className="w-6 h-6 rounded-md flex items-center justify-center text-ink-muted hover:bg-panel3 hover:text-ink transition flex-shrink-0"
+            variant="ghost"
+            size="icon"
+            className="h-6 w-6 rounded-md text-ink-muted hover:bg-panel3 hover:text-ink flex-shrink-0"
             aria-label="Stop listening"
           >
             <FaTimes size={11} />
-          </button>
+          </Button>
         </div>
       )}
 
       <div className="flex items-end gap-2">
-        <button
+        <Button
           onClick={() => setIsImageRequest((v) => !v)}
           disabled={disabled}
+          variant="ghost"
           title="Request an image with this message"
           aria-label="Request an image with this message"
           aria-pressed={isImageRequest}
           className={cn(
-            "w-11 h-11 flex-shrink-0 rounded-[13px] border flex items-center justify-center transition disabled:opacity-50 disabled:cursor-not-allowed",
+            "h-11 w-11 flex-shrink-0 rounded-[13px] border",
             isImageRequest
-              ? "border-primary bg-primary/10 text-primary"
-              : "border-line bg-panel2 text-ink-faint hover:border-primary hover:text-ink"
+              ? "border-primary bg-primary/10 text-primary hover:bg-primary/10"
+              : "border-line bg-panel2 text-ink-faint hover:border-primary hover:bg-panel2 hover:text-ink"
           )}
         >
           <FaImage size={15} />
-        </button>
+        </Button>
 
         {micSupported && (
-          <button
+          <Button
             onClick={toggleListening}
             disabled={disabled}
+            variant="ghost"
             title={isListening ? "Stop dictation" : "Dictate a message"}
             aria-label={isListening ? "Stop dictation" : "Dictate a message"}
             aria-pressed={isListening}
             className={cn(
-              "w-11 h-11 flex-shrink-0 rounded-[13px] border flex items-center justify-center transition disabled:opacity-50 disabled:cursor-not-allowed",
+              "h-11 w-11 flex-shrink-0 rounded-[13px] border",
               isListening
-                ? "border-red-500 bg-red-500/10 text-red-500"
-                : "border-line bg-panel2 text-ink-faint hover:border-primary hover:text-ink"
+                ? "border-red-500 bg-red-500/10 text-red-500 hover:bg-red-500/10"
+                : "border-line bg-panel2 text-ink-faint hover:border-primary hover:bg-panel2 hover:text-ink"
             )}
           >
             <FaMicrophone size={15} />
-          </button>
+          </Button>
         )}
 
-        <button
+        <Button
           onClick={() => setIsSettingsModalOpen(true)}
+          variant="ghost"
           title="Image Generation Settings"
           aria-label="Image Generation Settings"
-          className="w-11 h-11 flex-shrink-0 rounded-[13px] border border-line bg-panel2 text-ink-faint hover:border-primary hover:text-ink transition flex items-center justify-center"
+          className="h-11 w-11 flex-shrink-0 rounded-[13px] border border-line bg-panel2 text-ink-faint hover:border-primary hover:bg-panel2 hover:text-ink"
         >
           <FaCog size={14} />
-        </button>
+        </Button>
 
         <div className="flex-1 flex items-center gap-2 bg-panel2 border border-line rounded-[18px] min-h-[44px] pl-4 pr-1.5 py-0.5 shadow-sm">
           <textarea
@@ -223,29 +231,33 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSend, disabled = false, o
           />
 
           {disabled && onStop ? (
-            <button
+            <Button
               onClick={onStop}
-              className="w-9 h-9 flex-shrink-0 rounded-xl bg-red-500 hover:bg-red-600 text-white transition shadow-md transform hover:scale-105 flex items-center justify-center"
+              variant="destructive"
+              size="icon"
+              className="h-9 w-9 flex-shrink-0 rounded-xl shadow-md hover:scale-105"
               title="Stop Generating"
               aria-label="Stop Generating"
             >
               <FaStop size={13} />
-            </button>
+            </Button>
           ) : (
-            <button
+            <Button
               onClick={handleSend}
+              variant="ghost"
+              size="icon"
               className={cn(
-                "w-9 h-9 flex-shrink-0 rounded-xl transition shadow-md flex items-center justify-center",
+                "h-9 w-9 flex-shrink-0 rounded-xl shadow-md",
                 canSend
-                  ? "bg-gemini-logo text-onAccent transform hover:scale-105 hover:brightness-105"
-                  : "bg-panel3 text-ink-faint cursor-not-allowed"
+                  ? "bg-gemini-logo text-onAccent hover:scale-105 hover:brightness-105"
+                  : "bg-panel3 text-ink-faint cursor-not-allowed hover:bg-panel3"
               )}
               disabled={!canSend}
               title="Send Message"
               aria-label="Send Message"
             >
               <FaPaperPlane size={14} className={canSend ? "ml-0.5" : ""} />
-            </button>
+            </Button>
           )}
         </div>
       </div>
