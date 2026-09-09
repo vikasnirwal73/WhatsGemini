@@ -23,6 +23,7 @@ import { Button } from "./components/ui/button";
 const ChatPage = lazy(() => import("./pages/ChatPage"));
 const Login = lazy(() => import("./pages/Login"));
 const CharacterPage = lazy(() => import("./pages/CharacterPage"));
+const CharacterEditorPage = lazy(() => import("./pages/CharacterEditorPage"));
 const CharacterGalleryPage = lazy(() => import("./pages/CharacterGalleryPage"));
 const SettingsPage = lazy(() => import("./pages/SettingsPage"));
 const NotFound = lazy(() => import("./pages/NotFound"));
@@ -86,7 +87,7 @@ const EmptyChatState = () => {
               </Button>
               <Button
                 variant="outline"
-                onClick={() => navigate("/characters")}
+                onClick={() => navigate("/characters/new")}
                 className="px-4 py-2.5 h-auto bg-muted hover:border-primary hover:text-primary hover:bg-muted"
               >
                 Create your own
@@ -190,6 +191,8 @@ const AppContent = () => {
               <Routes>
                 <Route path="/chat/:chatId" element={<ChatPage />} />
                 <Route path="/characters" element={<CharacterPage />} />
+                <Route path="/characters/new" element={<CharacterEditorPage />} />
+                <Route path="/characters/:characterId/edit" element={<CharacterEditorPage />} />
                 <Route path="/characters/:characterId/gallery" element={<CharacterGalleryPage />} />
                 <Route path="/settings" element={<SettingsPage />} />
                 <Route path="/" element={<EmptyChatState />} />
