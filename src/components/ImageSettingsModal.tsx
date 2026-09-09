@@ -91,10 +91,9 @@ const ImageSettingsModal: React.FC<ImageSettingsModalProps> = ({ isOpen, onClose
 
   useEffect(() => {
     const stored = localStorage.getItem(LS_IMAGE_MODEL);
-    if (stored && !imageModelList.find(m => m.value === stored)) {
-      setImageModelList(prev => [...prev, { value: stored, label: stored }]);
-    }
-  }, [imageModelList]);
+    if (!stored) return;
+    setImageModelList(prev => prev.some(m => m.value === stored) ? prev : [...prev, { value: stored, label: stored }]);
+  }, []);
 
   useEffect(() => {
     if (useSdWebui && sdWebuiApiUrl) {
